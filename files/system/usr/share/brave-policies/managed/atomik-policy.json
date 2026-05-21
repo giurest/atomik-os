@@ -1,0 +1,39 @@
+{
+  "// Atomik OS — Brave Browser Policy": "Debloated con sincronizzazione attiva",
+
+  "// ── Disabilita funzioni non necessarie ────────────────────────────────": "",
+  "BraveRewardsDisabled": true,
+  "BraveWalletDisabled": true,
+  "BraveVPNDisabled": true,
+  "BraveTalkDisabled": true,
+  "BraveAIChatEnabled": false,
+
+  "// ── Telemetria e raccolta dati ─────────────────────────────────────────": "",
+  "MetricsReportingEnabled": false,
+  "SafeBrowsingEnabled": false,
+  "SpellCheckServiceEnabled": false,
+  "CloudPrintSubmitEnabled": false,
+
+  "// ── Sincronizzazione ABILITATA ─────────────────────────────────────────": "",
+  "SyncDisabled": false,
+  "BraveSyncAllowedTypes": {
+    "bookmarks": true,
+    "preferences": true,
+    "passwords": true,
+    "autofill": true,
+    "history": true,
+    "extensions": true,
+    "tabs": true
+  },
+
+  "// ── Privacy defaults ───────────────────────────────────────────────────": "",
+  "BuiltInDnsClientEnabled": false,
+  "NetworkPredictionOptions": 2,
+  "AutofillAddressEnabled": false,
+  "AutofillCreditCardEnabled": false,
+
+  "// ── UI pulizia ─────────────────────────────────────────────────────────": "",
+  "ShowHomeButton": false,
+  "BookmarkBarEnabled": false,
+  "NewTabPageLocation": "about:blank"
+}

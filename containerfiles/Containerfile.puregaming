@@ -1,0 +1,73 @@
+FROM registry.gitlab.com/origami-linux/images/origami:latest
+
+# ── Metadata ─────────────────────────────────────────────────────────────────
+LABEL org.opencontainers.image.title="Atomik OS PureGaming"
+LABEL org.opencontainers.image.description="Atomik OS gaming puro — CachyOS kernel, zero bloat, Steam + Heroic + Lutris"
+
+# ── Rimozione bloatware ───────────────────────────────────────────────────────
+RUN rpm-ostree override remove \
+    gnome-tour \
+    gnome-user-docs \
+    yelp \
+    firefox \
+    firefox-langpacks \
+    || true && \
+    ostree container commit
+
+# ── Repository Brave ─────────────────────────────────────────────────────────
+RUN rpm-ostree install \
+    https://brave-browser-rpm-release.s3.brave.com/brave-keyring.rpm && \
+    curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
+    | tee /etc/yum.repos.d/brave-browser.repo && \
+    ostree container commit
+
+# ── Pacchetti gaming ─────────────────────────────────────────────────────────
+COPY packages/puregaming.list /tmp/packages-puregaming.list
+RUN rpm-ostree install \
+    $(grep -v '^#' /tmp/packages-puregaming.list | tr '\n' ' ') && \
+    ostree container commit
+
+# ── Ottimizzazioni gaming kernel ─────────────────────────────────────────────
+RUN mkdir -p /etc/sysctl.d && \
+    cat > /etc/sysctl.d/99-atomik-gaming.conf << 'EOF'
+# Riduce latenza scheduler per gaming
+kernel.sched_latency_ns = 4000000
+kernel.sched_min_granularity_ns = 500000
+# Ottimizzazioni memoria
+vm.swappiness = 10
+vm.compaction_proactiveness = 0
+# Ottimizzazioni rete gaming
+net.core.netdev_max_backlog = 16384
+EOF
+    ostree container commit
+
+# ── Configurazione scx_scheduler per gaming ──────────────────────────────────
+RUN mkdir -p /etc/systemd/system && \
+    cat > /etc/systemd/system/scx.service << 'EOF'
+[Unit]
+Description=SCX Scheduler — gaming mode
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/bin/scx_lavd
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl enable scx.service || true && \
+    ostree container commit
+
+# ── System files, Plymouth, SDDM ─────────────────────────────────────────────
+COPY files/system/ /
+COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
+COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
+COPY files/sddm/ /usr/share/sddm/themes/atomik/
+
+RUN plymouth-set-default-theme atomik && \
+    mkdir -p /etc/sddm.conf.d && \
+    echo -e "[Theme]\nCurrent=atomik" > /etc/sddm.conf.d/atomik.conf && \
+    ostree container commit
+
+RUN rm -f /tmp/packages-*.list && \
+    ostree container commit

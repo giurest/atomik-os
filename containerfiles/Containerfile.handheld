@@ -1,0 +1,46 @@
+FROM ghcr.io/ublue-os/bazzite-deck:latest
+
+# ── Metadata ─────────────────────────────────────────────────────────────────
+LABEL org.opencontainers.image.title="Atomik OS Handheld"
+LABEL org.opencontainers.image.description="Atomik OS handheld — ottimizzato per Steam Deck e dispositivi portatili"
+
+# ── Rimozione bloatware Bazzite non necessario ────────────────────────────────
+RUN rpm-ostree override remove \
+    firefox \
+    firefox-langpacks \
+    || true && \
+    ostree container commit
+
+# ── Repository Brave ─────────────────────────────────────────────────────────
+RUN rpm-ostree install \
+    https://brave-browser-rpm-release.s3.brave.com/brave-keyring.rpm && \
+    curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
+    | tee /etc/yum.repos.d/brave-browser.repo && \
+    ostree container commit
+
+# ── Pacchetti handheld ───────────────────────────────────────────────────────
+COPY packages/handheld.list /tmp/packages-handheld.list
+RUN rpm-ostree install \
+    $(grep -v '^#' /tmp/packages-handheld.list | tr '\n' ' ') && \
+    ostree container commit
+
+# ── Ottimizzazioni TDP e batteria ─────────────────────────────────────────────
+RUN mkdir -p /etc/sysctl.d && \
+    cat > /etc/sysctl.d/99-atomik-handheld.conf << 'EOF'
+# Risparmio energetico aggressivo
+kernel.nmi_watchdog = 0
+vm.dirty_writeback_centisecs = 6000
+EOF
+    ostree container commit
+
+# ── System files, Plymouth, SDDM ─────────────────────────────────────────────
+COPY files/system/ /
+COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
+COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
+COPY files/sddm/ /usr/share/sddm/themes/atomik/
+
+RUN plymouth-set-default-theme atomik && \
+    mkdir -p /etc/sddm.conf.d && \
+    echo -e "[Theme]\nCurrent=atomik" > /etc/sddm.conf.d/atomik.conf && \
+    rm -f /tmp/packages-*.list && \
+    ostree container commit

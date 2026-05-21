@@ -1,0 +1,22 @@
+FROM ghcr.io/giurest/atomik-desktop:latest
+
+# ── Metadata ─────────────────────────────────────────────────────────────────
+LABEL org.opencontainers.image.title="Atomik OS Desktop NVIDIA"
+LABEL org.opencontainers.image.description="Atomik OS Desktop con driver NVIDIA proprietari"
+
+# ── Driver NVIDIA tramite akmod ───────────────────────────────────────────────
+RUN rpm-ostree install \
+    akmod-nvidia \
+    xorg-x11-drv-nvidia \
+    xorg-x11-drv-nvidia-cuda \
+    xorg-x11-drv-nvidia-cuda-libs \
+    nvidia-vaapi-driver \
+    libva-utils \
+    vdpauinfo && \
+    ostree container commit
+
+# ── Configurazione NVIDIA per Wayland / Niri ─────────────────────────────────
+RUN mkdir -p /etc/modprobe.d && \
+    echo "options nvidia-drm modeset=1" > /etc/modprobe.d/nvidia.conf && \
+    echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1" >> /etc/modprobe.d/nvidia.conf && \
+    ostree container commit

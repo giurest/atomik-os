@@ -1,0 +1,55 @@
+FROM registry.gitlab.com/origami-linux/images/origami:latest
+
+# ── Metadata ─────────────────────────────────────────────────────────────────
+LABEL org.opencontainers.image.title="Atomik OS Desktop"
+LABEL org.opencontainers.image.description="Atomik OS — variante Desktop minimalista con Niri + Noctalia"
+LABEL org.opencontainers.image.url="https://github.com/giurest/atomik-os"
+LABEL org.opencontainers.image.version="1.0"
+
+# ── Variabili ─────────────────────────────────────────────────────────────────
+ARG IMAGE_FLAVOR=desktop
+
+# ── Rimozione pacchetti indesiderati ─────────────────────────────────────────
+RUN rpm-ostree override remove \
+    gnome-tour \
+    gnome-user-docs \
+    yelp \
+    firefox \
+    firefox-langpacks \
+    || true && \
+    ostree container commit
+
+# ── Aggiunta repository Brave ─────────────────────────────────────────────────
+RUN rpm-ostree install \
+    https://brave-browser-rpm-release.s3.brave.com/brave-keyring.rpm && \
+    curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
+    | tee /etc/yum.repos.d/brave-browser.repo && \
+    ostree container commit
+
+# ── Pacchetti base (da packages/desktop.list) ─────────────────────────────────
+COPY packages/desktop.list /tmp/packages-desktop.list
+RUN rpm-ostree install \
+    $(grep -v '^#' /tmp/packages-desktop.list | tr '\n' ' ') && \
+    ostree container commit
+
+# ── Niri come sessione di default (non rimuovibile) ───────────────────────────
+COPY files/system/ /
+
+# ── Configurazione Brave debloated ────────────────────────────────────────────
+COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
+
+# ── Plymouth theme ───────────────────────────────────────────────────────────
+COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
+RUN plymouth-set-default-theme atomik && \
+    dracut --force --regenerate-all || true && \
+    ostree container commit
+
+# ── SDDM / login screen ──────────────────────────────────────────────────────
+COPY files/sddm/ /usr/share/sddm/themes/atomik/
+RUN mkdir -p /etc/sddm.conf.d && \
+    echo -e "[Theme]\nCurrent=atomik" > /etc/sddm.conf.d/atomik.conf && \
+    ostree container commit
+
+# ── Pulizia ──────────────────────────────────────────────────────────────────
+RUN rm -f /tmp/packages-*.list && \
+    ostree container commit
