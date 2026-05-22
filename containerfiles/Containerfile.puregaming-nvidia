@@ -11,13 +11,12 @@ RUN dnf install -y \
     dnf clean all
 
 # ── Driver NVIDIA ─────────────────────────────────────────────────────────────
-RUN dnf install -y \
+RUN dnf install -y --skip-unavailable \
     akmod-nvidia \
     xorg-x11-drv-nvidia \
     xorg-x11-drv-nvidia-cuda \
     xorg-x11-drv-nvidia-cuda-libs \
     nvidia-vaapi-driver \
-    libva-utils \
     vdpauinfo && \
     dnf clean all
 
