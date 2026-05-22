@@ -10,8 +10,9 @@ RUN dnf install -y \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm && \
     dnf clean all
 
-# ── Driver NVIDIA (solo driver userspace, no akmod) ───────────────────────────
-RUN dnf install -y --skip-unavailable --skip-broken --skip-broken \
+# ── Driver NVIDIA (ignora scriptlet akmod che fallisce in container) ──────────
+RUN dnf install -y --skip-unavailable \
+    --setopt=tsflags=noscripts \
     xorg-x11-drv-nvidia \
     xorg-x11-drv-nvidia-cuda \
     xorg-x11-drv-nvidia-cuda-libs \
