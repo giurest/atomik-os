@@ -1,8 +1,7 @@
+cat > packages/puregaming.list << 'EOF'
 # ── Atomik OS — pacchetti variante PureGaming ────────────────────────────────
-# Derivata dalla base desktop + pacchetti gaming specifici
 
 # ── Shell e terminale ─────────────────────────────────────────────────────────
-ghostty
 fish
 starship
 
@@ -17,24 +16,14 @@ grim
 slurp
 
 # ── Tema ─────────────────────────────────────────────────────────────────────
-noctalia
 papirus-icon-theme
-bibata-cursor-themes
-inter-fonts
-
-# ── Browser ──────────────────────────────────────────────────────────────────
-brave-browser
 
 # ── Gaming ───────────────────────────────────────────────────────────────────
-steam
-# Heroic e Lutris via Flatpak (più aggiornati)
-wine
-winetricks
+# steam, wine, heroic, lutris, protonplus via Flatpak
 gamemode
 gamescope
 mangohud
 vkBasalt
-protonplus
 goverlay
 
 # ── Compatibilità gaming ─────────────────────────────────────────────────────
@@ -51,7 +40,7 @@ scx-scheds
 # ── Multimedia ───────────────────────────────────────────────────────────────
 pipewire
 wireplumber
-pipewire-pulse
+pipewire-pulseaudio
 pipewire-alsa
 
 # ── Sistema ──────────────────────────────────────────────────────────────────
@@ -69,4 +58,5 @@ eza
 bat
 
 # ── Login manager ────────────────────────────────────────────────────────────
-sddm
+gdm
+EOF

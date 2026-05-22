@@ -62,9 +62,10 @@ RUN mkdir -p /etc/sysctl.d && \
     > /etc/sysctl.d/99-atomik-gaming.conf
 
 # ── Niri come sessione di default ─────────────────────────────────────────────
-RUN mkdir -p /etc/sddm.conf.d && \
-    printf '[Autologin]\nRelogin=false\n\n[General]\nDisplayServer=wayland\n\n[Theme]\nCurrent=\n\n[Wayland]\nCompositor=/usr/bin/niri\nSessionDir=/usr/share/wayland-sessions\nSessionCommand=/usr/share/sddm/scripts/wayland-session niri.desktop\n' \
-    > /etc/sddm.conf.d/niri.conf
+# ── Abilita GDM come display manager ─────────────────────────────────────────
+RUN mkdir -p /etc/systemd/system && \
+    ln -sf /usr/lib/systemd/system/gdm.service \
+           /etc/systemd/system/display-manager.service
 
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/

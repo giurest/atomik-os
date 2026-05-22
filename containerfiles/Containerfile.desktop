@@ -57,8 +57,10 @@ RUN dnf install -y --skip-unavailable \
     rm -f /tmp/packages-desktop.list
 
 # ── Niri come sessione di default (non rimuovibile) ───────────────────────────
-RUN systemctl enable gdm 2>/dev/null || true
-
+# ── Abilita GDM come display manager ─────────────────────────────────────────
+RUN mkdir -p /etc/systemd/system && \
+    ln -sf /usr/lib/systemd/system/gdm.service \
+           /etc/systemd/system/display-manager.service
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 
