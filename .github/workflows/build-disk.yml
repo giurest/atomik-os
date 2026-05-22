@@ -1,12 +1,6 @@
 name: Build Atomik OS ISO
 
 on:
-  workflow_run:
-    workflows: ["Build Atomik OS Images"]
-    types:
-      - completed
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       variant:
