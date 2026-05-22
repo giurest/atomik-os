@@ -46,9 +46,13 @@ RUN dnf remove -y \
     2>/dev/null || true && \
     dnf clean all
 
-# ── Repository DMS + DankLinux (DankGreeter) ─────────────────────────────────
-RUN dnf copr enable -y avengemedia/dms && \
-    dnf copr enable -y avengemedia/danklinux && \
+# ── Repository DMS + DankLinux (aggiunti manualmente per Origami) ─────────────
+RUN curl -fsSL \
+    "https://copr.fedorainfracloud.org/coprs/avengemedia/dms/repo/fedora-44/avengemedia-dms-fedora-44.repo" \
+    -o /etc/yum.repos.d/avengemedia-dms.repo && \
+    curl -fsSL \
+    "https://copr.fedorainfracloud.org/coprs/avengemedia/danklinux/repo/fedora-44/avengemedia-danklinux-fedora-44.repo" \
+    -o /etc/yum.repos.d/avengemedia-danklinux.repo && \
     dnf clean all
 
 # ── Assicura Flatpak disponibile ──────────────────────────────────────────────
