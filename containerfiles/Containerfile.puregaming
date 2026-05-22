@@ -1,65 +1,42 @@
 FROM registry.gitlab.com/origami-linux/images/origami:latest
 
-# ── Metadata ─────────────────────────────────────────────────────────────────
+# ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS PureGaming"
 LABEL org.opencontainers.image.description="Atomik OS gaming puro — CachyOS kernel, zero bloat, Steam + Heroic + Lutris"
 
 # ── Rimozione bloatware ───────────────────────────────────────────────────────
-RUN dnf remove -y \
-    gnome-tour \
-    gnome-user-docs \
-    yelp \
-    2>/dev/null || true && \
+RUN dnf remove -y gnome-tour gnome-user-docs yelp 2>/dev/null || true
 
-# ── Repository Brave ─────────────────────────────────────────────────────────
+# ── Repository e installazione Brave ─────────────────────────────────────────
 RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
     curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
     | tee /etc/yum.repos.d/brave-browser.repo && \
     dnf install -y brave-browser && \
     dnf clean all
 
-# ── Pacchetti gaming ─────────────────────────────────────────────────────────
+# ── Pacchetti gaming ──────────────────────────────────────────────────────────
 COPY packages/puregaming.list /tmp/packages-puregaming.list
-RUN dnf install -y \
-    $(grep -v '^#' /tmp/packages-puregaming.list | tr '\n' ' ') && \
+RUN dnf install -y $(grep -v '^#' /tmp/packages-puregaming.list | grep -v '^$' | tr '\n' ' ') && \
+    dnf clean all && \
+    rm -f /tmp/packages-puregaming.list
 
-# ── Ottimizzazioni gaming kernel ─────────────────────────────────────────────
+# ── Ottimizzazioni gaming kernel ──────────────────────────────────────────────
 RUN mkdir -p /etc/sysctl.d && \
-    cat > /etc/sysctl.d/99-atomik-gaming.conf << 'EOF'
-# Riduce latenza scheduler per gaming
-kernel.sched_latency_ns = 4000000
-kernel.sched_min_granularity_ns = 500000
-# Ottimizzazioni memoria
-vm.swappiness = 10
-vm.compaction_proactiveness = 0
-# Ottimizzazioni rete gaming
-net.core.netdev_max_backlog = 16384
-EOF
+    printf '# Riduce latenza scheduler per gaming\nkernel.sched_latency_ns = 4000000\nkernel.sched_min_granularity_ns = 500000\n# Ottimizzazioni memoria\nvm.swappiness = 10\nvm.compaction_proactiveness = 0\n# Ottimizzazioni rete gaming\nnet.core.netdev_max_backlog = 16384\n' \
+    > /etc/sysctl.d/99-atomik-gaming.conf
 
-# ── Configurazione scx_scheduler per gaming ──────────────────────────────────
+# ── Configurazione scx_scheduler per gaming ───────────────────────────────────
 RUN mkdir -p /etc/systemd/system && \
-    cat > /etc/systemd/system/scx.service << 'EOF'
-[Unit]
-Description=SCX Scheduler — gaming mode
-After=multi-user.target
+    printf '[Unit]\nDescription=SCX Scheduler gaming mode\nAfter=multi-user.target\n\n[Service]\nExecStart=/usr/bin/scx_lavd\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n' \
+    > /etc/systemd/system/scx.service
 
-[Service]
-ExecStart=/usr/bin/scx_lavd
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    systemctl enable scx.service || true && \
-
-# ── System files, Plymouth, SDDM ─────────────────────────────────────────────
-COPY files/system/ /
+# ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
+
+# ── Plymouth theme (placeholder) ─────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
+
+# ── SDDM theme (placeholder) ─────────────────────────────────────────────────
 COPY files/sddm/ /usr/share/sddm/themes/atomik/
-
-RUN plymouth-set-default-theme atomik && \
-    mkdir -p /etc/sddm.conf.d && \
-    echo -e "[Theme]\nCurrent=atomik" > /etc/sddm.conf.d/atomik.conf && \
-
-RUN rm -f /tmp/packages-*.list && \
+RUN mkdir -p /etc/sddm.conf.d && \
+    printf '[Theme]\nCurrent=atomik\n' > /etc/sddm.conf.d/atomik.conf

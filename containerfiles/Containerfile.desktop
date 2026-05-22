@@ -1,48 +1,32 @@
 FROM registry.gitlab.com/origami-linux/images/origami:latest
 
-# ── Metadata ─────────────────────────────────────────────────────────────────
+# ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Desktop"
 LABEL org.opencontainers.image.description="Atomik OS — variante Desktop minimalista con Niri + Noctalia"
-LABEL org.opencontainers.image.url="https://github.com/giurest/atomik-os"
-LABEL org.opencontainers.image.version="1.0"
 
-# ── Variabili ─────────────────────────────────────────────────────────────────
-ARG IMAGE_FLAVOR=desktop
+# ── Rimozione bloatware ───────────────────────────────────────────────────────
+RUN dnf remove -y gnome-tour gnome-user-docs yelp 2>/dev/null || true
 
-# ── Rimozione pacchetti indesiderati ─────────────────────────────────────────
-RUN dnf remove -y \
-    gnome-tour \
-    gnome-user-docs \
-    yelp \
-    2>/dev/null || true && \
-
-# ── Aggiunta repository Brave ─────────────────────────────────────────────────
+# ── Repository e installazione Brave ─────────────────────────────────────────
 RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
     curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
     | tee /etc/yum.repos.d/brave-browser.repo && \
     dnf install -y brave-browser && \
     dnf clean all
 
-# ── Pacchetti base (da packages/desktop.list) ─────────────────────────────────
+# ── Pacchetti desktop ─────────────────────────────────────────────────────────
 COPY packages/desktop.list /tmp/packages-desktop.list
-RUN dnf install -y \
-    $(grep -v '^#' /tmp/packages-desktop.list | tr '\n' ' ') && \
+RUN dnf install -y $(grep -v '^#' /tmp/packages-desktop.list | grep -v '^$' | tr '\n' ' ') && \
+    dnf clean all && \
+    rm -f /tmp/packages-desktop.list
 
-# ── Niri come sessione di default (non rimuovibile) ───────────────────────────
-COPY files/system/ /
-
-# ── Configurazione Brave debloated ────────────────────────────────────────────
+# ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 
-# ── Plymouth theme ───────────────────────────────────────────────────────────
+# ── Plymouth theme (placeholder) ─────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
-RUN plymouth-set-default-theme atomik && \
-    dracut --force --regenerate-all || true && \
 
-# ── SDDM / login screen ──────────────────────────────────────────────────────
+# ── SDDM theme (placeholder) ─────────────────────────────────────────────────
 COPY files/sddm/ /usr/share/sddm/themes/atomik/
 RUN mkdir -p /etc/sddm.conf.d && \
-    echo -e "[Theme]\nCurrent=atomik" > /etc/sddm.conf.d/atomik.conf && \
-
-# ── Pulizia ──────────────────────────────────────────────────────────────────
-RUN rm -f /tmp/packages-*.list && \
+    printf '[Theme]\nCurrent=atomik\n' > /etc/sddm.conf.d/atomik.conf

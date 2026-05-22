@@ -1,10 +1,10 @@
 FROM ghcr.io/giurest/atomik-desktop:latest
 
-# ── Metadata ─────────────────────────────────────────────────────────────────
+# ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Desktop NVIDIA"
 LABEL org.opencontainers.image.description="Atomik OS Desktop con driver NVIDIA proprietari"
 
-# ── Driver NVIDIA tramite akmod ───────────────────────────────────────────────
+# ── Driver NVIDIA ─────────────────────────────────────────────────────────────
 RUN dnf install -y \
     akmod-nvidia \
     xorg-x11-drv-nvidia \
@@ -13,8 +13,9 @@ RUN dnf install -y \
     nvidia-vaapi-driver \
     libva-utils \
     vdpauinfo && \
+    dnf clean all
 
-# ── Configurazione NVIDIA per Wayland / Niri ─────────────────────────────────
+# ── NVIDIA modeset per Wayland ────────────────────────────────────────────────
 RUN mkdir -p /etc/modprobe.d && \
-    echo "options nvidia-drm modeset=1" > /etc/modprobe.d/nvidia.conf && \
-    echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1" >> /etc/modprobe.d/nvidia.conf && \
+    printf 'options nvidia-drm modeset=1\noptions nvidia NVreg_PreserveVideoMemoryAllocations=1\n' \
+    > /etc/modprobe.d/nvidia.conf

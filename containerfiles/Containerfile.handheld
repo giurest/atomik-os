@@ -1,42 +1,30 @@
 FROM ghcr.io/ublue-os/bazzite-deck:latest
 
-# ── Metadata ─────────────────────────────────────────────────────────────────
+# ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Handheld"
 LABEL org.opencontainers.image.description="Atomik OS handheld — ottimizzato per Steam Deck e dispositivi portatili"
 
-# ── Rimozione bloatware Bazzite non necessario ────────────────────────────────
-RUN dnf remove -y \
-    firefox \
-    firefox-langpacks \
-    || true && \
+# ── Rimozione bloatware ───────────────────────────────────────────────────────
+RUN rpm-ostree override remove firefox firefox-langpacks 2>/dev/null || true
 
-# ── Repository Brave ─────────────────────────────────────────────────────────
+# ── Repository e installazione Brave ─────────────────────────────────────────
 RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
     curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
     | tee /etc/yum.repos.d/brave-browser.repo && \
-    dnf install -y brave-browser && \
-    dnf clean all
+    rpm-ostree install brave-browser && \
+    ostree container commit
 
-# ── Pacchetti handheld ───────────────────────────────────────────────────────
+# ── Pacchetti handheld ────────────────────────────────────────────────────────
 COPY packages/handheld.list /tmp/packages-handheld.list
-RUN dnf install -y \
-    $(grep -v '^#' /tmp/packages-handheld.list | tr '\n' ' ') && \
+RUN rpm-ostree install $(grep -v '^#' /tmp/packages-handheld.list | grep -v '^$' | tr '\n' ' ') && \
+    ostree container commit
 
-# ── Ottimizzazioni TDP e batteria ─────────────────────────────────────────────
-RUN mkdir -p /etc/sysctl.d && \
-    cat > /etc/sysctl.d/99-atomik-handheld.conf << 'EOF'
-# Risparmio energetico aggressivo
-kernel.nmi_watchdog = 0
-vm.dirty_writeback_centisecs = 6000
-EOF
-
-# ── System files, Plymouth, SDDM ─────────────────────────────────────────────
-COPY files/system/ /
+# ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
+
+# ── Plymouth e SDDM ───────────────────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 COPY files/sddm/ /usr/share/sddm/themes/atomik/
-
-RUN plymouth-set-default-theme atomik && \
-    mkdir -p /etc/sddm.conf.d && \
-    echo -e "[Theme]\nCurrent=atomik" > /etc/sddm.conf.d/atomik.conf && \
-    rm -f /tmp/packages-*.list && \
+RUN mkdir -p /etc/sddm.conf.d && \
+    printf '[Theme]\nCurrent=atomik\n' > /etc/sddm.conf.d/atomik.conf && \
+    ostree container commit
