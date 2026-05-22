@@ -5,25 +5,23 @@ LABEL org.opencontainers.image.title="Atomik OS PureGaming"
 LABEL org.opencontainers.image.description="Atomik OS gaming puro — CachyOS kernel, zero bloat, Steam + Heroic + Lutris"
 
 # ── Rimozione bloatware ───────────────────────────────────────────────────────
-RUN rpm-ostree override remove \
+RUN dnf remove -y \
     gnome-tour \
     gnome-user-docs \
     yelp \
     2>/dev/null || true && \
-    ostree container commit
 
 # ── Repository Brave ─────────────────────────────────────────────────────────
 RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
     curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
     | tee /etc/yum.repos.d/brave-browser.repo && \
-    rpm-ostree install brave-browser && \
-    ostree container commit
+    dnf install -y brave-browser && \
+    dnf clean all
 
 # ── Pacchetti gaming ─────────────────────────────────────────────────────────
 COPY packages/puregaming.list /tmp/packages-puregaming.list
-RUN rpm-ostree install \
+RUN dnf install -y \
     $(grep -v '^#' /tmp/packages-puregaming.list | tr '\n' ' ') && \
-    ostree container commit
 
 # ── Ottimizzazioni gaming kernel ─────────────────────────────────────────────
 RUN mkdir -p /etc/sysctl.d && \
@@ -37,7 +35,6 @@ vm.compaction_proactiveness = 0
 # Ottimizzazioni rete gaming
 net.core.netdev_max_backlog = 16384
 EOF
-    ostree container commit
 
 # ── Configurazione scx_scheduler per gaming ──────────────────────────────────
 RUN mkdir -p /etc/systemd/system && \
@@ -54,7 +51,6 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
     systemctl enable scx.service || true && \
-    ostree container commit
 
 # ── System files, Plymouth, SDDM ─────────────────────────────────────────────
 COPY files/system/ /
@@ -65,7 +61,5 @@ COPY files/sddm/ /usr/share/sddm/themes/atomik/
 RUN plymouth-set-default-theme atomik && \
     mkdir -p /etc/sddm.conf.d && \
     echo -e "[Theme]\nCurrent=atomik" > /etc/sddm.conf.d/atomik.conf && \
-    ostree container commit
 
 RUN rm -f /tmp/packages-*.list && \
-    ostree container commit

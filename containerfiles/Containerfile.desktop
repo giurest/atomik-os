@@ -10,25 +10,23 @@ LABEL org.opencontainers.image.version="1.0"
 ARG IMAGE_FLAVOR=desktop
 
 # ── Rimozione pacchetti indesiderati ─────────────────────────────────────────
-RUN rpm-ostree override remove \
+RUN dnf remove -y \
     gnome-tour \
     gnome-user-docs \
     yelp \
     2>/dev/null || true && \
-    ostree container commit
 
 # ── Aggiunta repository Brave ─────────────────────────────────────────────────
 RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
     curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
     | tee /etc/yum.repos.d/brave-browser.repo && \
-    rpm-ostree install brave-browser && \
-    ostree container commit
+    dnf install -y brave-browser && \
+    dnf clean all
 
 # ── Pacchetti base (da packages/desktop.list) ─────────────────────────────────
 COPY packages/desktop.list /tmp/packages-desktop.list
-RUN rpm-ostree install \
+RUN dnf install -y \
     $(grep -v '^#' /tmp/packages-desktop.list | tr '\n' ' ') && \
-    ostree container commit
 
 # ── Niri come sessione di default (non rimuovibile) ───────────────────────────
 COPY files/system/ /
@@ -40,14 +38,11 @@ COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 RUN plymouth-set-default-theme atomik && \
     dracut --force --regenerate-all || true && \
-    ostree container commit
 
 # ── SDDM / login screen ──────────────────────────────────────────────────────
 COPY files/sddm/ /usr/share/sddm/themes/atomik/
 RUN mkdir -p /etc/sddm.conf.d && \
     echo -e "[Theme]\nCurrent=atomik" > /etc/sddm.conf.d/atomik.conf && \
-    ostree container commit
 
 # ── Pulizia ──────────────────────────────────────────────────────────────────
 RUN rm -f /tmp/packages-*.list && \
-    ostree container commit

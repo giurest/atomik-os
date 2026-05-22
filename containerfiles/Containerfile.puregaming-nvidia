@@ -5,7 +5,7 @@ LABEL org.opencontainers.image.title="Atomik OS PureGaming NVIDIA"
 LABEL org.opencontainers.image.description="Atomik OS gaming + driver NVIDIA proprietari"
 
 # ── Driver NVIDIA ─────────────────────────────────────────────────────────────
-RUN rpm-ostree install \
+RUN dnf install -y \
     akmod-nvidia \
     xorg-x11-drv-nvidia \
     xorg-x11-drv-nvidia-cuda \
@@ -13,10 +13,8 @@ RUN rpm-ostree install \
     nvidia-vaapi-driver \
     libva-utils \
     vdpauinfo && \
-    ostree container commit
 
 # ── NVIDIA modeset per Wayland + gaming ──────────────────────────────────────
 RUN mkdir -p /etc/modprobe.d && \
     echo "options nvidia-drm modeset=1" > /etc/modprobe.d/nvidia.conf && \
     echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1" >> /etc/modprobe.d/nvidia.conf && \
-    ostree container commit
