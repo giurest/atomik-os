@@ -21,7 +21,7 @@ papirus-icon-theme
 # ── Gaming ───────────────────────────────────────────────────────────────────
 # steam, wine, heroic, lutris, protonplus via Flatpak
 gamemode
-gamescope
+#gamescope
 mangohud
 vkBasalt
 goverlay
@@ -44,8 +44,8 @@ pipewire-pulseaudio
 pipewire-alsa
 
 # ── Sistema ──────────────────────────────────────────────────────────────────
-distrobox
-podman
+#distrobox
+#podman
 flatpak
 NetworkManager
 NetworkManager-wifi

@@ -40,6 +40,6 @@ NetworkManager
 bluez
 
 # ── Login manager ────────────────────────────────────────────────────────────
-sddm
+gdm
 gamescope
 mangohud
