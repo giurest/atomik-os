@@ -22,7 +22,6 @@ jobs:
   build-iso:
     name: ISO ${{ matrix.variant }}
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: write
       packages: read
@@ -59,7 +58,6 @@ jobs:
             ${{ steps.build-iso.outputs.iso_path }}.sha256
           retention-days: 14
 
-      # Upload su Cloudflare R2 (opzionale — configura i secrets)
       - name: Upload ISO to Cloudflare R2
         if: ${{ secrets.R2_ACCESS_KEY_ID != '' }}
         uses: rclone/rclone-action@v1
