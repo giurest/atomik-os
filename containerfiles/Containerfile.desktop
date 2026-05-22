@@ -12,9 +12,9 @@ RUN dnf install -y flatpak && dnf clean all
 # ── Pacchetti desktop ─────────────────────────────────────────────────────────
 COPY packages/desktop.list /tmp/packages-desktop.list
 RUN dnf install -y --skip-unavailable \
-    $(grep -v '^#' /tmp/packages-puregaming.list | grep -v '^$' | tr '\n' ' ') && \
+    $(grep -v '^#' /tmp/packages-desktop.list | grep -v '^$' | tr '\n' ' ') && \
     dnf clean all && \
-    rm -f /tmp/packages-puregaming.list
+    rm -f /tmp/packages-desktop.list
 
 # ── Plymouth theme (placeholder) ─────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
