@@ -10,13 +10,12 @@ RUN dnf install -y \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm && \
     dnf clean all
 
-# ── Driver NVIDIA ─────────────────────────────────────────────────────────────
+# ── Driver NVIDIA (precompilati, non akmod) ───────────────────────────────────
 RUN dnf install -y --skip-unavailable \
-    akmod-nvidia \
     xorg-x11-drv-nvidia \
     xorg-x11-drv-nvidia-cuda \
     xorg-x11-drv-nvidia-cuda-libs \
-    nvidia-vaapi-driver \
+    xorg-x11-drv-nvidia-power \
     vdpauinfo && \
     dnf clean all
 
