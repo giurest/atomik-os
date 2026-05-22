@@ -1,0 +1,72 @@
+# ── Atomik OS — pacchetti variante PureGaming ────────────────────────────────
+# Derivata dalla base desktop + pacchetti gaming specifici
+
+# ── Shell e terminale ─────────────────────────────────────────────────────────
+ghostty
+fish
+starship
+
+# ── Compositor Niri ──────────────────────────────────────────────────────────
+niri
+waybar
+fuzzel
+mako
+swaylock
+wl-clipboard
+grim
+slurp
+
+# ── Tema ─────────────────────────────────────────────────────────────────────
+noctalia
+papirus-icon-theme
+bibata-cursor-themes
+inter-fonts
+
+# ── Browser ──────────────────────────────────────────────────────────────────
+brave-browser
+
+# ── Gaming ───────────────────────────────────────────────────────────────────
+steam
+# Heroic e Lutris via Flatpak (più aggiornati)
+wine
+winetricks
+gamemode
+gamescope
+mangohud
+vkBasalt
+protonplus
+goverlay
+
+# ── Compatibilità gaming ─────────────────────────────────────────────────────
+vulkan-loader
+vulkan-tools
+mesa-vulkan-drivers
+mesa-dri-drivers
+libva
+libva-utils
+
+# ── SCX Scheduler ────────────────────────────────────────────────────────────
+scx-scheds
+
+# ── Multimedia ───────────────────────────────────────────────────────────────
+pipewire
+wireplumber
+pipewire-pulse
+pipewire-alsa
+
+# ── Sistema ──────────────────────────────────────────────────────────────────
+distrobox
+podman
+flatpak
+NetworkManager
+NetworkManager-wifi
+bluez
+
+# ── CLI tools ────────────────────────────────────────────────────────────────
+fastfetch
+htop
+eza
+bat
+
+# ── Login manager ────────────────────────────────────────────────────────────
+sddm
