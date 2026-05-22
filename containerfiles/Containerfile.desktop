@@ -4,9 +4,49 @@ FROM registry.gitlab.com/origami-linux/images/origami:latest
 LABEL org.opencontainers.image.title="Atomik OS Desktop"
 LABEL org.opencontainers.image.description="Atomik OS — variante Desktop minimalista con Niri + Noctalia"
 
-# ── Rimozione bloatware ───────────────────────────────────────────────────────
-RUN dnf remove -y gnome-tour gnome-user-docs yelp 2>/dev/null || true
+# ── Rimozione COSMIC e bloatware ──────────────────────────────────────────────
+RUN dnf remove -y \
+    cosmic-applets \
+    cosmic-app-library \
+    cosmic-bg \
+    cosmic-comp \
+    cosmic-config-fedora \
+    cosmic-edit \
+    cosmic-ext-applet-clipboard-manager \
+    cosmic-ext-applet-logomenu \
+    cosmic-ext-applet-sysinfo \
+    cosmic-ext-calculator \
+    cosmic-ext-camera \
+    cosmic-ext-noctua \
+    cosmic-ext-storage \
+    cosmic-ext-tasks \
+    cosmic-ext-xcalendar \
+    cosmic-files \
+    cosmic-greeter \
+    cosmic-icon-theme \
+    cosmic-idle \
+    cosmic-initial-setup \
+    cosmic-launcher \
+    cosmic-notifications \
+    cosmic-osd \
+    cosmic-panel \
+    cosmic-player \
+    cosmic-randr \
+    cosmic-screenshot \
+    cosmic-session \
+    cosmic-settings \
+    cosmic-settings-daemon \
+    cosmic-store \
+    cosmic-term \
+    cosmic-wallpapers \
+    cosmic-workspaces \
+    cutecosmic-qt6 \
+    xdg-desktop-portal-cosmic \
+    gnome-tour gnome-user-docs yelp \
+    2>/dev/null || true && \
+    dnf clean all
 
+# ── Assicura Flatpak disponibile ──────────────────────────────────────────────
 RUN dnf install -y flatpak && dnf clean all
 
 # ── Pacchetti desktop ─────────────────────────────────────────────────────────
@@ -16,10 +56,16 @@ RUN dnf install -y --skip-unavailable \
     dnf clean all && \
     rm -f /tmp/packages-desktop.list
 
+# ── Niri come sessione di default (non rimuovibile) ───────────────────────────
+RUN mkdir -p /etc/sddm.conf.d && \
+    printf '[Autologin]\nRelogin=false\n\n[General]\nDisplayServer=wayland\n\n[Theme]\nCurrent=\n\n[Wayland]\nCompositor=/usr/bin/niri\nSessionDir=/usr/share/wayland-sessions\nSessionCommand=/usr/share/sddm/scripts/wayland-session niri.desktop\n' \
+    > /etc/sddm.conf.d/niri.conf
+
+# ── Policy Brave ──────────────────────────────────────────────────────────────
+COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
+
 # ── Plymouth theme (placeholder) ─────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 
-# ── SDDM theme (placeholder) ─────────────────────────────────────────────────
+# ── SDDM theme placeholder ───────────────────────────────────────────────────
 COPY files/sddm/ /usr/share/sddm/themes/atomik/
-RUN mkdir -p /etc/sddm.conf.d && \
-    printf '[Theme]\nCurrent=atomik\n' > /etc/sddm.conf.d/atomik.conf

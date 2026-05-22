@@ -4,11 +4,50 @@ FROM registry.gitlab.com/origami-linux/images/origami:latest
 LABEL org.opencontainers.image.title="Atomik OS PureGaming"
 LABEL org.opencontainers.image.description="Atomik OS gaming puro — CachyOS kernel, zero bloat, Steam + Heroic + Lutris"
 
-# ── Rimozione bloatware ───────────────────────────────────────────────────────
-RUN dnf remove -y gnome-tour gnome-user-docs yelp 2>/dev/null || true
+# ── Rimozione COSMIC e bloatware ──────────────────────────────────────────────
+RUN dnf remove -y \
+    cosmic-applets \
+    cosmic-app-library \
+    cosmic-bg \
+    cosmic-comp \
+    cosmic-config-fedora \
+    cosmic-edit \
+    cosmic-ext-applet-clipboard-manager \
+    cosmic-ext-applet-logomenu \
+    cosmic-ext-applet-sysinfo \
+    cosmic-ext-calculator \
+    cosmic-ext-camera \
+    cosmic-ext-noctua \
+    cosmic-ext-storage \
+    cosmic-ext-tasks \
+    cosmic-ext-xcalendar \
+    cosmic-files \
+    cosmic-greeter \
+    cosmic-icon-theme \
+    cosmic-idle \
+    cosmic-initial-setup \
+    cosmic-launcher \
+    cosmic-notifications \
+    cosmic-osd \
+    cosmic-panel \
+    cosmic-player \
+    cosmic-randr \
+    cosmic-screenshot \
+    cosmic-session \
+    cosmic-settings \
+    cosmic-settings-daemon \
+    cosmic-store \
+    cosmic-term \
+    cosmic-wallpapers \
+    cosmic-workspaces \
+    cutecosmic-qt6 \
+    xdg-desktop-portal-cosmic \
+    gnome-tour gnome-user-docs yelp \
+    2>/dev/null || true && \
+    dnf clean all
 
+# ── Assicura Flatpak disponibile ──────────────────────────────────────────────
 RUN dnf install -y flatpak && dnf clean all
-
 
 # ── Pacchetti gaming ──────────────────────────────────────────────────────────
 COPY packages/puregaming.list /tmp/packages-puregaming.list
@@ -19,18 +58,19 @@ RUN dnf install -y --skip-unavailable \
 
 # ── Ottimizzazioni gaming kernel ──────────────────────────────────────────────
 RUN mkdir -p /etc/sysctl.d && \
-    printf '# Riduce latenza scheduler per gaming\nkernel.sched_latency_ns = 4000000\nkernel.sched_min_granularity_ns = 500000\n# Ottimizzazioni memoria\nvm.swappiness = 10\nvm.compaction_proactiveness = 0\n# Ottimizzazioni rete gaming\nnet.core.netdev_max_backlog = 16384\n' \
+    printf 'kernel.sched_latency_ns = 4000000\nkernel.sched_min_granularity_ns = 500000\nvm.swappiness = 10\nvm.compaction_proactiveness = 0\nnet.core.netdev_max_backlog = 16384\n' \
     > /etc/sysctl.d/99-atomik-gaming.conf
 
-# ── Configurazione scx_scheduler per gaming ───────────────────────────────────
-RUN mkdir -p /etc/systemd/system && \
-    printf '[Unit]\nDescription=SCX Scheduler gaming mode\nAfter=multi-user.target\n\n[Service]\nExecStart=/usr/bin/scx_lavd\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n' \
-    > /etc/systemd/system/scx.service
+# ── Niri come sessione di default ─────────────────────────────────────────────
+RUN mkdir -p /etc/sddm.conf.d && \
+    printf '[Autologin]\nRelogin=false\n\n[General]\nDisplayServer=wayland\n\n[Theme]\nCurrent=\n\n[Wayland]\nCompositor=/usr/bin/niri\nSessionDir=/usr/share/wayland-sessions\nSessionCommand=/usr/share/sddm/scripts/wayland-session niri.desktop\n' \
+    > /etc/sddm.conf.d/niri.conf
+
+# ── Policy Brave ──────────────────────────────────────────────────────────────
+COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 
 # ── Plymouth theme (placeholder) ─────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 
-# ── SDDM theme (placeholder) ─────────────────────────────────────────────────
+# ── SDDM theme placeholder ───────────────────────────────────────────────────
 COPY files/sddm/ /usr/share/sddm/themes/atomik/
-RUN mkdir -p /etc/sddm.conf.d && \
-    printf '[Theme]\nCurrent=atomik\n' > /etc/sddm.conf.d/atomik.conf
