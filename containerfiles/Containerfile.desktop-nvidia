@@ -4,6 +4,12 @@ FROM ghcr.io/giurest/atomik-desktop:latest
 LABEL org.opencontainers.image.title="Atomik OS Desktop NVIDIA"
 LABEL org.opencontainers.image.description="Atomik OS Desktop con driver NVIDIA proprietari"
 
+# ── Aggiunge RPM Fusion per driver NVIDIA ────────────────────────────────────
+RUN dnf install -y \
+    https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
+    https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm && \
+    dnf clean all
+
 # ── Driver NVIDIA ─────────────────────────────────────────────────────────────
 RUN dnf install -y \
     akmod-nvidia \

@@ -4,6 +4,12 @@ FROM ghcr.io/giurest/atomik-puregaming:latest
 LABEL org.opencontainers.image.title="Atomik OS PureGaming NVIDIA"
 LABEL org.opencontainers.image.description="Atomik OS gaming + driver NVIDIA proprietari"
 
+# ── Aggiunge RPM Fusion per driver NVIDIA ────────────────────────────────────
+RUN dnf install -y \
+    https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
+    https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm && \
+    dnf clean all
+
 # ── Driver NVIDIA ─────────────────────────────────────────────────────────────
 RUN dnf install -y \
     akmod-nvidia \
@@ -15,7 +21,7 @@ RUN dnf install -y \
     vdpauinfo && \
     dnf clean all
 
-# ── NVIDIA modeset per Wayland + gaming ───────────────────────────────────────
+# ── NVIDIA modeset per Wayland ────────────────────────────────────────────────
 RUN mkdir -p /etc/modprobe.d && \
     printf 'options nvidia-drm modeset=1\noptions nvidia NVreg_PreserveVideoMemoryAllocations=1\n' \
     > /etc/modprobe.d/nvidia.conf
