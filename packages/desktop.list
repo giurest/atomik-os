@@ -1,44 +1,32 @@
 # ── Atomik OS — pacchetti variante Desktop ───────────────────────────────────
-# Formato: un pacchetto per riga, commenti con #
-# Aggiungere o rimuovere da qui — il Containerfile legge questo file
 
 # ── Shell e terminale ─────────────────────────────────────────────────────────
-ghostty
 fish
 starship
 
-# ── Compositor e ambiente Niri ────────────────────────────────────────────────
+# ── Compositor Niri ──────────────────────────────────────────────────────────
 niri
-waybar
-fuzzel
-mako
-swaylock
-swayidle
 wl-clipboard
 grim
 slurp
 wf-recorder
+swayidle
+
+# ── DankMaterialShell (shell, greeter, launcher integrati) ───────────────────
+dms
+dms-greeter
+greetd
 
 # ── Tema e aspetto ────────────────────────────────────────────────────────────
-noctalia
 papirus-icon-theme
-bibata-cursor-themes
-inter-fonts
-
-# ── Browser ──────────────────────────────────────────────────────────────────
-brave-browser
 
 # ── Sviluppo ─────────────────────────────────────────────────────────────────
 git
-gitg
-# VSCodium via Flatpak (vedere scripts/setup-flatpaks.sh)
-# GitFiend via Flatpak
-# OnlyOffice via Flatpak
 
 # ── Multimedia ───────────────────────────────────────────────────────────────
 pipewire
 wireplumber
-pipewire-pulse
+pipewire-pulseaudio
 pipewire-alsa
 pavucontrol
 
@@ -58,6 +46,3 @@ ripgrep
 fd-find
 htop
 fastfetch
-
-# ── Login manager ────────────────────────────────────────────────────────────
-gdm

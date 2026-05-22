@@ -2,7 +2,7 @@ FROM registry.gitlab.com/origami-linux/images/origami:latest
 
 # ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Desktop"
-LABEL org.opencontainers.image.description="Atomik OS — variante Desktop minimalista con Niri + Noctalia"
+LABEL org.opencontainers.image.description="Atomik OS — variante Desktop minimalista con Niri + DMS"
 
 # ── Rimozione COSMIC e bloatware ──────────────────────────────────────────────
 RUN dnf remove -y \
@@ -46,6 +46,11 @@ RUN dnf remove -y \
     2>/dev/null || true && \
     dnf clean all
 
+# ── Repository DMS + DankLinux (DankGreeter) ─────────────────────────────────
+RUN dnf copr enable -y avengemedia/dms && \
+    dnf copr enable -y avengemedia/danklinux && \
+    dnf clean all
+
 # ── Assicura Flatpak disponibile ──────────────────────────────────────────────
 RUN dnf install -y flatpak && dnf clean all
 
@@ -56,7 +61,22 @@ RUN dnf install -y --skip-unavailable \
     dnf clean all && \
     rm -f /tmp/packages-desktop.list
 
-# ── Niri come sessione di default (non rimuovibile) ───────────────────────────
+# ── greetd configurato per DankGreeter + Niri ─────────────────────────────────
+RUN mkdir -p /etc/greetd && \
+    printf '[terminal]\nvt = 1\n\n[default_session]\nuser = "greeter"\ncommand = "dms-greeter --command niri"\n' \
+    > /etc/greetd/config.toml
+
+# ── Abilita greetd, disabilita display manager alternativi ───────────────────
+RUN mkdir -p /etc/systemd/system && \
+    ln -sf /usr/lib/systemd/system/greetd.service \
+           /etc/systemd/system/display-manager.service && \
+    rm -f /etc/systemd/system/sddm.service \
+          /etc/systemd/system/gdm.service
+
+# ── DMS avvia automaticamente con Niri ───────────────────────────────────────
+RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
+    ln -sf /usr/lib/systemd/user/dms.service \
+           /usr/lib/systemd/user/niri.service.wants/dms.service
 
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
@@ -70,7 +90,6 @@ RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
     printf 'L  /etc/hostname  -  -  -  -  /usr/lib/hostname\n' \
     > /usr/lib/tmpfiles.d/atomik-hostname.conf
 
-
 # ── Fastfetch config di sistema ───────────────────────────────────────────────
 RUN mkdir -p /etc/fastfetch
 COPY files/fastfetch/desktop.jsonc /etc/fastfetch/config.jsonc
@@ -78,7 +97,3 @@ COPY files/fastfetch/atomik-logo.txt /etc/fastfetch/atomik-logo.txt
 RUN mkdir -p /etc/skel/.config/fastfetch && \
     ln -sf /etc/fastfetch/config.jsonc /etc/skel/.config/fastfetch/config.jsonc && \
     ln -sf /etc/fastfetch/atomik-logo.txt /etc/skel/.config/fastfetch/atomik-logo.txt
-# ── Abilita GDM come display manager ─────────────────────────────────────────
-RUN mkdir -p /etc/systemd/system && \
-    ln -sf /usr/lib/systemd/system/gdm.service \
-           /etc/systemd/system/display-manager.service

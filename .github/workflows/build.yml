@@ -34,8 +34,8 @@ jobs:
       matrix:
         variant:
           - desktop
-          - puregaming
-          - handheld
+#          - puregaming
+#          - handheld
 
     steps:
       - name: Checkout repository
@@ -88,68 +88,68 @@ jobs:
           COSIGN_EXPERIMENTAL: true
 
   # ── Fase 2: varianti nvidia (aspettano che le base siano pronte) ───────────
-  build-nvidia:
-    name: Build ${{ matrix.variant }}
-    runs-on: ubuntu-latest
-    needs: build-base
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        variant:
-          - desktop-nvidia
-          - puregaming-nvidia
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set image metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_REGISTRY }}/atomik-${{ matrix.variant }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=sha-
-            type=schedule,pattern={{date 'YYYYMMDD'}}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build image
-        id: build
-        uses: redhat-actions/buildah-build@v2
-        with:
-          image: atomik-${{ matrix.variant }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          containerfiles: ./containerfiles/Containerfile.${{ matrix.variant }}
-          oci: true
-
-      - name: Push image
-        uses: redhat-actions/push-to-registry@v2
-        id: push
-        with:
-          tags: ${{ steps.build.outputs.tags }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3
-        if: github.event_name != 'pull_request'
-
-      - name: Sign the image
-        if: github.event_name != 'pull_request'
-        run: |
-          cosign sign --yes ${{ env.IMAGE_REGISTRY }}/atomik-${{ matrix.variant }}@${{ steps.push.outputs.digest }}
-        env:
-          COSIGN_EXPERIMENTAL: true
+#  build-nvidia:
+#    name: Build ${{ matrix.variant }}
+#    runs-on: ubuntu-latest
+#    needs: build-base
+#    permissions:
+#      contents: read
+#      packages: write
+#      id-token: write
+#
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        variant:
+#          - desktop-nvidia
+#          - puregaming-nvidia
+#
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#
+#      - name: Set image metadata
+#        id: meta
+#        uses: docker/metadata-action@v5
+#        with:
+#          images: ${{ env.IMAGE_REGISTRY }}/atomik-${{ matrix.variant }}
+#          tags: |
+#            type=raw,value=latest,enable={{is_default_branch}}
+#            type=sha,prefix=sha-
+#            type=schedule,pattern={{date 'YYYYMMDD'}}
+#
+#      - name: Login to GitHub Container Registry
+#        uses: docker/login-action@v3
+#        with:
+#          registry: ghcr.io
+#          username: ${{ github.actor }}
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Build image
+#        id: build
+#        uses: redhat-actions/buildah-build@v2
+#        with:
+#          image: atomik-${{ matrix.variant }}
+#          tags: ${{ steps.meta.outputs.tags }}
+#          labels: ${{ steps.meta.outputs.labels }}
+#          containerfiles: ./containerfiles/Containerfile.${{ matrix.variant }}
+#          oci: true
+#
+#      - name: Push image
+#        uses: redhat-actions/push-to-registry@v2
+#        id: push
+#        with:
+#          tags: ${{ steps.build.outputs.tags }}
+#          username: ${{ github.actor }}
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Install cosign
+#        uses: sigstore/cosign-installer@v3
+#        if: github.event_name != 'pull_request'
+#
+#      - name: Sign the image
+#        if: github.event_name != 'pull_request'
+#        run: |
+#          cosign sign --yes ${{ env.IMAGE_REGISTRY }}/atomik-${{ matrix.variant }}@${{ steps.push.outputs.digest }}
+#        env:
+#          COSIGN_EXPERIMENTAL: true
