@@ -7,17 +7,15 @@ LABEL org.opencontainers.image.description="Atomik OS handheld — ottimizzato p
 # ── Rimozione bloatware ───────────────────────────────────────────────────────
 RUN rpm-ostree override remove firefox firefox-langpacks 2>/dev/null || true
 
-# ── Repository e installazione Brave ─────────────────────────────────────────
-RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
-    curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
-    | tee /etc/yum.repos.d/brave-browser.repo && \
-    rpm-ostree install brave-browser && \
-    ostree container commit
+# ── Assicura Flatpak disponibile ──────────────────────────────────────────────
+RUN dnf install -y flatpak 2>/dev/null || true
 
 # ── Pacchetti handheld ────────────────────────────────────────────────────────
 COPY packages/handheld.list /tmp/packages-handheld.list
-RUN rpm-ostree install $(grep -v '^#' /tmp/packages-handheld.list | grep -v '^$' | tr '\n' ' ') && \
-    ostree container commit
+RUN dnf install -y --skip-unavailable \
+    $(grep -v '^#' /tmp/packages-handheld.list | grep -v '^$' | tr '\n' ' ') && \
+    dnf clean all && \
+    rm -f /tmp/packages-handheld.list
 
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
