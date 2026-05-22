@@ -74,3 +74,14 @@ COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 
 # ── SDDM theme placeholder ───────────────────────────────────────────────────
 COPY files/sddm/ /usr/share/sddm/themes/atomik/
+
+# ── Hostname ──────────────────────────────────────────────────────────────────
+RUN echo "atomik-puregaming" > /etc/hostname
+
+# ── Fastfetch config di sistema ───────────────────────────────────────────────
+RUN mkdir -p /etc/fastfetch
+COPY files/fastfetch/puregaming.jsonc /etc/fastfetch/config.jsonc
+COPY files/fastfetch/atomik-logo.txt /etc/fastfetch/atomik-logo.txt
+RUN mkdir -p /etc/skel/.config/fastfetch && \
+    ln -sf /etc/fastfetch/config.jsonc /etc/skel/.config/fastfetch/config.jsonc && \
+    ln -sf /etc/fastfetch/atomik-logo.txt /etc/skel/.config/fastfetch/atomik-logo.txt

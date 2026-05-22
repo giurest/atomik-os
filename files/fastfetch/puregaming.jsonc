@@ -1,0 +1,44 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "source": "~/.config/fastfetch/atomik-logo.txt",
+    "type": "file",
+    "color": {
+      "1": "red",
+      "2": "yellow"
+    },
+    "padding": {
+      "top": 1,
+      "left": 2
+    }
+  },
+  "display": {
+    "separator": " → ",
+    "color": "red"
+  },
+  "modules": [
+    {
+      "type": "title",
+      "format": "{user-name}@{host-name}"
+    },
+    "separator",
+    {
+      "type": "os",
+      "format": "Atomik OS - PureGaming"
+    },
+    {
+      "type": "kernel",
+      "format": "{sysname} {release}"
+    },
+    "uptime",
+    "packages",
+    "shell",
+    "display",
+    "de",
+    "cpu",
+    "gpu",
+    "memory",
+    "disk",
+    "colors"
+  ]
+}

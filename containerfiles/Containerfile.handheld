@@ -5,7 +5,8 @@ LABEL org.opencontainers.image.title="Atomik OS Handheld"
 LABEL org.opencontainers.image.description="Atomik OS handheld — ottimizzato per Steam Deck e dispositivi portatili"
 
 # ── Rimozione bloatware ───────────────────────────────────────────────────────
-RUN rpm-ostree override remove firefox firefox-langpacks 2>/dev/null || true
+RUN rpm-ostree override remove firefox firefox-langpacks 2>/dev/null || true && \
+    ostree container commit
 
 # ── Assicura Flatpak disponibile ──────────────────────────────────────────────
 RUN dnf install -y flatpak 2>/dev/null || true
@@ -24,5 +25,17 @@ COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 COPY files/sddm/ /usr/share/sddm/themes/atomik/
 RUN mkdir -p /etc/sddm.conf.d && \
-    printf '[Theme]\nCurrent=atomik\n' > /etc/sddm.conf.d/atomik.conf && \
+    printf '[General]\nDisplayServer=wayland\n\n[Wayland]\nSessionDir=/usr/share/wayland-sessions\nSessionCommand=/usr/share/sddm/scripts/wayland-session niri.desktop\n' \
+    > /etc/sddm.conf.d/niri.conf
+
+# ── Hostname ──────────────────────────────────────────────────────────────────
+RUN echo "atomik-handheld" > /etc/hostname
+
+# ── Fastfetch config di sistema ───────────────────────────────────────────────
+RUN mkdir -p /etc/fastfetch
+COPY files/fastfetch/handheld.jsonc /etc/fastfetch/config.jsonc
+COPY files/fastfetch/atomik-logo.txt /etc/fastfetch/atomik-logo.txt
+RUN mkdir -p /etc/skel/.config/fastfetch && \
+    ln -sf /etc/fastfetch/config.jsonc /etc/skel/.config/fastfetch/config.jsonc && \
+    ln -sf /etc/fastfetch/atomik-logo.txt /etc/skel/.config/fastfetch/atomik-logo.txt && \
     ostree container commit
