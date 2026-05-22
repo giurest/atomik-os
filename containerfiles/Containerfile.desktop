@@ -7,21 +7,13 @@ LABEL org.opencontainers.image.description="Atomik OS — variante Desktop minim
 # ── Rimozione bloatware ───────────────────────────────────────────────────────
 RUN dnf remove -y gnome-tour gnome-user-docs yelp 2>/dev/null || true
 
-# ── Repository e installazione Brave ─────────────────────────────────────────
-RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
-    curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
-    | tee /etc/yum.repos.d/brave-browser.repo && \
-    dnf install -y brave-browser && \
-    dnf clean all
+RUN dnf install -y flatpak && dnf clean all
 
 # ── Pacchetti desktop ─────────────────────────────────────────────────────────
 COPY packages/desktop.list /tmp/packages-desktop.list
 RUN dnf install -y $(grep -v '^#' /tmp/packages-desktop.list | grep -v '^$' | tr '\n' ' ') && \
     dnf clean all && \
     rm -f /tmp/packages-desktop.list
-
-# ── Policy Brave ──────────────────────────────────────────────────────────────
-COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 
 # ── Plymouth theme (placeholder) ─────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
