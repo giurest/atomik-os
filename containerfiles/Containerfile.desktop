@@ -57,9 +57,7 @@ RUN dnf install -y --skip-unavailable \
     rm -f /tmp/packages-desktop.list
 
 # ── Niri come sessione di default (non rimuovibile) ───────────────────────────
-RUN mkdir -p /etc/sddm.conf.d && \
-    printf '[Autologin]\nRelogin=false\n\n[General]\nDisplayServer=wayland\n\n[Theme]\nCurrent=\n\n[Wayland]\nCompositor=/usr/bin/niri\nSessionDir=/usr/share/wayland-sessions\nSessionCommand=/usr/share/sddm/scripts/wayland-session niri.desktop\n' \
-    > /etc/sddm.conf.d/niri.conf
+RUN systemctl enable gdm 2>/dev/null || true
 
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
@@ -67,11 +65,12 @@ COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 # ── Plymouth theme (placeholder) ─────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 
-# ── SDDM theme placeholder ───────────────────────────────────────────────────
-COPY files/sddm/ /usr/share/sddm/themes/atomik/
+# ── Hostname persistente via tmpfiles ─────────────────────────────────────────
+RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
+    mkdir -p /usr/lib/tmpfiles.d && \
+    printf 'L  /etc/hostname  -  -  -  -  /usr/lib/hostname\n' \
+    > /usr/lib/tmpfiles.d/atomik-hostname.conf
 
-# ── Hostname ──────────────────────────────────────────────────────────────────
-RUN echo "atomik-desktop" > /etc/hostname
 
 # ── Fastfetch config di sistema ───────────────────────────────────────────────
 RUN mkdir -p /etc/fastfetch

@@ -72,11 +72,13 @@ COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 # ── Plymouth theme (placeholder) ─────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 
-# ── SDDM theme placeholder ───────────────────────────────────────────────────
-COPY files/sddm/ /usr/share/sddm/themes/atomik/
 
-# ── Hostname ──────────────────────────────────────────────────────────────────
-RUN echo "atomik-puregaming" > /etc/hostname
+
+# ── Hostname persistente via tmpfiles ─────────────────────────────────────────
+RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
+    mkdir -p /usr/lib/tmpfiles.d && \
+    printf 'L  /etc/hostname  -  -  -  -  /usr/lib/hostname\n' \
+    > /usr/lib/tmpfiles.d/atomik-hostname.conf
 
 # ── Fastfetch config di sistema ───────────────────────────────────────────────
 RUN mkdir -p /etc/fastfetch
