@@ -14,16 +14,14 @@ RUN rpm-ostree override remove \
     gnome-tour \
     gnome-user-docs \
     yelp \
-    firefox \
-    firefox-langpacks \
-    || true && \
+    2>/dev/null || true && \
     ostree container commit
 
 # ── Aggiunta repository Brave ─────────────────────────────────────────────────
-RUN rpm-ostree install \
-    https://brave-browser-rpm-release.s3.brave.com/brave-keyring.rpm && \
+RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
     curl -fsSL https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
     | tee /etc/yum.repos.d/brave-browser.repo && \
+    rpm-ostree install brave-browser && \
     ostree container commit
 
 # ── Pacchetti base (da packages/desktop.list) ─────────────────────────────────
