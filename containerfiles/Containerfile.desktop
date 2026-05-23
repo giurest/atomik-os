@@ -43,6 +43,7 @@ RUN dnf remove -y \
     cutecosmic-qt6 \
     xdg-desktop-portal-cosmic \
     gnome-tour gnome-user-docs yelp \
+    waybar \
     2>/dev/null || true && \
     dnf clean all
 
@@ -85,11 +86,7 @@ COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 # ── Plymouth theme ────────────────────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 
-# ── Hostname persistente via tmpfiles ─────────────────────────────────────────
-RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
-    mkdir -p /usr/lib/tmpfiles.d && \
-    printf 'L  /etc/hostname  -  -  -  -  /usr/lib/hostname\n' \
-    > /usr/lib/tmpfiles.d/atomik-hostname.conf
+# ── Hostname persistente ──────────────────────────────────────────────────────
 RUN echo 'atomik-desktop' > /etc/hostname
 
 
@@ -105,3 +102,7 @@ RUN mkdir -p /etc/skel/.config/fastfetch && \
 RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /etc/os-release && \
     sed -i 's/^ID=.*/ID=atomik/' /etc/os-release
+
+# ── GRUB distributor (corregge voce menu grub da "Origami Linux") ─────────────
+RUN sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Atomik OS"/' /etc/default/grub || \
+    echo 'GRUB_DISTRIBUTOR="Atomik OS"' >> /etc/default/grub
