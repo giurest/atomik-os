@@ -81,6 +81,16 @@ RUN mkdir -p /etc/systemd/system && \
 RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
     ln -sf /usr/lib/systemd/user/dms.service \
            /usr/lib/systemd/user/niri.service.wants/dms.service
+# ── Utente greeter e directory cache ─────────────────────────────────────────
+RUN useradd -r -M -s /sbin/nologin -d /var/lib/greeter greeter && \
+    mkdir -p /var/cache/dms-greeter && \
+    chown greeter:greeter /var/cache/dms-greeter && \
+    mkdir -p /var/lib/greeter/.cache/starship && \
+    chown -R greeter:greeter /var/lib/greeter
+
+# ── Abilita greetd ────────────────────────────────────────────────────────────
+RUN ln -sf /usr/lib/systemd/system/greetd.service \
+           /etc/systemd/system/display-manager.service
 
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
