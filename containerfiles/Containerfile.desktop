@@ -43,7 +43,6 @@ RUN dnf remove -y \
     cutecosmic-qt6 \
     xdg-desktop-portal-cosmic \
     gnome-tour gnome-user-docs yelp \
-    waybar \
     2>/dev/null || true && \
     dnf clean all
 
@@ -76,11 +75,10 @@ RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
     ln -sf /usr/lib/systemd/user/dms.service \
            /usr/lib/systemd/user/niri.service.wants/dms.service
 
-# ── Maschera waybar (gestito da DMS, non serve separato) ─────────────────────
+# ── Maschera waybar globalmente (DMS lo sostituisce) ─────────────────────────
 RUN mkdir -p /etc/systemd/user && \
-    ln -sf /dev/null /etc/systemd/user/waybar.service
-RUN ln -sf /dev/null /usr/lib/systemd/user/waybar.service
-
+    ln -sf /dev/null /etc/systemd/user/waybar.service && \
+    ln -sf /dev/null /usr/lib/systemd/user/waybar.service
 
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
@@ -88,26 +86,34 @@ COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 # ── Plymouth theme ────────────────────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 
-# ── Hostname persistente ──────────────────────────────────────────────────────
-RUN echo 'atomik-desktop' > /usr/lib/hostname && \
+# ── Hostname persistente via tmpfiles ─────────────────────────────────────────
+RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
     mkdir -p /usr/lib/tmpfiles.d && \
     printf 'L+ /etc/hostname - - - - /usr/lib/hostname\n' \
     > /usr/lib/tmpfiles.d/atomik-hostname.conf
 
+# ── OS Identity (fastfetch, GRUB, sistema) ────────────────────────────────────
+RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /etc/os-release && \
+    sed -i 's/^ID=.*/ID=atomik/' /etc/os-release && \
+    sed -i 's/^NAME=.*/NAME="Atomik OS"/' /usr/lib/os-release && \
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /usr/lib/os-release && \
+    sed -i 's/^ID=.*/ID=atomik/' /usr/lib/os-release
 
 # ── Fastfetch config di sistema ───────────────────────────────────────────────
 RUN mkdir -p /etc/fastfetch
 COPY files/fastfetch/desktop.jsonc /etc/fastfetch/config.jsonc
 COPY files/fastfetch/atomik-logo.txt /etc/fastfetch/atomik-logo.txt
+
+# ── Setup fastfetch per utenti al primo login (anche esistenti) ───────────────
+RUN printf '[Unit]\nDescription=Setup fastfetch config per utente\nConditionPathExists=!/var/home/%%u/.config/fastfetch/config.jsonc\nAfter=local-fs.target\n\n[Service]\nType=oneshot\nExecStart=/bin/sh -c "mkdir -p %%h/.config/fastfetch && ln -sf /etc/fastfetch/config.jsonc %%h/.config/fastfetch/config.jsonc && ln -sf /etc/fastfetch/atomik-logo.txt %%h/.config/fastfetch/atomik-logo.txt"\nRemainAfterExit=yes\n\n[Install]\nWantedBy=default.target\n' \
+    > /usr/lib/systemd/user/atomik-fastfetch-setup.service && \
+    systemctl --global enable atomik-fastfetch-setup.service 2>/dev/null || \
+    mkdir -p /usr/lib/systemd/user/default.target.wants && \
+    ln -sf /usr/lib/systemd/user/atomik-fastfetch-setup.service \
+           /usr/lib/systemd/user/default.target.wants/atomik-fastfetch-setup.service
+
+# ── skel per nuovi utenti ─────────────────────────────────────────────────────
 RUN mkdir -p /etc/skel/.config/fastfetch && \
     ln -sf /etc/fastfetch/config.jsonc /etc/skel/.config/fastfetch/config.jsonc && \
     ln -sf /etc/fastfetch/atomik-logo.txt /etc/skel/.config/fastfetch/atomik-logo.txt
-
-# ── OS Identity ───────────────────────────────────────────────────────────────
-RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
-    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /etc/os-release && \
-    sed -i 's/^ID=.*/ID=atomik/' /etc/os-release
-
-# ── GRUB distributor (corregge voce menu grub da "Origami Linux") ─────────────
-RUN sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Atomik OS"/' /etc/default/grub || \
-    echo 'GRUB_DISTRIBUTOR="Atomik OS"' >> /etc/default/grub
