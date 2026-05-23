@@ -79,6 +79,8 @@ RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
 # ── Maschera waybar (gestito da DMS, non serve separato) ─────────────────────
 RUN mkdir -p /etc/systemd/user && \
     ln -sf /dev/null /etc/systemd/user/waybar.service
+RUN ln -sf /dev/null /usr/lib/systemd/user/waybar.service
+
 
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
@@ -87,7 +89,10 @@ COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 
 # ── Hostname persistente ──────────────────────────────────────────────────────
-RUN echo 'atomik-desktop' > /etc/hostname
+RUN echo 'atomik-desktop' > /usr/lib/hostname && \
+    mkdir -p /usr/lib/tmpfiles.d && \
+    printf 'L+ /etc/hostname - - - - /usr/lib/hostname\n' \
+    > /usr/lib/tmpfiles.d/atomik-hostname.conf
 
 
 # ── Fastfetch config di sistema ───────────────────────────────────────────────
