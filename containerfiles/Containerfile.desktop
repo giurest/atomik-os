@@ -65,37 +65,20 @@ RUN dnf install -y --skip-unavailable \
     dnf clean all && \
     rm -f /tmp/packages-desktop.list
 
-# ── greetd configurato per DankGreeter + Niri ─────────────────────────────────
-RUN mkdir -p /etc/greetd && \
-    printf '[terminal]\nvt = 1\n\n[default_session]\nuser = "greeter"\ncommand = "dms-greeter --command niri"\n' \
-    > /etc/greetd/config.toml
-
-# ── Abilita greetd, disabilita display manager alternativi ───────────────────
-RUN mkdir -p /etc/systemd/system && \
-    ln -sf /usr/lib/systemd/system/greetd.service \
-           /etc/systemd/system/display-manager.service && \
-    rm -f /etc/systemd/system/sddm.service \
-          /etc/systemd/system/gdm.service
+# ── greetd come display manager ───────────────────────────────────────────────
+# dms-greeter crea automaticamente l'utente greeter, le directory e il config
+RUN ln -sf /usr/lib/systemd/system/greetd.service \
+           /etc/systemd/system/display-manager.service
 
 # ── DMS avvia automaticamente con Niri ───────────────────────────────────────
 RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
     ln -sf /usr/lib/systemd/user/dms.service \
            /usr/lib/systemd/user/niri.service.wants/dms.service
-# ── Utente greeter e directory cache ─────────────────────────────────────────
-RUN useradd -r -M -s /sbin/nologin -d /var/lib/greeter greeter && \
-    mkdir -p /var/cache/dms-greeter && \
-    chown greeter:greeter /var/cache/dms-greeter && \
-    mkdir -p /var/lib/greeter/.cache/starship && \
-    chown -R greeter:greeter /var/lib/greeter
-
-# ── Abilita greetd ────────────────────────────────────────────────────────────
-RUN ln -sf /usr/lib/systemd/system/greetd.service \
-           /etc/systemd/system/display-manager.service
 
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 
-# ── Plymouth theme (placeholder) ─────────────────────────────────────────────
+# ── Plymouth theme ────────────────────────────────────────────────────────────
 COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
 
 # ── Hostname persistente via tmpfiles ─────────────────────────────────────────
