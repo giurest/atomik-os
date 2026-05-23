@@ -75,6 +75,10 @@ RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
     ln -sf /usr/lib/systemd/user/dms.service \
            /usr/lib/systemd/user/niri.service.wants/dms.service
 
+# ── Maschera waybar (gestito da DMS, non serve separato) ─────────────────────
+RUN mkdir -p /etc/systemd/user && \
+    ln -sf /dev/null /etc/systemd/user/waybar.service
+
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 
@@ -94,3 +98,8 @@ COPY files/fastfetch/atomik-logo.txt /etc/fastfetch/atomik-logo.txt
 RUN mkdir -p /etc/skel/.config/fastfetch && \
     ln -sf /etc/fastfetch/config.jsonc /etc/skel/.config/fastfetch/config.jsonc && \
     ln -sf /etc/fastfetch/atomik-logo.txt /etc/skel/.config/fastfetch/atomik-logo.txt
+
+# ── OS Identity ───────────────────────────────────────────────────────────────
+RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /etc/os-release && \
+    sed -i 's/^ID=.*/ID=atomik/' /etc/os-release
