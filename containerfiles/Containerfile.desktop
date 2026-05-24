@@ -100,13 +100,19 @@ RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /usr/lib/os-release && \
     sed -i 's/^ID=.*/ID=atomik/' /usr/lib/os-release
 
+# ── Niri config di sistema (no waybar, angoli arrotondati, DMS) ──────────────
+RUN mkdir -p /etc/niri
+COPY files/niri/config.kdl /etc/niri/config.kdl
+
 # ── Fastfetch config di sistema ───────────────────────────────────────────────
 RUN mkdir -p /etc/fastfetch
 COPY files/fastfetch/desktop.jsonc /etc/fastfetch/config.jsonc
 COPY files/fastfetch/atomik-logo.txt /etc/fastfetch/atomik-logo.txt
 
-RUN printf '[Unit]\nDescription=Setup fastfetch config per utente\nConditionPathExists=!/%%h/.config/fastfetch/config.jsonc\nAfter=local-fs.target\n\n[Service]\nType=oneshot\nExecStart=/bin/sh -c "mkdir -p $HOME/.config/fastfetch && ln -sf /etc/fastfetch/config.jsonc $HOME/.config/fastfetch/config.jsonc && ln -sf /etc/fastfetch/atomik-logo.txt $HOME/.config/fastfetch/atomik-logo.txt"\nRemainAfterExit=yes\n\n[Install]\nWantedBy=default.target\n' \
+# ── Setup fastfetch per utenti al primo login (anche esistenti) ───────────────
+RUN printf '[Unit]\nDescription=Setup fastfetch config per utente\nConditionPathExists=!/var/home/%%u/.config/fastfetch/config.jsonc\nAfter=local-fs.target\n\n[Service]\nType=oneshot\nExecStart=/bin/sh -c "mkdir -p %%h/.config/fastfetch && ln -sf /etc/fastfetch/config.jsonc %%h/.config/fastfetch/config.jsonc && ln -sf /etc/fastfetch/atomik-logo.txt %%h/.config/fastfetch/atomik-logo.txt"\nRemainAfterExit=yes\n\n[Install]\nWantedBy=default.target\n' \
     > /usr/lib/systemd/user/atomik-fastfetch-setup.service && \
+    systemctl --global enable atomik-fastfetch-setup.service 2>/dev/null || \
     mkdir -p /usr/lib/systemd/user/default.target.wants && \
     ln -sf /usr/lib/systemd/user/atomik-fastfetch-setup.service \
            /usr/lib/systemd/user/default.target.wants/atomik-fastfetch-setup.service
