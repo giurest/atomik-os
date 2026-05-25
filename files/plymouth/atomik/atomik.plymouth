@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Atomik OS
+Description=Atomik OS boot theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/atomik
+ScriptFile=/usr/share/plymouth/themes/atomik/atomik.script

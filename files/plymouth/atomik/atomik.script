@@ -1,0 +1,73 @@
+# Atomik OS Plymouth Theme
+
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+
+# Background nero
+background_color.red = 0.05;
+background_color.green = 0.05;
+background_color.blue = 0.08;
+
+fun PaintBackground(x, y, width, height) {
+    Window.SetBackgroundTopColor(background_color.red, background_color.green, background_color.blue);
+    Window.SetBackgroundBottomColor(background_color.red, background_color.green, background_color.blue);
+}
+
+Plymouth.SetBackgroundTopColor(0.05, 0.05, 0.08);
+Plymouth.SetBackgroundBottomColor(0.05, 0.05, 0.08);
+
+# Carica logo
+logo_image = Image("logo.png");
+logo_width = logo_image.GetWidth();
+logo_height = logo_image.GetHeight();
+
+# Scala il logo se necessario (max 300px)
+scale = 1.0;
+if (logo_width > 300) {
+    scale = 300 / logo_width;
+}
+logo_width = logo_width * scale;
+logo_height = logo_height * scale;
+
+logo_image = logo_image.Scale(logo_width, logo_height);
+
+# Centra il logo leggermente sopra centro
+logo_x = (screen_width - logo_width) / 2;
+logo_y = (screen_height - logo_height) / 2 - 60;
+
+logo_sprite = Sprite(logo_image);
+logo_sprite.SetX(logo_x);
+logo_sprite.SetY(logo_y);
+logo_sprite.SetZ(10);
+
+# Barra di progresso
+progress_bar_width = 300;
+progress_bar_height = 3;
+progress_bar_x = (screen_width - progress_bar_width) / 2;
+progress_bar_y = logo_y + logo_height + 40;
+
+# Sfondo barra (grigio scuro)
+bar_bg_image = Image.CreateNativeBuffer(progress_bar_width, progress_bar_height, "rgba");
+bar_bg_image.FillArea(0, 0, progress_bar_width, progress_bar_height, 0.2, 0.2, 0.2, 1.0);
+bar_bg_sprite = Sprite(bar_bg_image);
+bar_bg_sprite.SetX(progress_bar_x);
+bar_bg_sprite.SetY(progress_bar_y);
+bar_bg_sprite.SetZ(11);
+
+# Barra attiva (blu Atomik)
+progress = 0;
+bar_image = Image.CreateNativeBuffer(progress_bar_width, progress_bar_height, "rgba");
+bar_sprite = Sprite();
+bar_sprite.SetX(progress_bar_x);
+bar_sprite.SetY(progress_bar_y);
+bar_sprite.SetZ(12);
+
+fun UpdateProgress(time) {
+    progress = Math.Min(progress + 0.005, 1.0);
+    filled_width = Math.Max(1, Math.Int(progress_bar_width * progress));
+    bar_image = Image.CreateNativeBuffer(filled_width, progress_bar_height, "rgba");
+    bar_image.FillArea(0, 0, filled_width, progress_bar_height, 0.18, 0.55, 0.95, 1.0);
+    bar_sprite.SetImage(bar_image);
+}
+
+Plymouth.SetRefreshFunction(UpdateProgress);
