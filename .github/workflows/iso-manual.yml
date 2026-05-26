@@ -58,14 +58,14 @@ jobs:
             ${{ steps.build-iso.outputs.iso_path }}.sha256
           retention-days: 14
 
-      - name: Upload ISO to Cloudflare R2
-        if: ${{ secrets.R2_ACCESS_KEY_ID != '' }}
-        uses: rclone/rclone-action@v1
-        env:
-          RCLONE_CONFIG_R2_TYPE: s3
-          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
-          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          RCLONE_CONFIG_R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-        with:
-          args: copy ${{ steps.build-iso.outputs.iso_path }} r2:atomik-os/releases/
+#      - name: Upload ISO to Cloudflare R2
+#        if: ${{ secrets.R2_ACCESS_KEY_ID != '' }}
+#        uses: rclone/rclone-action@v1
+#        env:
+#          RCLONE_CONFIG_R2_TYPE: s3
+#          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+#          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+#          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+#          RCLONE_CONFIG_R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+#        with:
+#          args: copy ${{ steps.build-iso.outputs.iso_path }} r2:atomik-os/releases/
