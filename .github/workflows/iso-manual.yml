@@ -38,7 +38,7 @@ jobs:
 
       - name: Build ISO with bootc-image-builder
         id: build-iso
-        uses: jasonn3/build-container-installer@v1.2.3
+        uses: jasonn3/build-container-installer@main
         with:
           arch: x86_64
           image_name: atomik-${{ matrix.variant }}
