@@ -8,3 +8,6 @@ pwpolicy root --notstrict
 pwpolicy user --notstrict
 pwpolicy luks --notstrict
 %end
+
+# Questo forza Anaconda a mostrare la schermata utente
+user --name= --groups=wheel
