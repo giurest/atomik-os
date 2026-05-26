@@ -10,10 +10,10 @@ on:
         type: choice
         options:
           - desktop
-          - desktop-nvidia
-          - puregaming
-          - puregaming-nvidia
-          - handheld
+#          - desktop-nvidia
+#          - puregaming
+#          - puregaming-nvidia
+#          - handheld
 
 env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
@@ -44,7 +44,7 @@ jobs:
           image_name: atomik-${{ matrix.variant }}
           image_repo: ${{ env.IMAGE_REGISTRY }}
           image_tag: latest
-          version: 43
+          version: 44
           variant: Kinoite
           iso_name: atomik-${{ matrix.variant }}-latest.iso
           enrollment_password: atomikos
