@@ -65,9 +65,17 @@ RUN dnf install -y --skip-unavailable \
     dnf clean all && \
     rm -f /tmp/packages-desktop.list
 
-# ── greetd come display manager ───────────────────────────────────────────────
+# ── Initial setup per creazione utente al primo avvio ────────────────────────
+RUN dnf install -y initial-setup && \
+    dnf clean all
+
+# ── greetd come display manager (parte dopo initial-setup) ───────────────────
 RUN ln -sf /usr/lib/systemd/system/greetd.service \
-           /etc/systemd/system/display-manager.service
+           /etc/systemd/system/display-manager.service && \
+    mkdir -p /etc/systemd/system/greetd.service.d && \
+    printf '[Unit]\nAfter=initial-setup.service\nRequires=initial-setup.service\n' \
+    > /etc/systemd/system/greetd.service.d/after-initial-setup.conf && \
+    systemctl enable initial-setup.service
 
 # ── DMS avvia automaticamente con Niri ───────────────────────────────────────
 RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
@@ -117,8 +125,3 @@ RUN mkdir -p /etc/skel/.config/fastfetch && \
 
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
 RUN plymouth-set-default-theme atomik 2>/dev/null || true
-
-# ── Initial setup per creazione utente al primo avvio ────────────────────────
-RUN dnf install -y initial-setup && \
-    systemctl enable initial-setup.service && \
-    dnf clean all
