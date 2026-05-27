@@ -117,3 +117,8 @@ RUN mkdir -p /etc/skel/.config/fastfetch && \
 
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
 RUN plymouth-set-default-theme atomik 2>/dev/null || true
+
+# ── Initial setup per creazione utente al primo avvio ────────────────────────
+RUN dnf install -y initial-setup && \
+    systemctl enable initial-setup.service && \
+    dnf clean all
