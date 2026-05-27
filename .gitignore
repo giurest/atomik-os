@@ -427,3 +427,7 @@ FodyWeavers.xsd
 *.msm
 *.msp
 cosign.key
+
+# ISO generate localmente
+installer/*.iso
+installer/*.iso.sha256
