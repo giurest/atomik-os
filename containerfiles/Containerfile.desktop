@@ -106,8 +106,10 @@ RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
 # ── OS Identity ───────────────────────────────────────────────────────────────
 RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /etc/os-release && \
+    sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
     sed -i 's/^NAME=.*/NAME="Atomik OS"/' /usr/lib/os-release && \
-    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /usr/lib/os-release
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /usr/lib/os-release && \
+    sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release
 
 # ── Niri config di sistema ────────────────────────────────────────────────────
 RUN mkdir -p /etc/niri
