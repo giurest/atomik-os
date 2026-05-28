@@ -1,12 +1,3 @@
-[customizations.installer.kickstart]
-contents = """
-%anaconda
-pwpolicy root --notstrict
-pwpolicy user --notstrict
-pwpolicy luks --notstrict
-%end
-"""
-
 [customizations.installer.modules]
 enable = [
   "org.fedoraproject.Anaconda.Modules.Storage",
