@@ -77,8 +77,9 @@ jobs:
           DATE=$(date +%Y%m%d)
           SHA=${{ github.sha }}
           DEST="atomik-desktop-${DATE}-${SHA:0:7}"
+          ISO=$(find ${{ steps.build.outputs.output-directory }} -name "*.iso" | head -1)
           mkdir -p /tmp/iso-upload/$DEST
-          cp ${{ steps.build.outputs.output-directory }}/*.iso /tmp/iso-upload/$DEST/
+          cp "$ISO" /tmp/iso-upload/$DEST/
           rclone copy /tmp/iso-upload S3:${{ secrets.S3_BUCKET_NAME }} \
             --s3-acl public-read \
             --progress
