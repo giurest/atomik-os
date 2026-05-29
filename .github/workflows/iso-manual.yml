@@ -62,7 +62,7 @@ jobs:
           retention-days: 14
           compression-level: 0
 
-       - name: Upload ISO to Cubbit S3
+      - name: Upload ISO to Cubbit S3
         if: success()
         shell: bash
         env:
