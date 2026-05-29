@@ -74,6 +74,11 @@ jobs:
           RCLONE_CONFIG_S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
         run: |
           sudo apt-get install -y rclone
-          rclone copy ${{ steps.build.outputs.output-directory }} S3:${{ secrets.S3_BUCKET_NAME }} \
+          DATE=$(date +%Y%m%d)
+          SHA=${{ github.sha }}
+          DEST="atomik-desktop-${DATE}-${SHA:0:7}"
+          mkdir -p /tmp/iso-upload/$DEST
+          cp ${{ steps.build.outputs.output-directory }}/*.iso /tmp/iso-upload/$DEST/
+          rclone copy /tmp/iso-upload S3:${{ secrets.S3_BUCKET_NAME }} \
             --s3-acl public-read \
             --progress
