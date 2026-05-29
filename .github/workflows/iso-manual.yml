@@ -48,7 +48,7 @@ jobs:
         with:
           builder-image: ${{ env.BIB_IMAGE }}
           config-file: ./installer/atomik.toml
-          image: quay.io/fedora/fedora-bootc:44
+          image: ghcr.io/giurest/atomik-desktop:latest
           chown: ${{ env.USER_UID }}:${{ env.USER_GID }}
           types: anaconda-iso
           additional-args: --use-librepo=True --rootfs xfs
