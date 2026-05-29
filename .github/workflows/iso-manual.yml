@@ -61,3 +61,19 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
+       - name: Upload ISO to Cubbit S3
+        if: success()
+        shell: bash
+        env:
+          RCLONE_CONFIG_S3_TYPE: s3
+          RCLONE_CONFIG_S3_PROVIDER: ${{ secrets.S3_PROVIDER }}
+          RCLONE_CONFIG_S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_S3_REGION: ${{ secrets.S3_REGION }}
+          RCLONE_CONFIG_S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+        run: |
+          sudo apt-get install -y rclone
+          rclone copy ${{ steps.build.outputs.output-directory }} S3:${{ secrets.S3_BUCKET_NAME }} \
+            --s3-acl public-read \
+            --progress
