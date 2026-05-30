@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Atomik Wallpaper
+Exec=dms ipc call wallpaper set /usr/share/backgrounds/atomik/wall.jpg
+X-GNOME-Autostart-enabled=true
+NoDisplay=true
