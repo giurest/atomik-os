@@ -123,5 +123,15 @@ RUN mkdir -p /etc/skel/.config/fastfetch && \
     ln -sf /etc/fastfetch/config.jsonc /etc/skel/.config/fastfetch/config.jsonc && \
     ln -sf /etc/fastfetch/atomik-logo.txt /etc/skel/.config/fastfetch/atomik-logo.txt
 
+RUN mkdir -p /etc/skel/.config/autostart && \
+    cat > /etc/skel/.config/autostart/atomik-wallpaper.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=Atomik Wallpaper
+Exec=dms ipc call wallpaper set /usr/share/backgrounds/atomik/wall.jpg
+X-GNOME-Autostart-enabled=true
+NoDisplay=true
+EOF
+
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
 RUN plymouth-set-default-theme atomik 2>/dev/null || true
