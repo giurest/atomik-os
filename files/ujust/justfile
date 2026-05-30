@@ -1,0 +1,133 @@
+# Atomik OS — system justfile (ujust)
+# Eseguito tramite il wrapper `ujust`.
+
+# Mostra l'elenco delle ricette disponibili
+_default:
+    @just --list --unsorted --justfile {{justfile()}}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gestione utenti
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Crea un nuovo utente con home e shell, aggiunto al gruppo wheel (sudo)
+create-user username="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    USERNAME="{{username}}"
+    if [[ -z "$USERNAME" ]]; then
+        read -rp "Nome utente da creare: " USERNAME
+    fi
+    if [[ -z "$USERNAME" ]]; then
+        echo "Errore: nome utente vuoto."
+        exit 1
+    fi
+    if id "$USERNAME" &>/dev/null; then
+        echo "L'utente '$USERNAME' esiste già."
+        exit 1
+    fi
+    sudo useradd -m -G wheel -s /usr/bin/bash "$USERNAME"
+    echo "Imposta la password per '$USERNAME':"
+    sudo passwd "$USERNAME"
+    echo "✓ Utente '$USERNAME' creato e aggiunto al gruppo wheel."
+
+# Elimina un utente esistente (opzionalmente con la sua home)
+delete-user username="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    USERNAME="{{username}}"
+    if [[ -z "$USERNAME" ]]; then
+        read -rp "Nome utente da eliminare: " USERNAME
+    fi
+    if [[ -z "$USERNAME" ]]; then
+        echo "Errore: nome utente vuoto."
+        exit 1
+    fi
+    if ! id "$USERNAME" &>/dev/null; then
+        echo "L'utente '$USERNAME' non esiste."
+        exit 1
+    fi
+    read -rp "Eliminare anche la home directory? [s/N]: " DELHOME
+    if [[ "$DELHOME" =~ ^[sS]$ ]]; then
+        sudo userdel -r "$USERNAME"
+        echo "✓ Utente '$USERNAME' e home eliminati."
+    else
+        sudo userdel "$USERNAME"
+        echo "✓ Utente '$USERNAME' eliminato (home conservata)."
+    fi
+
+# Cambia la password di un utente
+passwd-user username="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    USERNAME="{{username}}"
+    if [[ -z "$USERNAME" ]]; then
+        read -rp "Utente di cui cambiare la password: " USERNAME
+    fi
+    sudo passwd "$USERNAME"
+
+# Aggiungi o rimuovi i privilegi sudo (gruppo wheel) per un utente
+toggle-sudo username="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    USERNAME="{{username}}"
+    if [[ -z "$USERNAME" ]]; then
+        read -rp "Utente: " USERNAME
+    fi
+    if id -nG "$USERNAME" | grep -qw wheel; then
+        sudo gpasswd -d "$USERNAME" wheel
+        echo "✓ Privilegi sudo rimossi da '$USERNAME'."
+    else
+        sudo gpasswd -a "$USERNAME" wheel
+        echo "✓ Privilegi sudo concessi a '$USERNAME'."
+    fi
+
+# Elenca gli utenti umani del sistema (UID >= 1000)
+list-users:
+    #!/usr/bin/env bash
+    awk -F: '$3 >= 1000 && $3 < 65534 { print $1 " (uid " $3 ")" }' /etc/passwd
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sistema (bootc)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Aggiorna Atomik OS all'ultima immagine disponibile
+update:
+    @echo "Controllo aggiornamenti Atomik OS…"
+    sudo bootc upgrade
+
+# Mostra lo stato corrente dell'immagine bootc
+status:
+    sudo bootc status
+
+# Torna alla versione precedente del sistema (rollback)
+rollback:
+    @echo "Rollback alla versione precedente…"
+    sudo bootc rollback
+    @echo "✓ Riavvia per applicare il rollback."
+
+# Riavvia il sistema
+reboot:
+    sudo systemctl reboot
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Manutenzione
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Reimposta il wallpaper di Atomik
+set-wallpaper:
+    dms ipc call wallpaper set /usr/share/backgrounds/atomik/wall.jpg
+    @echo "✓ Wallpaper Atomik impostato."
+
+# Ripristina la configurazione fastfetch di default
+reset-fastfetch:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p ~/.config/fastfetch
+    ln -sf /etc/fastfetch/config.jsonc ~/.config/fastfetch/config.jsonc
+    ln -sf /etc/fastfetch/atomik-logo.txt ~/.config/fastfetch/atomik-logo.txt
+    echo "✓ Configurazione fastfetch ripristinata."
+
+# Pulisci le immagini bootc non più referenziate
+cleanup:
+    sudo bootc image prune 2>/dev/null || sudo podman image prune -f
+    @echo "✓ Pulizia completata."

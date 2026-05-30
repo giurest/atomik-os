@@ -133,5 +133,11 @@ X-GNOME-Autostart-enabled=true
 NoDisplay=true
 EOF
 
+# ── ujust: comandi di sistema Atomik ──────────────────────────────────────────
+RUN mkdir -p /usr/share/atomik
+COPY files/ujust/justfile /usr/share/atomik/justfile
+COPY files/system/usr/bin/ujust /usr/bin/ujust
+RUN chmod +x /usr/bin/ujust
+
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
 RUN plymouth-set-default-theme atomik 2>/dev/null || true

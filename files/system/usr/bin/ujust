@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# ujust — wrapper Atomik OS attorno a `just` con il justfile di sistema.
+# Uso:
+#   ujust                  → elenca le ricette disponibili
+#   ujust <ricetta> [args] → esegue una ricetta
+
+set -euo pipefail
+
+SYSTEM_JUSTFILE="/usr/share/atomik/justfile"
+
+if [[ ! -f "$SYSTEM_JUSTFILE" ]]; then
+    echo "Errore: justfile di sistema non trovato in $SYSTEM_JUSTFILE" >&2
+    exit 1
+fi
+
+if ! command -v just &>/dev/null; then
+    echo "Errore: 'just' non è installato." >&2
+    exit 1
+fi
+
+exec just --justfile "$SYSTEM_JUSTFILE" --working-directory "$HOME" "$@"
