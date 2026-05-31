@@ -17,6 +17,9 @@ dms
 dms-greeter
 greetd
 
+# ── File manager ──────────────────────────────────────────────────────────────
+nautilus
+
 # ── Tema e aspetto ────────────────────────────────────────────────────────────
 papirus-icon-theme
 
