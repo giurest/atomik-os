@@ -1,0 +1,13 @@
+[Unit]
+Description=Atomik OS - Installazione client di gioco Flatpak al primo avvio
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/atomik-flatpak-gaming-done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/atomik-flatpak-gaming
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Installa i client di gioco via Flatpak al primo avvio.
+# Si auto-disabilita dopo il primo completamento riuscito.
+set -euo pipefail
+
+MARKER=/var/lib/atomik-flatpak-gaming-done
+[ -f "$MARKER" ] && exit 0
+
+# Aggiunge Flathub a livello di sistema (idempotente)
+flatpak remote-add --if-not-exists flathub \
+    https://flathub.org/repo/flathub.flatpakrepo
+
+# Client di gioco
+flatpak install -y --noninteractive flathub \
+    com.valvesoftware.Steam \
+    net.lutris.Lutris \
+    com.heroicgameslauncher.hgl
+
+touch "$MARKER"
