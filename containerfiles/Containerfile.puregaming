@@ -11,11 +11,12 @@ RUN dnf install -y \
     dnf install -y mangohud gamemode && \
     dnf clean all
 
-# ── Pacchetti aggiuntivi puregaming (da lista) ────────────────────────────────
+# ── Pacchetti aggiuntivi puregaming (da lista, opzionale) ─────────────────────
 COPY packages/puregaming.list /tmp/packages-puregaming.list
-RUN dnf install -y --skip-unavailable \
-    $(grep -v '^#' /tmp/packages-puregaming.list | grep -v '^$' | tr '\n' ' ') && \
-    dnf clean all && \
+RUN PKGS="$(grep -v '^#' /tmp/packages-puregaming.list | grep -v '^$' | tr '\n' ' ')" && \
+    if [ -n "$PKGS" ]; then \
+        dnf install -y --skip-unavailable $PKGS && dnf clean all ; \
+    fi && \
     rm -f /tmp/packages-puregaming.list
 
 # ── Ottimizzazioni gaming (sysctl, safe, niente initramfs) ────────────────────

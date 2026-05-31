@@ -1,6 +1,5 @@
 # Pacchetti aggiuntivi variante PureGaming
 # (mangohud e gamemode sono installati direttamente nel Containerfile via RPMFusion)
-# Aggiungi qui altri pacchetti di sistema se necessario.
 pipewire
 wireplumber
 pipewire-pulseaudio
