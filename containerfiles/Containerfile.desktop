@@ -84,6 +84,18 @@ RUN mkdir -p /etc/systemd/user && \
 # ── Policy Brave ──────────────────────────────────────────────────────────────
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 
+# ── Brave browser via Flatpak al primo boot ───────────────────────────────────
+# Brave Flatpak (com.brave.Browser) installato da Flathub al primo avvio,
+# tramite servizio oneshot. Vale per la base e a cascata per tutte le varianti.
+COPY files/system/usr/lib/systemd/system/atomik-flatpak-base.service \
+     /usr/lib/systemd/system/atomik-flatpak-base.service
+COPY files/system/usr/bin/atomik-flatpak-base \
+     /usr/bin/atomik-flatpak-base
+RUN chmod +x /usr/bin/atomik-flatpak-base && \
+    mkdir -p /usr/lib/systemd/system/multi-user.target.wants && \
+    ln -sf /usr/lib/systemd/system/atomik-flatpak-base.service \
+           /usr/lib/systemd/system/multi-user.target.wants/atomik-flatpak-base.service
+
 # ── Plymouth theme ────────────────────────────────────────────────────────────
 # Copia SOLO il contenuto della cartella del tema (atomik.plymouth, atomik.script,
 # logo.png) direttamente in themes/atomik/ — niente sottocartella annidata.

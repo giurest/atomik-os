@@ -1,0 +1,13 @@
+[Unit]
+Description=Atomik OS - Installazione app Flatpak di base al primo avvio
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/atomik-flatpak-base-done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/atomik-flatpak-base
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

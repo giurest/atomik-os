@@ -1,19 +1,15 @@
 #!/usr/bin/env bash
-# Installa i client di gioco e comunicazione via Flatpak al primo avvio.
+# Installa le app Flatpak di base al primo avvio (Brave browser).
 # Si auto-disabilita dopo il primo completamento riuscito.
 set -euo pipefail
 
-MARKER=/var/lib/atomik-flatpak-gaming-done
+MARKER=/var/lib/atomik-flatpak-base-done
 [ -f "$MARKER" ] && exit 0
 
 flatpak remote-add --if-not-exists flathub \
     https://flathub.org/repo/flathub.flatpakrepo
 
 flatpak install -y --noninteractive flathub \
-    com.valvesoftware.Steam \
-    net.lutris.Lutris \
-    com.heroicgameslauncher.hgl \
-    com.discordapp.Discord \
-    com.teamspeak.TeamSpeak3
+    com.brave.Browser
 
 touch "$MARKER"
