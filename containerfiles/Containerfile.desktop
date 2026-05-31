@@ -65,11 +65,17 @@ RUN dnf install -y --skip-unavailable \
     dnf clean all && \
     rm -f /tmp/packages-desktop.list
 
-# ── greetd come display manager ───────────────────────────────────────────────
-# L'utente viene creato da Anaconda durante l'installazione, quindi non serve
-# initial-setup né alcuna dipendenza aggiuntiva: greetd parte direttamente.
+# ── Initial setup per creazione utente al primo avvio ────────────────────────
+RUN dnf install -y initial-setup && \
+    dnf clean all
+
+# ── greetd come display manager (parte dopo initial-setup) ───────────────────
 RUN ln -sf /usr/lib/systemd/system/greetd.service \
-           /etc/systemd/system/display-manager.service
+           /etc/systemd/system/display-manager.service && \
+    mkdir -p /etc/systemd/system/greetd.service.d && \
+    printf '[Unit]\nAfter=initial-setup.service\nRequires=initial-setup.service\n' \
+    > /etc/systemd/system/greetd.service.d/after-initial-setup.conf && \
+    systemctl enable initial-setup.service
 
 # ── DMS avvia automaticamente con Niri ───────────────────────────────────────
 RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
@@ -85,7 +91,9 @@ RUN mkdir -p /etc/systemd/user && \
 COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
 
 # ── Plymouth theme ────────────────────────────────────────────────────────────
-COPY files/plymouth/ /usr/share/plymouth/themes/atomik/
+# Copia SOLO il contenuto della cartella del tema (atomik.plymouth, atomik.script,
+# logo.png) direttamente in themes/atomik/ — niente sottocartella annidata.
+COPY files/plymouth/atomik/ /usr/share/plymouth/themes/atomik/
 
 # ── Wallpaper predefinito ─────────────────────────────────────────────────────
 RUN mkdir -p /usr/share/backgrounds/atomik
@@ -98,14 +106,12 @@ RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
     > /usr/lib/tmpfiles.d/atomik-hostname.conf
 
 # ── OS Identity ───────────────────────────────────────────────────────────────
-# ID resta "fedora": bootc-image-builder lo usa per selezionare la definizione
-# di distribuzione. NAME/PRETTY_NAME mostrano comunque il branding Atomik.
 RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /etc/os-release && \
-    sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
+    sed -i 's/^ID=.*/ID=atomik/' /etc/os-release && \
     sed -i 's/^NAME=.*/NAME="Atomik OS"/' /usr/lib/os-release && \
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /usr/lib/os-release && \
-    sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release
+    sed -i 's/^ID=.*/ID=atomik/' /usr/lib/os-release
 
 # ── Niri config di sistema ────────────────────────────────────────────────────
 RUN mkdir -p /etc/niri
@@ -119,15 +125,13 @@ RUN mkdir -p /etc/skel/.config/fastfetch && \
     ln -sf /etc/fastfetch/config.jsonc /etc/skel/.config/fastfetch/config.jsonc && \
     ln -sf /etc/fastfetch/atomik-logo.txt /etc/skel/.config/fastfetch/atomik-logo.txt
 
-# ── Autostart wallpaper per nuovi utenti ──────────────────────────────────────
-RUN mkdir -p /etc/skel/.config/autostart
-COPY files/skel/autostart/atomik-wallpaper.desktop /etc/skel/.config/autostart/atomik-wallpaper.desktop
-
-# ── ujust: comandi di sistema Atomik ──────────────────────────────────────────
-RUN mkdir -p /usr/share/atomik
-COPY files/ujust/justfile /usr/share/atomik/justfile
-COPY files/system/usr/bin/ujust /usr/bin/ujust
-RUN chmod +x /usr/bin/ujust
-
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
-RUN plymouth-set-default-theme atomik 2>/dev/null || true
+# Imposta il tema come default. Su bootc l'initramfs viene rigenerato
+# automaticamente al deploy, ma scriviamo plymouthd.conf esplicitamente per
+# garantire che il tema atomik sia quello selezionato (non bgrt).
+RUN mkdir -p /etc/plymouth && \
+    printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
+    plymouth-set-default-theme atomik 2>/dev/null || true
+RUN if command -v dracut >/dev/null 2>&1; then \
+        dracut --force --regenerate-all 2>/dev/null || true; \
+    fi
