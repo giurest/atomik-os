@@ -74,6 +74,10 @@ window-rule {
 // DMS viene avviato da systemd (niri.service.wants/dms.service)
 // NON avviare waybar qui — DMS gestisce la propria barra
 
+// Imposta il wallpaper Atomik all'avvio della sessione.
+// Si attende che DMS sia pronto prima di inviare il comando IPC.
+spawn-at-startup "sh" "-c" "for i in $(seq 1 30); do dms ipc call wallpaper set /usr/share/backgrounds/atomik/wall.jpg && break; sleep 1; done"
+
 // ── Screenshot path ───────────────────────────────────────────────────────────
 screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 
