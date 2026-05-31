@@ -65,9 +65,9 @@ RUN dnf install -y --skip-unavailable \
     dnf clean all && \
     rm -f /tmp/packages-desktop.list
 
-# ── Initial setup per creazione utente al primo avvio ────────────────────────
-RUN dnf install -y initial-setup && \
-    dnf clean all
+# ── greetd come display manager ───────────────────────────────────────────────
+# L'utente viene creato da Anaconda durante l'installazione, quindi non serve
+# initial-setup né alcuna dipendenza aggiuntiva: greetd parte direttamente
 
 # ── greetd come display manager (parte dopo initial-setup) ───────────────────
 RUN ln -sf /usr/lib/systemd/system/greetd.service \
