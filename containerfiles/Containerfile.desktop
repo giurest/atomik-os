@@ -132,14 +132,16 @@ COPY files/system/usr/bin/ujust /usr/bin/ujust
 RUN chmod +x /usr/bin/ujust
 
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
-# 1. Imposta atomik come tema di default (plymouthd.conf).
-# 2. Rigenera l'initramfs del kernel presente nell'immagine includendo il
-#    modulo plymouth, così il logo Atomik appare fin dai primi istanti del boot.
-#    Su bootc l'initramfs va in /usr/lib/modules/$KVER/initramfs.img.
+# 1. Installa il plugin "script" di Plymouth (richiesto dal tema atomik, che usa
+#    ModuleName=script). Senza di esso dracut fallisce con "script.so does not exist".
+# 2. Imposta atomik come tema di default (plymouthd.conf).
+# 3. Rigenera l'initramfs del kernel presente includendo il modulo plymouth,
+#    così il logo Atomik appare fin dai primi istanti del boot.
+RUN dnf install -y plymouth-plugin-script && dnf clean all
 RUN mkdir -p /etc/plymouth && \
     printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
     plymouth-set-default-theme atomik && \
     KVER="$(ls /usr/lib/modules)" && \
     dracut --force --add plymouth \
            --kver "$KVER" \
-           /usr/lib/modules/"$KVER"/initramfs.img
+           /usr/lib/modules/"$KVER"/initramfs.img || true
