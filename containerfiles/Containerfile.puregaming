@@ -4,12 +4,6 @@ FROM ghcr.io/giurest/atomik-desktop:latest
 LABEL org.opencontainers.image.title="Atomik OS PureGaming"
 LABEL org.opencontainers.image.description="Atomik OS — variante gaming su base Desktop, MangoHud + GameMode, Steam/Lutris/Heroic via Flatpak"
 
-# ── Rimozione tool container (non servono in gaming) ──────────────────────────
-# podman/distrobox ereditati dalla base desktop: peso morto su una variante
-# orientata al gioco. docker incluso per sicurezza se presente come dipendenza.
-RUN dnf remove -y podman distrobox docker docker-ce 2>/dev/null || true && \
-    dnf clean all
-
 # ── Tool di sistema gaming (RPM) ──────────────────────────────────────────────
 # RPMFusion free necessario per mangohud e gamemode su Fedora.
 RUN dnf install -y \
