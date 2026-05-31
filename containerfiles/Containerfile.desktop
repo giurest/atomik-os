@@ -132,9 +132,14 @@ COPY files/system/usr/bin/ujust /usr/bin/ujust
 RUN chmod +x /usr/bin/ujust
 
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
-# Imposta il tema come default. Su bootc l'initramfs viene rigenerato
-# al deploy, ma scriviamo plymouthd.conf esplicitamente per garantire
-# che il tema atomik sia quello selezionato (non bgrt).
+# 1. Imposta atomik come tema di default (plymouthd.conf).
+# 2. Rigenera l'initramfs del kernel presente nell'immagine includendo il
+#    modulo plymouth, così il logo Atomik appare fin dai primi istanti del boot.
+#    Su bootc l'initramfs va in /usr/lib/modules/$KVER/initramfs.img.
 RUN mkdir -p /etc/plymouth && \
     printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
-    plymouth-set-default-theme atomik 2>/dev/null || true
+    plymouth-set-default-theme atomik && \
+    KVER="$(ls /usr/lib/modules)" && \
+    dracut --force --add plymouth \
+           --kver "$KVER" \
+           /usr/lib/modules/"$KVER"/initramfs.img
