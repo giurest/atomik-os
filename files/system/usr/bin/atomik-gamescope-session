@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Atomik OS — Gamescope Session (game mode)
+# Lancia gamescope con Steam in Big Picture / Deck UI.
+# Steam è Flatpak su Atomik, quindi usiamo flatpak run.
+
+# Risoluzione di gamescope (adatta al tuo display)
+export SCREEN_WIDTH="${SCREEN_WIDTH:-1920}"
+export SCREEN_HEIGHT="${SCREEN_HEIGHT:-1080}"
+
+# MangoHud disponibile via --mangoapp
+exec gamescope \
+    --mangoapp \
+    --steam \
+    --default-touch-mode 4 \
+    --hide-cursor-delay 3000 \
+    -W "$SCREEN_WIDTH" \
+    -H "$SCREEN_HEIGHT" \
+    -f \
+    -- flatpak run com.valvesoftware.Steam \
+        -gamepadui \
+        -steamos3 \
+        -steampal \
+        -pipewire-dmabuf \
+        -nointro

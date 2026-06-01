@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Atomik Game Mode
+Comment=Gamescope + Steam Big Picture (game mode)
+Exec=/usr/bin/atomik-gamescope-session
+Type=Application
+DesktopNames=gamescope

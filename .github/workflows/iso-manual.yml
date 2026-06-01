@@ -11,6 +11,7 @@ on:
         options:
           - desktop
           - puregaming
+          - handheld
 
 env:
   IMAGE_NAME: atomik-${{ github.event.inputs.variant }}
