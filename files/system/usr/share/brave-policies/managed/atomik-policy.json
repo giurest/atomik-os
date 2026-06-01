@@ -5,25 +5,20 @@
   "BraveTalkDisabled": true,
   "BraveAIChatEnabled": false,
   "TorDisabled": true,
+
   "MetricsReportingEnabled": false,
   "SafeBrowsingProtectionLevel": 0,
   "SpellCheckServiceEnabled": false,
-  "CloudPrintSubmitEnabled": false,
+
   "SyncDisabled": false,
-  "BraveSyncAllowedTypes": {
-    "bookmarks": true,
-    "preferences": true,
-    "autofill": true,
-    "history": true,
-    "extensions": true,
-    "tabs": true
-  },
+
   "BuiltInDnsClientEnabled": false,
   "DnsOverHttpsMode": "automatic",
   "NetworkPredictionOptions": 2,
   "PasswordManagerEnabled": false,
   "AutofillAddressEnabled": false,
   "AutofillCreditCardEnabled": false,
+
   "ShowHomeButton": false,
   "BookmarkBarEnabled": false,
   "NewTabPageLocation": "https://duckduckgo.com/"
