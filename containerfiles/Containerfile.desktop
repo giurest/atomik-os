@@ -81,12 +81,23 @@ RUN mkdir -p /etc/systemd/user && \
     ln -sf /dev/null /etc/systemd/user/waybar.service && \
     ln -sf /dev/null /usr/lib/systemd/user/waybar.service
 
-# ── Policy Brave ──────────────────────────────────────────────────────────────
-COPY files/system/usr/share/brave-policies/ /usr/share/brave-policies/
+# ── Brave browser (RPM) + policy di debloat ───────────────────────────────────
+# Brave installato come RPM dal repo ufficiale: legge le managed policies da
+# /etc/brave/policies/managed, quindi il debloat si applica automaticamente a
+# ogni avvio, su tutte le varianti. (Il Flatpak non onora le policy filesystem.)
+RUN dnf install -y dnf-plugins-core && \
+    curl -fsSLo /etc/yum.repos.d/brave-browser.repo \
+      https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo && \
+    rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
+    dnf install -y brave-browser && \
+    dnf clean all
+RUN mkdir -p /etc/brave/policies/managed
+COPY files/system/usr/share/brave-policies/managed/atomik-policy.json \
+     /etc/brave/policies/managed/atomik-policy.json
 
-# ── Brave browser via Flatpak al primo boot ───────────────────────────────────
-# Brave Flatpak (com.brave.Browser) installato da Flathub al primo avvio,
-# tramite servizio oneshot. Vale per la base e a cascata per tutte le varianti.
+# ── App Flatpak di base al primo boot (Bazaar store) ──────────────────────────
+# Brave NON è qui: è installato come RPM sopra. Lo script installa lo store
+# Bazaar (ed eventuali altre app) da Flathub al primo avvio.
 COPY files/system/usr/lib/systemd/system/atomik-flatpak-base.service \
      /usr/lib/systemd/system/atomik-flatpak-base.service
 COPY files/system/usr/bin/atomik-flatpak-base \
