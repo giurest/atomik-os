@@ -1,21 +1,14 @@
 {
-  "// Atomik OS — Brave Browser Policy": "Debloat con sincronizzazione attiva",
-
-  "// ── Funzioni Brave non necessarie ──────────────────────────────────────": "",
   "BraveRewardsDisabled": true,
   "BraveWalletDisabled": true,
   "BraveVPNDisabled": true,
   "BraveTalkDisabled": true,
   "BraveAIChatEnabled": false,
   "TorDisabled": true,
-
-  "// ── Telemetria e raccolta dati ─────────────────────────────────────────": "",
   "MetricsReportingEnabled": false,
-  "SafeBrowsingEnabled": false,
+  "SafeBrowsingProtectionLevel": 0,
   "SpellCheckServiceEnabled": false,
   "CloudPrintSubmitEnabled": false,
-
-  "// ── Sincronizzazione ABILITATA ─────────────────────────────────────────": "",
   "SyncDisabled": false,
   "BraveSyncAllowedTypes": {
     "bookmarks": true,
@@ -25,17 +18,13 @@
     "extensions": true,
     "tabs": true
   },
-
-  "// ── Privacy e rete ─────────────────────────────────────────────────────": "",
   "BuiltInDnsClientEnabled": false,
   "DnsOverHttpsMode": "automatic",
   "NetworkPredictionOptions": 2,
   "PasswordManagerEnabled": false,
   "AutofillAddressEnabled": false,
   "AutofillCreditCardEnabled": false,
-
-  "// ── UI pulizia ─────────────────────────────────────────────────────────": "",
   "ShowHomeButton": false,
   "BookmarkBarEnabled": false,
-  "NewTabPageLocation": "about:blank"
+  "NewTabPageLocation": "https://duckduckgo.com/"
 }
