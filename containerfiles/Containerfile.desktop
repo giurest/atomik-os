@@ -85,12 +85,24 @@ RUN mkdir -p /etc/systemd/user && \
 # Brave installato come RPM dal repo ufficiale: legge le managed policies da
 # /etc/brave/policies/managed, quindi il debloat si applica automaticamente a
 # ogni avvio, su tutte le varianti. (Il Flatpak non onora le policy filesystem.)
-RUN dnf install -y dnf-plugins-core && \
+#
+# Nota bootc: su Origami /opt -> /var/opt (non scrivibile in build). Brave vuole
+# installarsi in /opt/brave.com. Reindirizziamo /opt a /usr/lib/opt (in /usr,
+# scrivibile e persistente) PRIMA di installare, replicando lo schema che Origami
+# usa gia' per Mullvad VPN (/var/opt/... -> /usr/lib/opt/...).
+RUN rm -f /opt && mkdir -p /usr/lib/opt && ln -s /usr/lib/opt /opt && \
+    dnf install -y dnf-plugins-core && \
     curl -fsSLo /etc/yum.repos.d/brave-browser.repo \
       https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo && \
     rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
     dnf install -y brave-browser && \
     dnf clean all
+# Ripristina /opt -> /var/opt (com'era su Origami) e collega brave.com da /var/opt
+# tramite tmpfiles, cosi' a runtime /opt/brave.com risolve a /usr/lib/opt/brave.com.
+RUN rm -f /opt && ln -s /var/opt /opt && \
+    mkdir -p /usr/lib/tmpfiles.d && \
+    printf 'L+ /var/opt/brave.com - - - - /usr/lib/opt/brave.com\n' \
+    > /usr/lib/tmpfiles.d/atomik-brave-opt.conf
 RUN mkdir -p /etc/brave/policies/managed
 COPY files/system/usr/share/brave-policies/managed/atomik-policy.json \
      /etc/brave/policies/managed/atomik-policy.json
