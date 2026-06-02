@@ -2,30 +2,33 @@ FROM ghcr.io/giurest/atomik-puregaming:latest
 
 # ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Handheld"
-LABEL org.opencontainers.image.description="Atomik OS — variante Handheld con Gamescope + Steam Game Mode (SPERIMENTALE)"
+LABEL org.opencontainers.image.description="Atomik OS — variante Handheld, desktop gaming portatile per power user (SPERIMENTALE)"
 
-# ── Gamescope (compositor Valve per game mode) ────────────────────────────────
-# gamescope è nel repo Fedora. xorg-x11-server-Xwayland è necessario per i
-# giochi che non supportano Wayland nativamente.
+# ── Gamescope + seatd (sessione alternativa nel greeter) ──────────────────────
+# gamescope è disponibile come sessione opzionale: l'utente può sceglierla dal
+# greeter al posto di Niri. seatd fornisce il seat management necessario.
+# Nota: su Steam Deck OLED la rotazione del pannello non è supportata dal kernel
+# Fedora/CachyOS — gamescope funziona ma il display è ruotato di 90°.
+# L'esperienza consigliata è usare Niri + Steam Big Picture.
 RUN dnf install -y \
     gamescope \
+    seatd \
     xorg-x11-server-Xwayland \
     && dnf clean all
 
-# ── Script di sessione gamescope ──────────────────────────────────────────────
-# atomik-gamescope-session: lancia gamescope + Steam Flatpak in Big Picture
-# steamos-session-select: gestisce lo switch game mode <-> desktop (chiamato da Steam)
-# atomik-session-launcher: wrapper per greetd, decide quale sessione avviare
+# ── Abilita seatd (necessario per gamescope come compositor DRM) ──────────────
+RUN systemctl enable seatd.service
+
+# ── Gruppi utente per accesso GPU/input (applicati ai nuovi utenti) ───────────
+# seat: accesso seatd, video: GPU, input: dispositivi input, render: rendering
+RUN sed -i 's/^GROUPS=.*/GROUPS="wheel,seat,video,input,render"/' /etc/default/useradd 2>/dev/null || \
+    echo 'GROUPS="wheel,seat,video,input,render"' >> /etc/default/useradd
+
+# ── Script sessione gamescope (opzionale, dal greeter) ────────────────────────
 COPY files/system/usr/bin/atomik-gamescope-session /usr/bin/atomik-gamescope-session
-COPY files/system/usr/bin/steamos-session-select /usr/bin/steamos-session-select
-COPY files/system/usr/bin/atomik-session-launcher /usr/bin/atomik-session-launcher
-RUN chmod +x /usr/bin/atomik-gamescope-session \
-             /usr/bin/steamos-session-select \
-             /usr/bin/atomik-session-launcher
+RUN chmod +x /usr/bin/atomik-gamescope-session
 
 # ── Sessione Wayland per greetd/dms-greeter ───────────────────────────────────
-# Aggiunge "Atomik Game Mode" come opzione di sessione nel greeter.
-# L'utente può scegliere tra Game Mode (gamescope) e Niri (desktop).
 COPY files/system/usr/share/wayland-sessions/atomik-gamescope.desktop \
      /usr/share/wayland-sessions/atomik-gamescope.desktop
 
