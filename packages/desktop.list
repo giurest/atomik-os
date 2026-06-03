@@ -49,3 +49,9 @@ ripgrep
 fd-find
 htop
 fastfetch
+
+# ── VPN e gestione rete ──────────────────────────────────────────────────────
+nm-connection-editor
+network-manager-applet
+NetworkManager-openvpn-gnome
+wireguard-tools

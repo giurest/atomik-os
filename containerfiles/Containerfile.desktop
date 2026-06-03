@@ -43,6 +43,7 @@ RUN dnf remove -y \
     cutecosmic-qt6 \
     xdg-desktop-portal-cosmic \
     gnome-tour gnome-user-docs yelp \
+    mullvad-vpn \
     2>/dev/null || true && \
     dnf clean all
 
