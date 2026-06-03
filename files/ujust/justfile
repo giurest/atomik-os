@@ -109,6 +109,48 @@ rollback:
 reboot:
     sudo systemctl reboot
 
+# ── SSH ──────────────────────────────────────────────────────────────────────
+
+# Abilita e avvia il server SSH
+sshd:
+    #!/usr/bin/env bash
+    if systemctl is-active --quiet sshd.service; then
+        echo "✓ sshd è già attivo"
+    else
+        echo "→ Attivazione sshd..."
+        sudo systemctl enable --now sshd.service
+        echo "✓ sshd attivato e avviato"
+    fi
+    echo ""
+    USER=$(whoami)
+    IP=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+    if [ -n "$IP" ]; then
+        echo "┌──────────────────────────────────────┐"
+        echo "│  Connettiti con:                     │"
+        echo "│  ssh ${USER}@${IP}"
+        echo "└──────────────────────────────────────┘"
+    else
+        echo "⚠ Nessun indirizzo IP trovato"
+    fi
+    echo ""
+    echo "Stato: $(systemctl is-active sshd.service) | Abilitato al boot: $(systemctl is-enabled sshd.service)"
+
+# Disabilita e ferma il server SSH
+sshd-off:
+    #!/usr/bin/env bash
+    if systemctl is-active --quiet sshd.service; then
+        echo "→ Arresto sshd..."
+        sudo systemctl disable --now sshd.service
+        echo "✓ sshd disattivato e fermato"
+    else
+        echo "✓ sshd è già spento"
+        if systemctl is-enabled --quiet sshd.service 2>/dev/null; then
+            echo "→ Rimuovo avvio automatico..."
+            sudo systemctl disable sshd.service
+            echo "✓ Rimosso dal boot"
+        fi
+    fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Manutenzione
 # ─────────────────────────────────────────────────────────────────────────────
