@@ -176,3 +176,19 @@ RUN dnf install -y plymouth-plugin-script && dnf clean all
 RUN mkdir -p /etc/plymouth && \
     printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
     plymouth-set-default-theme atomik 2>/dev/null || true
+
+# ── Configurazione default Niri + DMS (per skel e ujust reset) ────────────────
+# I defaults vengono copiati in /usr/share/atomik/defaults/ (sorgente di verità)
+# e in /etc/skel/ (per i nuovi utenti). Gli utenti esistenti usano `ujust reset-desktop`.
+COPY files/atomik-defaults/ /usr/share/atomik/defaults/
+
+# Skel: Niri config per nuovi utenti
+RUN mkdir -p /etc/skel/.config/niri/dms && \
+    cp /usr/share/atomik/defaults/niri/config.kdl /etc/skel/.config/niri/config.kdl && \
+    cp /usr/share/atomik/defaults/niri/dms/binds.kdl /etc/skel/.config/niri/dms/binds.kdl && \
+    cp /usr/share/atomik/defaults/niri/dms/windowrules.kdl /etc/skel/.config/niri/dms/windowrules.kdl
+
+# Skel: DMS settings per nuovi utenti
+RUN mkdir -p /etc/skel/.config/DankMaterialShell && \
+    cp /usr/share/atomik/defaults/DankMaterialShell/settings.json \
+       /etc/skel/.config/DankMaterialShell/settings.json

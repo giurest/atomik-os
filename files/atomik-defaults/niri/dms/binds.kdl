@@ -1,0 +1,6 @@
+binds {
+    Super+Shift+S hotkey-overlay-title="Screenshot: Interactive" { spawn "dms" "ipc" "call" "niri" "screenshot"; }
+    Super+Z hotkey-overlay-title="App Launcher: Toggle" { spawn "dms" "ipc" "call" "spotlight" "toggle"; }
+    Alt+F4 hotkey-overlay-title="Close Window" { close-window; }
+    Super+F hotkey-overlay-title="Fullscreen" { fullscreen-window; }
+}
