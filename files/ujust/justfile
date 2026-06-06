@@ -167,6 +167,14 @@ reset-fastfetch:
 install-winboat:
     #!/usr/bin/env bash
     set -euo pipefail
+    echo "→ Verifica prerequisiti..."
+    if ! flatpak info com.freerdp.FreeRDP &>/dev/null; then
+        echo "→ Installazione FreeRDP 3..."
+        flatpak install -y --noninteractive flathub com.freerdp.FreeRDP
+        echo "✓ FreeRDP installato"
+    else
+        echo "✓ FreeRDP già presente"
+    fi
     echo "→ Scarico l'ultima versione di WinBoat..."
     URL=$(curl -s https://api.github.com/repos/TibixDev/winboat/releases/latest \
         | grep "browser_download_url.*AppImage" \
@@ -182,8 +190,9 @@ install-winboat:
     echo "→ Integrazione con Gear Lever..."
     flatpak run it.mijorus.gearlever --integrate "$TMPFILE"
     rm -f "$TMPFILE"
+    echo ""
     echo "✓ WinBoat installato e integrato nel launcher."
-    echo "  Prerequisiti: Podman, KVM abilitato"    
+    echo "  Prerequisiti: Podman (✓), FreeRDP (✓), KVM abilitato"
 
 # Pulisci le immagini bootc non più referenziate
 cleanup:
