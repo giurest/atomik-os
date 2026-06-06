@@ -47,6 +47,16 @@ RUN dnf remove -y \
     2>/dev/null || true && \
     dnf clean all
 
+# ── Pulizia residui Mullvad VPN ───────────────────────────────────────────────
+# dnf remove non elimina tutti i file: desktop entry, binari in /usr/lib/opt,
+# tmpfiles e repo restano. Pulizia esplicita.
+RUN rm -rf /usr/share/applications/mullvadvpn.desktop \
+           "/usr/lib/opt/Mullvad VPN" \
+           "/usr/lib/tmpfiles.d/99-bluebuild-optfix-Mullvad VPN.conf" \
+           /usr/share/distribution-gpg-keys/mullvad \
+           /etc/mullvad-vpn \
+           /etc/yum.repos.d/mullvad.repo 2>/dev/null || true
+
 # ── Repository DMS + DankLinux (aggiunti manualmente per Origami) ─────────────
 RUN curl -fsSL \
     "https://copr.fedorainfracloud.org/coprs/avengemedia/dms/repo/fedora-44/avengemedia-dms-fedora-44.repo" \
@@ -67,8 +77,6 @@ RUN dnf install -y --skip-unavailable \
     rm -f /tmp/packages-desktop.list
 
 # ── greetd come display manager ───────────────────────────────────────────────
-# L'utente viene creato da Anaconda durante l'installazione, quindi non serve
-# initial-setup né alcuna dipendenza aggiuntiva: greetd parte direttamente.
 RUN ln -sf /usr/lib/systemd/system/greetd.service \
            /etc/systemd/system/display-manager.service
 
@@ -83,14 +91,6 @@ RUN mkdir -p /etc/systemd/user && \
     ln -sf /dev/null /usr/lib/systemd/user/waybar.service
 
 # ── Brave browser (RPM) + policy di debloat ───────────────────────────────────
-# Brave installato come RPM dal repo ufficiale: legge le managed policies da
-# /etc/brave/policies/managed, quindi il debloat si applica automaticamente a
-# ogni avvio, su tutte le varianti. (Il Flatpak non onora le policy filesystem.)
-#
-# Nota bootc: su Origami /opt -> /var/opt (non scrivibile in build). Brave vuole
-# installarsi in /opt/brave.com. Reindirizziamo /opt a /usr/lib/opt (in /usr,
-# scrivibile e persistente) PRIMA di installare, replicando lo schema che Origami
-# usa gia' per Mullvad VPN (/var/opt/... -> /usr/lib/opt/...).
 RUN rm -f /opt && mkdir -p /usr/lib/opt && ln -s /usr/lib/opt /opt && \
     dnf install -y dnf-plugins-core && \
     curl -fsSLo /etc/yum.repos.d/brave-browser.repo \
@@ -98,8 +98,6 @@ RUN rm -f /opt && mkdir -p /usr/lib/opt && ln -s /usr/lib/opt /opt && \
     rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
     dnf install -y brave-browser && \
     dnf clean all
-# Ripristina /opt -> /var/opt (com'era su Origami) e collega brave.com da /var/opt
-# tramite tmpfiles, cosi' a runtime /opt/brave.com risolve a /usr/lib/opt/brave.com.
 RUN rm -f /opt && ln -s /var/opt /opt && \
     mkdir -p /usr/lib/tmpfiles.d && \
     printf 'L+ /var/opt/brave.com - - - - /usr/lib/opt/brave.com\n' \
@@ -108,9 +106,7 @@ RUN mkdir -p /etc/brave/policies/managed
 COPY files/system/usr/share/brave-policies/managed/atomik-policy.json \
      /etc/brave/policies/managed/atomik-policy.json
 
-# ── App Flatpak di base al primo boot (Bazaar store) ──────────────────────────
-# Brave NON è qui: è installato come RPM sopra. Lo script installa lo store
-# Bazaar (ed eventuali altre app) da Flathub al primo avvio.
+# ── App Flatpak di base al primo boot ─────────────────────────────────────────
 COPY files/system/usr/lib/systemd/system/atomik-flatpak-base.service \
      /usr/lib/systemd/system/atomik-flatpak-base.service
 COPY files/system/usr/bin/atomik-flatpak-base \
@@ -121,8 +117,6 @@ RUN chmod +x /usr/bin/atomik-flatpak-base && \
            /usr/lib/systemd/system/multi-user.target.wants/atomik-flatpak-base.service
 
 # ── Plymouth theme ────────────────────────────────────────────────────────────
-# Copia SOLO il contenuto della cartella del tema (atomik.plymouth, atomik.script,
-# logo.png) direttamente in themes/atomik/ — niente sottocartella annidata.
 COPY files/plymouth/atomik/ /usr/share/plymouth/themes/atomik/
 
 # ── Wallpaper predefinito ─────────────────────────────────────────────────────
@@ -136,8 +130,6 @@ RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
     > /usr/lib/tmpfiles.d/atomik-hostname.conf
 
 # ── OS Identity ───────────────────────────────────────────────────────────────
-# ID resta "fedora": bootc-image-builder lo usa per selezionare la definizione
-# di distribuzione. NAME/PRETTY_NAME mostrano comunque il branding Atomik.
 RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /etc/os-release && \
     sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
@@ -168,18 +160,12 @@ COPY files/system/usr/bin/ujust /usr/bin/ujust
 RUN chmod +x /usr/bin/ujust
 
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
-# Installa il plugin "script" (il tema atomik usa ModuleName=script) e imposta
-# atomik come tema di default. NON rigeneriamo l'initramfs in fase di build:
-# su bootc è inaffidabile e può rendere il sistema non avviabile. Il tema viene
-# applicato nella fase di boot in cui Plymouth legge plymouthd.conf.
 RUN dnf install -y plymouth-plugin-script && dnf clean all
 RUN mkdir -p /etc/plymouth && \
     printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
     plymouth-set-default-theme atomik 2>/dev/null || true
 
 # ── Configurazione default Niri + DMS (per skel e ujust reset) ────────────────
-# I defaults vengono copiati in /usr/share/atomik/defaults/ (sorgente di verità)
-# e in /etc/skel/ (per i nuovi utenti). Gli utenti esistenti usano `ujust reset-desktop`.
 COPY files/atomik-defaults/ /usr/share/atomik/defaults/
 
 # Skel: Niri config per nuovi utenti
