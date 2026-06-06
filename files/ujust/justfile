@@ -163,6 +163,28 @@ reset-fastfetch:
     ln -sf /etc/fastfetch/atomik-logo.txt ~/.config/fastfetch/atomik-logo.txt
     echo "✓ Configurazione fastfetch ripristinata."
 
+# Installa WinBoat (Windows app runner via container)
+install-winboat:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "→ Scarico l'ultima versione di WinBoat..."
+    URL=$(curl -s https://api.github.com/repos/TibixDev/winboat/releases/latest \
+        | grep "browser_download_url.*AppImage" \
+        | head -1 \
+        | cut -d '"' -f 4)
+    if [ -z "$URL" ]; then
+        echo "✗ Impossibile trovare l'AppImage nelle release."
+        exit 1
+    fi
+    TMPFILE=$(mktemp /tmp/WinBoat-XXXX.AppImage)
+    curl -fSL "$URL" -o "$TMPFILE"
+    chmod +x "$TMPFILE"
+    echo "→ Integrazione con Gear Lever..."
+    flatpak run it.mijorus.gearlever --integrate "$TMPFILE"
+    rm -f "$TMPFILE"
+    echo "✓ WinBoat installato e integrato nel launcher."
+    echo "  Prerequisiti: Podman, KVM abilitato"    
+
 # Pulisci le immagini bootc non più referenziate
 cleanup:
     sudo bootc image prune 2>/dev/null || sudo podman image prune -f
