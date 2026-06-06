@@ -58,3 +58,4 @@ wireguard-tools
 
 # ── AppImage support ──────────────────────────────────────────────────────
 fuse
+fuse-libs
