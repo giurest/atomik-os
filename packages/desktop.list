@@ -55,3 +55,6 @@ nm-connection-editor
 network-manager-applet
 NetworkManager-openvpn-gnome
 wireguard-tools
+
+# ── AppImage support ──────────────────────────────────────────────────────
+fuse
