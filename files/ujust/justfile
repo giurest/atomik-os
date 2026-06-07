@@ -170,7 +170,7 @@ install-winboat:
     echo "→ Verifica prerequisiti..."
     if ! flatpak info com.freerdp.FreeRDP &>/dev/null; then
         echo "→ Installazione FreeRDP 3..."
-        flatpak install -y --noninteractive flathub com.freerdp.FreeRDP
+        flatpak install -y --noninteractive --system flathub com.freerdp.FreeRDP
         echo "✓ FreeRDP installato"
     else
         echo "✓ FreeRDP già presente"
