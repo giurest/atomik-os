@@ -194,6 +194,7 @@ install-winboat:
     echo "✓ WinBoat installato e integrato nel launcher."
     echo "  Prerequisiti: Podman (✓), FreeRDP (✓), KVM abilitato"
 
+
 # ── SMB / Condivisioni di rete ───────────────────────────────────────────────
  
 # Crea una connessione SMB persistente (NAS, PC Windows)
@@ -203,42 +204,31 @@ smb-connect:
     USER_HOME="$HOME"
     USERNAME="$(whoami)"
     USER_UID=$(id -u)
- 
     echo "┌──────────────────────────────────────┐"
     echo "│  Connessione SMB / Condivisione rete │"
     echo "└──────────────────────────────────────┘"
     echo ""
- 
-    # Cartella contenitore (primo livello)
     read -rp "Nome cartella contenitore (es. nas, shares): " CONTAINER
     if [[ -z "$CONTAINER" ]]; then
         echo "✗ Nome contenitore vuoto."; exit 1
     fi
     mkdir -p "$USER_HOME/$CONTAINER"
- 
-    # Nome connessione (secondo livello)
     read -rp "Nome connessione (es. server1, backup, media): " CONNECTION
     if [[ -z "$CONNECTION" ]]; then
         echo "✗ Nome connessione vuoto."; exit 1
     fi
- 
     MOUNT_PATH="$USER_HOME/$CONTAINER/$CONNECTION"
     if mountpoint -q "$MOUNT_PATH" 2>/dev/null; then
         echo "✗ '$MOUNT_PATH' è già un mount attivo."
         exit 1
     fi
     mkdir -p "$MOUNT_PATH"
- 
-    # Dettagli connessione
     read -rp "Descrizione (es. NAS Ufficio): " DESCRIPTION
     read -rp "Percorso remoto (es. //192.168.178.100/dati): " REMOTE_PATH
     read -rp "Utente SMB: " SMB_USER
     read -srp "Password SMB: " SMB_PASS
     echo ""
- 
-    # Nome unit systemd (slashes -> dashes, senza lo / iniziale)
     UNIT_NAME=$(systemd-escape --path "$MOUNT_PATH")
- 
     echo ""
     echo "→ Configurazione:"
     echo "  Mount:  $MOUNT_PATH"
@@ -251,40 +241,12 @@ smb-connect:
         echo "Operazione annullata."
         exit 0
     fi
- 
-    # Crea file .mount
-    sudo tee /etc/systemd/system/${UNIT_NAME}.mount > /dev/null << MOUNT_EOF
-[Unit]
-Description=$DESCRIPTION
- 
-[Mount]
-What=$REMOTE_PATH
-Where=$MOUNT_PATH
-Type=cifs
-Options=rw,file_mode=0700,dir_mode=0700,uid=$USER_UID,user=$SMB_USER,password=$SMB_PASS
-DirectoryMode=0700
- 
-[Install]
-WantedBy=multi-user.target
-MOUNT_EOF
- 
-    # Crea file .automount
-    sudo tee /etc/systemd/system/${UNIT_NAME}.automount > /dev/null << AUTOMOUNT_EOF
-[Unit]
-Description=$DESCRIPTION (automount)
- 
-[Automount]
-Where=$MOUNT_PATH
-TimeoutIdleSec=60
- 
-[Install]
-WantedBy=multi-user.target
-AUTOMOUNT_EOF
- 
-    # Attiva
+    MOUNT_CONTENT="[Unit]\nDescription=$DESCRIPTION\n\n[Mount]\nWhat=$REMOTE_PATH\nWhere=$MOUNT_PATH\nType=cifs\nOptions=rw,file_mode=0700,dir_mode=0700,uid=$USER_UID,user=$SMB_USER,password=$SMB_PASS\nDirectoryMode=0700\n\n[Install]\nWantedBy=multi-user.target"
+    printf "$MOUNT_CONTENT\n" | sudo tee /etc/systemd/system/${UNIT_NAME}.mount > /dev/null
+    AUTOMOUNT_CONTENT="[Unit]\nDescription=$DESCRIPTION (automount)\n\n[Automount]\nWhere=$MOUNT_PATH\nTimeoutIdleSec=60\n\n[Install]\nWantedBy=multi-user.target"
+    printf "$AUTOMOUNT_CONTENT\n" | sudo tee /etc/systemd/system/${UNIT_NAME}.automount > /dev/null
     sudo systemctl daemon-reload
     sudo systemctl enable --now ${UNIT_NAME}.automount
- 
     echo ""
     echo "✓ Connessione '$CONNECTION' creata e attiva."
     echo "  Accedi a: $MOUNT_PATH"
@@ -295,23 +257,18 @@ smb-disconnect:
     #!/usr/bin/env bash
     set -euo pipefail
     USER_HOME="$HOME"
- 
     echo "┌──────────────────────────────────────┐"
     echo "│  Rimozione connessione SMB           │"
     echo "└──────────────────────────────────────┘"
     echo ""
- 
     read -rp "Nome cartella contenitore (es. nas): " CONTAINER
     read -rp "Nome connessione da rimuovere (es. server1): " CONNECTION
- 
     MOUNT_PATH="$USER_HOME/$CONTAINER/$CONNECTION"
     UNIT_NAME=$(systemd-escape --path "$MOUNT_PATH")
- 
     if [[ ! -f "/etc/systemd/system/${UNIT_NAME}.mount" ]]; then
         echo "✗ Nessuna connessione trovata per '$MOUNT_PATH'."
         exit 1
     fi
- 
     echo ""
     echo "⚠ Verrà rimossa la connessione:"
     echo "  Mount: $MOUNT_PATH"
@@ -322,19 +279,16 @@ smb-disconnect:
         echo "Operazione annullata."
         exit 0
     fi
- 
     sudo systemctl disable --now ${UNIT_NAME}.automount 2>/dev/null || true
     sudo systemctl disable --now ${UNIT_NAME}.mount 2>/dev/null || true
     sudo rm -f /etc/systemd/system/${UNIT_NAME}.mount
     sudo rm -f /etc/systemd/system/${UNIT_NAME}.automount
     sudo systemctl daemon-reload
- 
     read -rp "Eliminare anche la cartella '$MOUNT_PATH'? [s/N]: " DELFOLDER
     if [[ "$DELFOLDER" =~ ^[sS]$ ]]; then
         rm -rf "$MOUNT_PATH"
         echo "✓ Cartella rimossa."
     fi
- 
     echo "✓ Connessione '$CONNECTION' rimossa."
  
 # Elenca le connessioni SMB attive
@@ -357,6 +311,7 @@ smb-list:
     if [ "$FOUND" -eq 0 ]; then
         echo "  Nessuna connessione SMB configurata."
     fi
+ 
 
 # Pulisci le immagini bootc non più referenziate
 cleanup:
