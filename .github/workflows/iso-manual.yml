@@ -12,6 +12,7 @@ on:
           - desktop
           - puregaming
           - handheld
+          - desktop-nvidia
 
 env:
   IMAGE_NAME: atomik-${{ github.event.inputs.variant }}

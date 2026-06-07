@@ -100,6 +100,7 @@ jobs:
         variant:
           - puregaming
           - handheld
+          - desktop-nvidia
 
     steps:
       - name: Checkout repository
