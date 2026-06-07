@@ -299,7 +299,7 @@ smb-list:
     echo "└──────────────────────────────────────┘"
     echo ""
     FOUND=0
-    for f in /etc/systemd/system/home-*.mount; do
+    for f in /etc/systemd/system/var-*.mount; do
         [ -f "$f" ] || continue
         UNIT=$(basename "$f")
         WHERE=$(grep "^Where=" "$f" | cut -d= -f2)
