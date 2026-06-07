@@ -201,7 +201,7 @@ install-winboat:
 smb-connect:
     #!/usr/bin/env bash
     set -euo pipefail
-    USER_HOME="$HOME"
+    USER_HOME="$(realpath "$HOME")"
     USERNAME="$(whoami)"
     USER_UID=$(id -u)
     echo "┌──────────────────────────────────────┐"
@@ -256,7 +256,7 @@ smb-connect:
 smb-disconnect:
     #!/usr/bin/env bash
     set -euo pipefail
-    USER_HOME="$HOME"
+    USER_HOME="$(realpath "$HOME")"
     echo "┌──────────────────────────────────────┐"
     echo "│  Rimozione connessione SMB           │"
     echo "└──────────────────────────────────────┘"
