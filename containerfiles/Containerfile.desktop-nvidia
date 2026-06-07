@@ -10,7 +10,7 @@ RUN sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
     sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release
 
 # ── Rimozione COSMIC e bloatware ──────────────────────────────────────────────
-RUN dnf remove -y \
+RUN dnf5 remove -y \
     cosmic-applets \
     cosmic-app-library \
     cosmic-bg \
@@ -50,7 +50,7 @@ RUN dnf remove -y \
     gnome-tour gnome-user-docs yelp \
     mullvad-vpn \
     2>/dev/null || true && \
-    dnf clean all
+    dnf5 clean all
 
 # ── Pulizia residui Mullvad VPN ───────────────────────────────────────────────
 RUN rm -rf /usr/share/applications/mullvadvpn.desktop \
@@ -67,16 +67,16 @@ RUN curl -fsSL \
     curl -fsSL \
     "https://copr.fedorainfracloud.org/coprs/avengemedia/danklinux/repo/fedora-44/avengemedia-danklinux-fedora-44.repo" \
     -o /etc/yum.repos.d/avengemedia-danklinux.repo && \
-    dnf clean all
+    dnf5 clean all
 
 # ── Assicura Flatpak disponibile ──────────────────────────────────────────────
-RUN dnf install -y flatpak && dnf clean all
+RUN dnf5 install -y flatpak && dnf5 clean all&& dnf5 clean all dnf5 clean all
 
 # ── Pacchetti desktop ─────────────────────────────────────────────────────────
 COPY packages/desktop.list /tmp/packages-desktop.list
-RUN dnf install -y --skip-unavailable \
+RUN dnf5 install -y --skip-unavailable \
     $(grep -v '^#' /tmp/packages-desktop.list | grep -v '^$' | tr '\n' ' ') && \
-    dnf clean all && \
+    dnf5 clean all && \
     rm -f /tmp/packages-desktop.list
 
 # ── greetd come display manager ───────────────────────────────────────────────
@@ -95,12 +95,12 @@ RUN mkdir -p /etc/systemd/user && \
 
 # ── Brave browser (RPM) + policy di debloat ───────────────────────────────────
 RUN rm -f /opt && mkdir -p /usr/lib/opt && ln -s /usr/lib/opt /opt && \
-    dnf install -y dnf-plugins-core && \
+    dnf5 install -y dnf-plugins-core && \
     curl -fsSLo /etc/yum.repos.d/brave-browser.repo \
       https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo && \
     rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
-    dnf install -y brave-browser && \
-    dnf clean all
+    dnf5 install -y brave-browser && \
+    dnf5 clean all
 RUN rm -f /opt && ln -s /var/opt /opt && \
     mkdir -p /usr/lib/tmpfiles.d && \
     printf 'L+ /var/opt/brave.com - - - - /usr/lib/opt/brave.com\n' \
@@ -163,7 +163,7 @@ COPY files/system/usr/bin/ujust /usr/bin/ujust
 RUN chmod +x /usr/bin/ujust
 
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
-RUN dnf install -y plymouth-plugin-script && dnf clean all
+RUN dnf5 install -y plymouth-plugin-script && dnf5 clean all&& dnf5 clean all dnf5 clean all
 RUN mkdir -p /etc/plymouth && \
     printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
     plymouth-set-default-theme atomik 2>/dev/null || true
