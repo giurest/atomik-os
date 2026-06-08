@@ -8,9 +8,9 @@ Distribuzione Linux immutabile basata su **Origami Linux** (Fedora Atomic + kern
 |---|---|---|---|
 | `desktop` | Origami Linux | Workstation minimalista + sviluppo | ✅ Disponibile |
 | `puregaming` | `atomik-desktop` | Gaming puro su base desktop | ✅ Disponibile |
-| `desktop-nvidia` | `atomik-desktop` + driver NVIDIA | Workstation con GPU NVIDIA | 🚧 Pianificata |
-| `puregaming-nvidia` | `atomik-puregaming` + driver NVIDIA | Gaming con GPU NVIDIA | 🚧 Pianificata |
-| `handheld` | Bazzite Deck | Steam Deck e dispositivi portatili | 🚧 Pianificata |
+| `desktop-nvidia` | RAKU-OS + driver NVIDIA | Workstation con GPU NVIDIA | ✅ Disponibile - BETA |
+| `puregaming-nvidia` | `desktop-nvidia` + driver NVIDIA | Gaming con GPU NVIDIA |  ✅ Disponibile - BETA |
+| `handheld` | `atomik-desktop` | Steam Deck per power users | ✅ Disponibile |
 
 `puregaming` eredita interamente da `desktop`: tutto ciò che è nella base (Niri, DMS, greetd, ujust, Brave, Bazaar) è presente anche in gaming.
 
