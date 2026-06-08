@@ -194,6 +194,15 @@ install-winboat:
     echo "✓ WinBoat installato e integrato nel launcher."
     echo "  Prerequisiti: Podman (✓), FreeRDP (✓), KVM abilitato"
 
+# Installa WinBoat (Windows app runner via container)
+unlock-winboat:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ~/.winboat
+    podman-compose down
+    podman-compose up -d    
+    echo "  Pod Winboat: Riavviato (✓)"
+
 
 # ── SMB / Condivisioni di rete ───────────────────────────────────────────────
  
