@@ -194,14 +194,35 @@ install-winboat:
     echo "✓ WinBoat installato e integrato nel launcher."
     echo "  Prerequisiti: Podman (✓), FreeRDP (✓), KVM abilitato"
 
-# Installa WinBoat (Windows app runner via container)
+# Sblocca WinBoat (riavvia il container)
 unlock-winboat:
     #!/usr/bin/env bash
     set -euo pipefail
-    cd ~/.winboat
-    podman-compose down
-    podman-compose up -d    
-    echo "  Pod Winboat: Riavviato (✓)"
+    WINBOAT_DIR="$HOME/.winboat"
+    if [ ! -d "$WINBOAT_DIR" ]; then
+        echo "✗ WinBoat non trovato in $WINBOAT_DIR"
+        exit 1
+    fi
+    cd "$WINBOAT_DIR"
+    echo "→ Arresto container WinBoat..."
+    if podman-compose down 2>&1 | tail -3; then
+        echo "  ✓ Container fermato"
+    else
+        echo "  ⚠ Nessun container attivo da fermare"
+    fi
+    echo ""
+    echo "→ Avvio container WinBoat..."
+    if podman-compose up -d 2>&1 | tail -5; then
+        echo ""
+        echo "┌──────────────────────────────────────┐"
+        echo "│  ✓ WinBoat pronto                    │"
+        echo "│  Stato container:                     │"
+        podman ps --filter "name=winboat" --format "│  {{.Names}}  {{.Status}}" 2>/dev/null || true
+        echo "└──────────────────────────────────────┘"
+    else
+        echo "  ✗ Errore nell'avvio del container"
+        exit 1
+    fi
 
 
 # ── SMB / Condivisioni di rete ───────────────────────────────────────────────
