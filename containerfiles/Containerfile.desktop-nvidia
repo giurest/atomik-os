@@ -20,6 +20,9 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/build.sh
 
+# ── Fix repo Terra (chiave GPG incompatibile con ISO builder) ─────────────────
+RUN rm -f /etc/yum.repos.d/terra*.repo 2>/dev/null || true    
+
 # ── Brave: tmpfiles per /opt e policy debloat ─────────────────────────────────
 RUN mkdir -p /usr/lib/tmpfiles.d && \
     printf 'L+ /var/opt/brave.com - - - - /usr/lib/opt/brave.com\n' \
