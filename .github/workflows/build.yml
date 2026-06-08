@@ -102,6 +102,22 @@ jobs:
           - handheld
           - desktop-nvidia
 
+  # ── Fase 3: varianti derivate da desktop-nvidia ────────────────────────────
+  build-nvidia-derived:
+    name: Build ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    needs: build-derived
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - puregaming-nvidia      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
