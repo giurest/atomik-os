@@ -1,83 +1,32 @@
+# Build context con script e lista pacchetti
+FROM scratch AS ctx
+COPY build_files_nvidia /
+
+# Base Image
 FROM ghcr.io/rakuos/rakuos-base-nvidia:latest
 
 # ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Desktop NVIDIA"
 LABEL org.opencontainers.image.description="Atomik OS — variante Desktop con driver NVIDIA proprietari (base RakuOS)"
 
-# ── ID=fedora (necessario per bootc-image-builder e compatibilità) ────────────
-# RakuOS potrebbe impostare un ID diverso; lo forziamo a fedora come su desktop.
+# ── ID=fedora (necessario per bootc-image-builder) ────────────────────────────
 RUN sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
     sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release
 
-# ── Rimozione COSMIC e bloatware ──────────────────────────────────────────────
-RUN dnf5 remove -y \
-    cosmic-applets \
-    cosmic-app-library \
-    cosmic-bg \
-    cosmic-comp \
-    cosmic-config-fedora \
-    cosmic-edit \
-    cosmic-ext-applet-clipboard-manager \
-    cosmic-ext-applet-logomenu \
-    cosmic-ext-applet-sysinfo \
-    cosmic-ext-calculator \
-    cosmic-ext-camera \
-    cosmic-ext-noctua \
-    cosmic-ext-storage \
-    cosmic-ext-tasks \
-    cosmic-ext-xcalendar \
-    cosmic-files \
-    cosmic-greeter \
-    cosmic-icon-theme \
-    cosmic-idle \
-    cosmic-initial-setup \
-    cosmic-launcher \
-    cosmic-notifications \
-    cosmic-osd \
-    cosmic-panel \
-    cosmic-player \
-    cosmic-randr \
-    cosmic-screenshot \
-    cosmic-session \
-    cosmic-settings \
-    cosmic-settings-daemon \
-    cosmic-store \
-    cosmic-term \
-    cosmic-wallpapers \
-    cosmic-workspaces \
-    cutecosmic-qt6 \
-    xdg-desktop-portal-cosmic \
-    gnome-tour gnome-user-docs yelp \
-    mullvad-vpn \
-    2>/dev/null || true && \
-    dnf5 clean all
+# ── Build: repo, pacchetti, Brave (via build.sh con mount RakuOS) ─────────────
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/build.sh
 
-# ── Pulizia residui Mullvad VPN ───────────────────────────────────────────────
-RUN rm -rf /usr/share/applications/mullvadvpn.desktop \
-           "/usr/lib/opt/Mullvad VPN" \
-           "/usr/lib/tmpfiles.d/99-bluebuild-optfix-Mullvad VPN.conf" \
-           /usr/share/distribution-gpg-keys/mullvad \
-           /etc/mullvad-vpn \
-           /etc/yum.repos.d/mullvad.repo 2>/dev/null || true
-
-# ── Repository DMS + DankLinux ────────────────────────────────────────────────
-RUN curl -fsSL \
-    "https://copr.fedorainfracloud.org/coprs/avengemedia/dms/repo/fedora-44/avengemedia-dms-fedora-44.repo" \
-    -o /etc/yum.repos.d/avengemedia-dms.repo && \
-    curl -fsSL \
-    "https://copr.fedorainfracloud.org/coprs/avengemedia/danklinux/repo/fedora-44/avengemedia-danklinux-fedora-44.repo" \
-    -o /etc/yum.repos.d/avengemedia-danklinux.repo && \
-    dnf5 clean all
-
-# ── Assicura Flatpak disponibile ──────────────────────────────────────────────
-RUN dnf5 install -y flatpak && dnf5 clean all&& dnf5 clean all dnf5 clean all
-
-# ── Pacchetti desktop ─────────────────────────────────────────────────────────
-COPY packages/desktop.list /tmp/packages-desktop.list
-RUN dnf5 install -y --skip-unavailable \
-    $(grep -v '^#' /tmp/packages-desktop.list | grep -v '^$' | tr '\n' ' ') && \
-    dnf5 clean all && \
-    rm -f /tmp/packages-desktop.list
+# ── Brave: tmpfiles per /opt e policy debloat ─────────────────────────────────
+RUN mkdir -p /usr/lib/tmpfiles.d && \
+    printf 'L+ /var/opt/brave.com - - - - /usr/lib/opt/brave.com\n' \
+    > /usr/lib/tmpfiles.d/atomik-brave-opt.conf
+RUN mkdir -p /etc/brave/policies/managed
+COPY files/system/usr/share/brave-policies/managed/atomik-policy.json \
+     /etc/brave/policies/managed/atomik-policy.json
 
 # ── greetd come display manager ───────────────────────────────────────────────
 RUN ln -sf /usr/lib/systemd/system/greetd.service \
@@ -92,22 +41,6 @@ RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
 RUN mkdir -p /etc/systemd/user && \
     ln -sf /dev/null /etc/systemd/user/waybar.service && \
     ln -sf /dev/null /usr/lib/systemd/user/waybar.service
-
-# ── Brave browser (RPM) + policy di debloat ───────────────────────────────────
-RUN rm -f /opt && mkdir -p /usr/lib/opt && ln -s /usr/lib/opt /opt && \
-    dnf5 install -y dnf-plugins-core && \
-    curl -fsSLo /etc/yum.repos.d/brave-browser.repo \
-      https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo && \
-    rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc && \
-    dnf5 install -y brave-browser && \
-    dnf5 clean all
-RUN rm -f /opt && ln -s /var/opt /opt && \
-    mkdir -p /usr/lib/tmpfiles.d && \
-    printf 'L+ /var/opt/brave.com - - - - /usr/lib/opt/brave.com\n' \
-    > /usr/lib/tmpfiles.d/atomik-brave-opt.conf
-RUN mkdir -p /etc/brave/policies/managed
-COPY files/system/usr/share/brave-policies/managed/atomik-policy.json \
-     /etc/brave/policies/managed/atomik-policy.json
 
 # ── App Flatpak di base al primo boot ─────────────────────────────────────────
 COPY files/system/usr/lib/systemd/system/atomik-flatpak-base.service \
@@ -163,12 +96,11 @@ COPY files/system/usr/bin/ujust /usr/bin/ujust
 RUN chmod +x /usr/bin/ujust
 
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
-RUN dnf5 install -y plymouth-plugin-script && dnf5 clean all&& dnf5 clean all dnf5 clean all
 RUN mkdir -p /etc/plymouth && \
     printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
     plymouth-set-default-theme atomik 2>/dev/null || true
 
-# ── Configurazione default Niri + DMS (per skel e ujust reset) ────────────────
+# ── Configurazione default Niri + DMS ─────────────────────────────────────────
 COPY files/atomik-defaults/ /usr/share/atomik/defaults/
 RUN mkdir -p /etc/skel/.config/niri/dms && \
     cp /usr/share/atomik/defaults/niri/config.kdl /etc/skel/.config/niri/config.kdl && \
@@ -177,3 +109,6 @@ RUN mkdir -p /etc/skel/.config/niri/dms && \
 RUN mkdir -p /etc/skel/.config/DankMaterialShell && \
     cp /usr/share/atomik/defaults/DankMaterialShell/settings.json \
        /etc/skel/.config/DankMaterialShell/settings.json
+
+# ── Lint finale ───────────────────────────────────────────────────────────────
+RUN bootc container lint
