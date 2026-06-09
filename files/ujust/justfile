@@ -110,6 +110,138 @@ reboot:
     sudo systemctl reboot
 
 # ─────────────────────────────────────────────────────────────────────────────
+# GESTORE GIT
+# ─────────────────────────────────────────────────────────────────────────────    
+
+# Configura Git e chiavi SSH per un repo
+git-config:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "┌──────────────────────────────────────┐"
+    echo "│  Configurazione Git + SSH            │"
+    echo "└──────────────────────────────────────┘"
+    echo ""
+    CURRENT_NAME=$(git config --global user.name 2>/dev/null || echo "")
+    CURRENT_EMAIL=$(git config --global user.email 2>/dev/null || echo "")
+    if [ -n "$CURRENT_NAME" ]; then
+        echo "  Configurazione attuale:"
+        echo "  Nome:  $CURRENT_NAME"
+        echo "  Email: $CURRENT_EMAIL"
+        echo ""
+        read -rp "Riconfigurare? [s/N]: " RECONF
+        if [[ ! "$RECONF" =~ ^[sS]$ ]]; then
+            echo ""
+        else
+            read -rp "Nome e cognome: " GIT_NAME
+            read -rp "Email: " GIT_EMAIL
+            git config --global user.name "$GIT_NAME"
+            git config --global user.email "$GIT_EMAIL"
+            echo "✓ Identità aggiornata"
+            echo ""
+        fi
+    else
+        read -rp "Nome e cognome: " GIT_NAME
+        read -rp "Email: " GIT_EMAIL
+        git config --global user.name "$GIT_NAME"
+        git config --global user.email "$GIT_EMAIL"
+        echo "✓ Identità configurata"
+        echo ""
+    fi
+    echo "── Chiave SSH ──"
+    if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
+        echo "  ✓ Chiave esistente:"
+        cat "$HOME/.ssh/id_ed25519.pub"
+    else
+        read -rp "Generare una nuova chiave SSH? [s/N]: " GENKEY
+        if [[ "$GENKEY" =~ ^[sS]$ ]]; then
+            EMAIL=$(git config --global user.email)
+            ssh-keygen -t ed25519 -C "$EMAIL" -f "$HOME/.ssh/id_ed25519"
+            eval "$(ssh-agent -s)" > /dev/null
+            ssh-add "$HOME/.ssh/id_ed25519" 2>/dev/null
+            echo ""
+            echo "✓ Chiave generata. Copia questa su GitHub/GitLab:"
+            echo ""
+            cat "$HOME/.ssh/id_ed25519.pub"
+        fi
+    fi
+    echo ""
+    echo "── Clona repository ──"
+    read -rp "URL repository da clonare (vuoto per saltare): " REPO_URL
+    if [ -n "$REPO_URL" ]; then
+        read -rp "Cartella destinazione (default: ~/code): " CODE_DIR
+        CODE_DIR="${CODE_DIR:-$HOME/code}"
+        mkdir -p "$CODE_DIR"
+        cd "$CODE_DIR"
+        git clone "$REPO_URL"
+        echo "✓ Repository clonato in $CODE_DIR"
+    fi
+
+# Workflow git rapido: fetch, pull, add, commit, push
+git project="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PROJECT="{{project}}"
+    if [ -z "$PROJECT" ]; then
+        read -rp "Nome progetto (cartella in ~/code/): " PROJECT
+    fi
+    if [ -z "$PROJECT" ]; then
+        echo "✗ Nome progetto vuoto."
+        exit 1
+    fi
+    PROJECT_DIR="$HOME/code/$PROJECT"
+    if [ ! -d "$PROJECT_DIR/.git" ]; then
+        echo "✗ '$PROJECT_DIR' non è un repository git."
+        exit 1
+    fi
+    cd "$PROJECT_DIR"
+    BRANCH=$(git branch --show-current)
+    echo "┌──────────────────────────────────────┐"
+    echo "│  Git: $PROJECT ($BRANCH)"
+    echo "└──────────────────────────────────────┘"
+    echo ""
+    echo "→ Fetch..."
+    git fetch --all --prune
+    echo ""
+    echo "→ Pull..."
+    git pull --rebase 2>/dev/null || git pull
+    echo ""
+    echo "→ Stato:"
+    git status --short
+    echo ""
+    CHANGES=$(git status --porcelain)
+    if [ -z "$CHANGES" ]; then
+        echo "✓ Nessuna modifica da committare."
+        exit 0
+    fi
+    echo "── File modificati ──"
+    git diff --stat
+    echo ""
+    git status --short
+    echo ""
+    read -rp "Aggiungere tutto e committare? [s/N]: " DO_COMMIT
+    if [[ ! "$DO_COMMIT" =~ ^[sS]$ ]]; then
+        echo "Operazione annullata."
+        exit 0
+    fi
+    echo ""
+    read -rp "Messaggio commit: " COMMIT_MSG
+    if [ -z "$COMMIT_MSG" ]; then
+        echo "✗ Messaggio vuoto, commit annullato."
+        exit 1
+    fi
+    git add -A
+    git commit -m "$COMMIT_MSG"
+    echo ""
+    read -rp "Push su $BRANCH? [s/N]: " DO_PUSH
+    if [[ "$DO_PUSH" =~ ^[sS]$ ]]; then
+        git push origin "$BRANCH"
+        echo ""
+        echo "✓ Push completato su $BRANCH"
+    else
+        echo "✓ Commit locale, push saltato."
+    fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Manutenzione
 # ─────────────────────────────────────────────────────────────────────────────
 
