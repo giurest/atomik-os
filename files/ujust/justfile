@@ -342,6 +342,114 @@ smb-list:
         echo "  Nessuna connessione SMB configurata."
     fi
  
+# Powerwash: backup dati essenziali + reset completo del sistema
+powerwash:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "┌──────────────────────────────────────┐"
+    echo "│  ⚠ POWERWASH — Reset di sistema     │"
+    echo "└──────────────────────────────────────┘"
+    echo ""
+    echo "Flusso di lavoro:"
+    echo "  1. Salva SOLO le cartelle scelte su un dispositivo esterno"
+    echo "  2. Resetta completamente il sistema (etc, var, flatpak)"
+    echo "  3. Al riavvio il sistema sarà come appena installato"
+    echo ""
+    echo "⚠ TUTTO il resto verrà cancellato: config, app, flatpak, cache."
+    echo ""
+    read -rp "Continuare? [s/N]: " CONFIRM
+    if [[ ! "$CONFIRM" =~ ^[sS]$ ]]; then
+        echo "Operazione annullata."
+        exit 0
+    fi
+    USER_HOME="$(realpath "$HOME")"
+    USERNAME="$(whoami)"
+    echo ""
+    echo "── Cartelle da salvare ──"
+    echo "Default: Documenti Immagini Video Musica Scaricati"
+    read -rp "Cartelle aggiuntive (separate da spazio, vuoto per solo default): " EXTRA
+    FOLDERS="Documenti Documents Immagini Pictures Video Videos Musica Music Scaricati Downloads $EXTRA"
+    echo ""
+    echo "── Destinazione backup ──"
+    echo "Dispositivi montati:"
+    lsblk -o NAME,SIZE,MOUNTPOINT,FSTYPE | grep -v "loop" | grep -v "^$"
+    echo ""
+    read -rp "Percorso destinazione (es. /run/media/$USERNAME/USB): " DEST
+    if [ ! -d "$DEST" ]; then
+        echo "✗ Percorso '$DEST' non trovato."
+        exit 1
+    fi
+    BACKUP_FILE="$DEST/atomik-powerwash-$(date +%Y%m%d-%H%M%S).tar.gz"
+    echo ""
+    echo "── Creazione backup ──"
+    BACKUP_ARGS=""
+    for DIR in $FOLDERS; do
+        FULL_PATH="$USER_HOME/$DIR"
+        if [ -d "$FULL_PATH" ]; then
+            echo "  + $DIR"
+            BACKUP_ARGS="$BACKUP_ARGS $DIR"
+        fi
+    done
+    if [ -z "$BACKUP_ARGS" ]; then
+        echo "✗ Nessuna cartella trovata da salvare."
+        exit 1
+    fi
+    echo ""
+    echo "→ Salvataggio in $BACKUP_FILE ..."
+    cd "$USER_HOME"
+    tar czf "$BACKUP_FILE" $BACKUP_ARGS
+    BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+    echo "✓ Backup completato ($BACKUP_SIZE)"
+    echo ""
+    echo "── Reset sistema ──"
+    VARIANT=$(grep "^PRETTY_NAME" /etc/os-release | sed 's/.*(\(.*\)).*/\1/' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+    IMAGE="ghcr.io/giurest/atomik-${VARIANT}:latest"
+    echo "Variante rilevata: $VARIANT"
+    echo "Immagine: $IMAGE"
+    echo ""
+    echo "⚠ ULTIMO AVVISO: il sistema verrà resettato al prossimo riavvio."
+    echo "  Il backup è stato salvato su: $BACKUP_FILE"
+    echo "  SCOLLEGA il dispositivo esterno DOPO il riavvio."
+    echo ""
+    read -rp "Procedere con il reset? [s/N]: " FINAL
+    if [[ ! "$FINAL" =~ ^[sS]$ ]]; then
+        echo "Reset annullato. Il backup resta in: $BACKUP_FILE"
+        exit 0
+    fi
+    echo "→ Preparazione reset..."
+    sudo tee /etc/systemd/system/atomik-powerwash.service > /dev/null << PWEOF
+[Unit]
+Description=Atomik OS Powerwash - pulizia var
+After=local-fs.target
+Before=display-manager.service
+ConditionPathExists=/var/lib/atomik-powerwash-pending
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'rm -rf /var/home/*/.config /var/home/*/.local /var/home/*/.cache /var/home/*/.var /var/lib/flatpak /var/cache/* /var/log/* /var/tmp/* && rm -f /var/lib/atomik-powerwash-pending && systemctl disable atomik-powerwash.service && rm -f /etc/systemd/system/atomik-powerwash.service && systemctl daemon-reload'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+PWEOF
+    sudo systemctl enable atomik-powerwash.service
+    sudo touch /var/lib/atomik-powerwash-pending
+    echo "→ Switch immagine..."
+    sudo bootc switch --mutate-in-place --transport registry "$IMAGE"
+    echo ""
+    echo "┌──────────────────────────────────────┐"
+    echo "│  ✓ Powerwash preparato               │"
+    echo "│                                       │"
+    echo "│  Al prossimo riavvio:                 │"
+    echo "│  • Sistema resettato ai default       │"
+    echo "│  • Home pulite                        │"
+    echo "│  • Flatpak rimossi                    │"
+    echo "│                                       │"
+    echo "│  Backup: $BACKUP_FILE"
+    echo "│                                       │"
+    echo "│  Riavvia quando pronto:               │"
+    echo "│  sudo systemctl reboot                │"
+    echo "└──────────────────────────────────────┘"
 
 # Pulisci le immagini bootc non più referenziate
 cleanup:
