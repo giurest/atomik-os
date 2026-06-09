@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Atomik OS — Prepara il servizio powerwash per il prossimo boot
+set -euo pipefail
+
+cat > /etc/systemd/system/atomik-powerwash.service << 'EOF'
+[Unit]
+Description=Atomik OS Powerwash
+After=local-fs.target
+Before=display-manager.service
+ConditionPathExists=/var/lib/atomik-powerwash-pending
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'rm -rf /var/home/*/.config /var/home/*/.local /var/home/*/.cache /var/home/*/.var /var/lib/flatpak /var/cache/* /var/log/* /var/tmp/* && rm -f /var/lib/atomik-powerwash-pending && systemctl disable atomik-powerwash.service && rm -f /etc/systemd/system/atomik-powerwash.service && systemctl daemon-reload'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable atomik-powerwash.service
+touch /var/lib/atomik-powerwash-pending
+echo "✓ Servizio powerwash preparato"

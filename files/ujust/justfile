@@ -549,24 +549,7 @@ powerwash:
         exit 0
     fi
     echo "→ Preparazione reset..."
-    PWSERVICE="[Unit]\nDescription=Atomik OS Powerwash\nAfter=local-fs.target\nBefore=display-manager.service\nConditionPathExists=/var/lib/atomik-powerwash-pending\n\n[Service]\nType=oneshot\nExecStart=/bin/bash -c 'rm -rf /var/home/*/.config /var/home/*/.local /var/home/*/.cache /var/home/*/.var /var/lib/flatpak /var/cache/* /var/log/* /var/tmp/* && rm -f /var/lib/atomik-powerwash-pending && systemctl disable atomik-powerwash.service && rm -f /etc/systemd/system/atomik-powerwash.service && systemctl daemon-reload'\nRemainAfterExit=yes\n\n[Install]\nWantedBy=multi-user.target"
-    printf "$PWSERVICE\n" | sudo tee /etc/systemd/system/atomik-powerwash.service > /dev/null
-[Unit]
-Description=Atomik OS Powerwash - pulizia var
-After=local-fs.target
-Before=display-manager.service
-ConditionPathExists=/var/lib/atomik-powerwash-pending
-
-[Service]
-Type=oneshot
-ExecStart=/bin/bash -c 'rm -rf /var/home/*/.config /var/home/*/.local /var/home/*/.cache /var/home/*/.var /var/lib/flatpak /var/cache/* /var/log/* /var/tmp/* && rm -f /var/lib/atomik-powerwash-pending && systemctl disable atomik-powerwash.service && rm -f /etc/systemd/system/atomik-powerwash.service && systemctl daemon-reload'
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-PWEOF
-    sudo systemctl enable atomik-powerwash.service
-    sudo touch /var/lib/atomik-powerwash-pending
+    sudo /usr/bin/atomik-powerwash-prepare
     echo "→ Switch immagine..."
     sudo bootc switch --mutate-in-place --transport registry "$IMAGE"
     echo ""
@@ -578,11 +561,53 @@ PWEOF
     echo "│  • Home pulite                        │"
     echo "│  • Flatpak rimossi                    │"
     echo "│                                       │"
-    echo "│  Backup: $BACKUP_FILE"
+    echo "│  Backup salvato su dispositivo esterno│"
     echo "│                                       │"
     echo "│  Riavvia quando pronto:               │"
     echo "│  sudo systemctl reboot                │"
     echo "└──────────────────────────────────────┘"
+
+# ── SSH ──────────────────────────────────────────────────────────────────────
+
+# Abilita e avvia il server SSH
+sshd:
+    #!/usr/bin/env bash
+    if systemctl is-active --quiet sshd.service; then
+        echo "✓ sshd è già attivo"
+    else
+        echo "→ Attivazione sshd..."
+        sudo systemctl enable --now sshd.service
+        echo "✓ sshd attivato e avviato"
+    fi
+    echo ""
+    USER=$(whoami)
+    IP=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+    if [ -n "$IP" ]; then
+        echo "┌──────────────────────────────────────┐"
+        echo "│  Connettiti con:                     │"
+        echo "│  ssh ${USER}@${IP}"
+        echo "└──────────────────────────────────────┘"
+    else
+        echo "⚠ Nessun indirizzo IP trovato"
+    fi
+    echo ""
+    echo "Stato: $(systemctl is-active sshd.service) | Abilitato al boot: $(systemctl is-enabled sshd.service)"
+
+# Disabilita e ferma il server SSH
+sshd-off:
+    #!/usr/bin/env bash
+    if systemctl is-active --quiet sshd.service; then
+        echo "→ Arresto sshd..."
+        sudo systemctl disable --now sshd.service
+        echo "✓ sshd disattivato e fermato"
+    else
+        echo "✓ sshd è già spento"
+        if systemctl is-enabled --quiet sshd.service 2>/dev/null; then
+            echo "→ Rimuovo avvio automatico..."
+            sudo systemctl disable sshd.service
+            echo "✓ Rimosso dal boot"
+        fi
+    fi
 
 # Pulisci le immagini bootc non più referenziate
 cleanup:

@@ -153,6 +153,9 @@ RUN mkdir -p /etc/skel/.config/fastfetch && \
 RUN mkdir -p /etc/skel/.config/autostart
 COPY files/skel/autostart/atomik-wallpaper.desktop /etc/skel/.config/autostart/atomik-wallpaper.desktop
 
+COPY files/system/usr/bin/atomik-powerwash-prepare /usr/bin/atomik-powerwash-prepare
+RUN chmod +x /usr/bin/atomik-powerwash-prepare
+
 # ── ujust: comandi di sistema Atomik ──────────────────────────────────────────
 RUN mkdir -p /usr/share/atomik
 COPY files/ujust/justfile /usr/share/atomik/justfile
