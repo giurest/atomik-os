@@ -1,0 +1,22 @@
+{
+  "dankActions": {
+    "enabled": true,
+    "variants": [
+      {
+        "icon": "download",
+        "displayText": "",
+        "displayCommand": "",
+        "clickCommand": "alacritty -e sh -c \"ujust update\"",
+        "middleClickCommand": "",
+        "rightClickCommand": "",
+        "updateInterval": 0,
+        "showIcon": true,
+        "showText": true,
+        "visibilityCommand": "",
+        "visibilityInterval": 0,
+        "id": "variant_1780754587168",
+        "name": "Aggiornamento Atomik-OS"
+      }
+    ]
+  }
+}

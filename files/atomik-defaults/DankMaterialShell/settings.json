@@ -58,7 +58,7 @@
   "selectedGpuIndex": 0,
   "enabledGpuPciIds": [],
   "showSystemTray": true,
-  "systemTrayIconTintMode": "none",
+  "systemTrayIconTintMode": "primary",
   "systemTrayIconTintSaturation": 50,
   "systemTrayIconTintStrength": 135,
   "showClock": true,
@@ -129,19 +129,24 @@
       "width": 50,
       "instanceId": "mpvigx1rhmmg1g74tgqtlmz33kphqi",
       "deviceName": ""
+    },
+    {
+      "id": "builtin_vpn",
+      "enabled": true,
+      "width": 50
     }
   ],
-  "showWorkspaceIndex": false,
-  "showWorkspaceName": false,
+  "showWorkspaceIndex": true,
+  "showWorkspaceName": true,
   "showWorkspacePadding": false,
   "workspaceScrolling": false,
-  "showWorkspaceApps": false,
+  "showWorkspaceApps": true,
   "workspaceDragReorder": true,
   "maxWorkspaceIcons": 3,
   "workspaceAppIconSizeOffset": 0,
   "groupWorkspaceApps": true,
   "workspaceFollowFocus": false,
-  "showOccupiedWorkspacesOnly": false,
+  "showOccupiedWorkspacesOnly": true,
   "reverseScrolling": false,
   "dwlShowAllTags": false,
   "workspaceColorMode": "default",
@@ -176,7 +181,7 @@
   "appIdSubstitutions": [],
   "centeringMode": "index",
   "clockDateFormat": "",
-  "lockDateFormat": "",
+  "lockDateFormat": "dddd, MMMM d",
   "greeterRememberLastSession": true,
   "greeterRememberLastUser": true,
   "greeterEnableFprint": false,
@@ -189,7 +194,7 @@
   "browserUsageHistory": {},
   "appPickerViewMode": "grid",
   "filePickerUsageHistory": {},
-  "sortAppsAlphabetically": false,
+  "sortAppsAlphabetically": true,
   "appLauncherGridColumns": 4,
   "spotlightCloseNiriOverview": true,
   "spotlightSectionViewModes": {},
@@ -323,7 +328,7 @@
   "dockMaxVisibleApps": 0,
   "dockMaxVisibleRunningApps": 0,
   "dockShowOverflowBadge": true,
-  "notificationOverlayEnabled": false,
+  "notificationOverlayEnabled": true,
   "notificationPopupShadowEnabled": true,
   "notificationPopupPrivacyMode": false,
   "modalDarkenBackground": true,
@@ -358,7 +363,7 @@
   "notificationHistorySaveNormal": true,
   "notificationHistorySaveCritical": true,
   "notificationRules": [],
-  "osdAlwaysShowValue": false,
+  "osdAlwaysShowValue": true,
   "osdPosition": 5,
   "osdVolumeEnabled": true,
   "osdMediaVolumeEnabled": true,
@@ -389,7 +394,7 @@
   "customPowerActionPowerOff": "",
   "updaterHideWidget": false,
   "updaterUseCustomCommand": false,
-  "updaterCustomCommand": "",
+  "updaterCustomCommand": "ujust update",
   "updaterTerminalAdditionalParams": "",
   "displayNameMode": "system",
   "screenPreferences": {},
@@ -412,23 +417,82 @@
       ],
       "showOnLastDisplay": true,
       "leftWidgets": [
-        "launcherButton",
-        "workspaceSwitcher",
-        "focusedWindow"
+        {
+          "id": "launcherButton",
+          "enabled": true
+        },
+        {
+          "id": "workspaceSwitcher",
+          "enabled": true
+        },
+        {
+          "id": "runningApps",
+          "enabled": true,
+          "runningAppsCompactMode": true,
+          "runningAppsGroupByApp": true,
+          "runningAppsCurrentWorkspace": false,
+          "runningAppsCurrentMonitor": false
+        },
+        {
+          "id": "focusedWindow",
+          "enabled": true
+        }
       ],
       "centerWidgets": [
-        "music",
         "clock",
         "weather"
       ],
       "rightWidgets": [
-        "systemTray",
-        "clipboard",
-        "cpuUsage",
-        "memUsage",
-        "notificationButton",
-        "battery",
-        "controlCenterButton"
+        {
+          "id": "systemTray",
+          "enabled": true
+        },
+        {
+          "id": "clipboard",
+          "enabled": true
+        },
+        {
+          "id": "cpuUsage",
+          "enabled": true
+        },
+        {
+          "id": "memUsage",
+          "enabled": true
+        },
+        {
+          "id": "diskUsage",
+          "enabled": true,
+          "mountPath": "/etc"
+        },
+        {
+          "id": "notificationButton",
+          "enabled": true
+        },
+        {
+          "id": "battery",
+          "enabled": true
+        },
+        {
+          "id": "controlCenterButton",
+          "enabled": true
+        },
+        {
+          "id": "spacer",
+          "enabled": true,
+          "size": 20
+        },
+        {
+          "id": "separator",
+          "enabled": true
+        },
+        {
+          "id": "powerMenuButton",
+          "enabled": true
+        },
+        {
+          "id": "dankActions:variant_1780754587168",
+          "enabled": true
+        }
       ],
       "spacing": 4,
       "innerPadding": 4,
@@ -436,12 +500,12 @@
       "transparency": 1,
       "widgetTransparency": 1,
       "squareCorners": false,
-      "noBackground": false,
-      "maximizeWidgetIcons": false,
-      "maximizeWidgetText": false,
+      "noBackground": true,
+      "maximizeWidgetIcons": true,
+      "maximizeWidgetText": true,
       "removeWidgetPadding": false,
       "widgetPadding": 8,
-      "gothCornersEnabled": false,
+      "gothCornersEnabled": true,
       "gothCornerRadiusOverride": false,
       "gothCornerRadiusValue": 12,
       "borderEnabled": false,
@@ -541,7 +605,88 @@
   "systemMonitorVariants": [],
   "desktopWidgetPositions": {},
   "desktopWidgetGridSettings": {},
-  "desktopWidgetInstances": [],
+  "desktopWidgetInstances": [
+    {
+      "id": "dw_1780743581289_w6ojunnwz",
+      "widgetType": "systemMonitor",
+      "name": "Monitor di Sistema",
+      "enabled": true,
+      "config": {
+        "showHeader": true,
+        "transparency": 0,
+        "colorMode": "primary",
+        "customColor": "#ffffff",
+        "showCpu": true,
+        "showCpuGraph": true,
+        "showCpuTemp": true,
+        "showGpuTemp": true,
+        "gpuPciId": "1002:1900",
+        "showMemory": true,
+        "showMemoryGraph": true,
+        "showNetwork": true,
+        "showNetworkGraph": true,
+        "showDisk": true,
+        "showTopProcesses": true,
+        "topProcessCount": 3,
+        "topProcessSortBy": "cpu",
+        "layoutMode": "auto",
+        "graphInterval": 60,
+        "displayPreferences": [
+          "all"
+        ],
+        "showOnOverlay": false,
+        "syncPositionAcrossScreens": true
+      },
+      "positions": {
+        "DP-3": {
+          "width": 320,
+          "height": 480,
+          "x": 6.08984375,
+          "y": 48.515625
+        },
+        "_synced": {
+          "x": 0.00237884521484375,
+          "y": 0.03369140625,
+          "width": 320,
+          "height": 480
+        }
+      }
+    },
+    {
+      "id": "dw_1780743587747_6w4y9ceoy",
+      "widgetType": "desktopClock",
+      "name": "Orologio Desktop",
+      "enabled": true,
+      "config": {
+        "style": "digital",
+        "transparency": 0,
+        "colorMode": "primary",
+        "customColor": "#ffffff",
+        "showDate": true,
+        "showAnalogNumbers": false,
+        "showAnalogSeconds": true,
+        "displayPreferences": [
+          "all"
+        ],
+        "syncPositionAcrossScreens": true,
+        "showDigitalSeconds": true
+      },
+      "positions": {
+        "DP-3": {
+          "width": 200,
+          "height": 200,
+          "x": 2356,
+          "y": 52.6796875
+        },
+        "_synced": {
+          "x": 0.9203125,
+          "y": 0.03658311631944444,
+          "width": 200,
+          "height": 200
+        }
+      }
+    }
+  ],
   "desktopWidgetGroups": [],
   "builtInPluginSettings": {
     "dms_settings_search": {
