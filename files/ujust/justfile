@@ -217,7 +217,7 @@ unlock-winboat:
         echo "┌──────────────────────────────────────┐"
         echo "│  ✓ WinBoat pronto                    │"
         echo "│  Stato container:                     │"
-        podman ps --filter "name=winboat" --format "│  {{.Names}}  {{.Status}}" 2>/dev/null || true
+        podman ps --filter "name=winboat" 2>/dev/null | tail -1 || true
         echo "└──────────────────────────────────────┘"
     else
         echo "  ✗ Errore nell'avvio del container"
