@@ -1,0 +1,45 @@
+# ── Atomik OS — pacchetti variante Handheld ──────────────────────────────────
+# Ottimizzato per Steam Deck e dispositivi portatili
+# Basato su Bazzite-deck che già include molto
+
+# ── Shell e terminale ─────────────────────────────────────────────────────────
+ghostty
+fish
+starship
+
+# ── Tema ─────────────────────────────────────────────────────────────────────
+noctalia
+papirus-icon-theme
+bibata-cursor-themes
+
+# ── Browser ──────────────────────────────────────────────────────────────────
+brave-browser
+
+# ── Gaming handheld ───────────────────────────────────────────────────────────
+# Steam è già incluso in Bazzite-deck
+gamemode
+mangohud
+# HandyGCCS — supporto controller handheld
+handygccs
+
+# ── Gestione energia ─────────────────────────────────────────────────────────
+tlp
+powertop
+
+# ── Multimedia ───────────────────────────────────────────────────────────────
+pipewire
+wireplumber
+pipewire-pulse
+pipewire-alsa
+
+# ── Sistema ──────────────────────────────────────────────────────────────────
+distrobox
+podman
+flatpak
+NetworkManager
+bluez
+
+# ── Login manager ────────────────────────────────────────────────────────────
+gdm
+gamescope
+mangohud
