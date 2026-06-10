@@ -1,0 +1,62 @@
+# ── Atomik OS — pacchetti variante Desktop ───────────────────────────────────
+
+# ── Shell e terminale ─────────────────────────────────────────────────────────
+fish
+starship
+
+# ── Compositor Niri ──────────────────────────────────────────────────────────
+niri
+wl-clipboard
+grim
+slurp
+wf-recorder
+swayidle
+
+# ── DankMaterialShell (shell, greeter, launcher integrati) ───────────────────
+dms
+dms-greeter
+greetd
+
+# ── File manager ──────────────────────────────────────────────────────────────
+nautilus
+
+# ── Tema e aspetto ────────────────────────────────────────────────────────────
+papirus-icon-theme
+
+# ── Sviluppo ─────────────────────────────────────────────────────────────────
+git
+
+# ── Multimedia ───────────────────────────────────────────────────────────────
+pipewire
+wireplumber
+pipewire-pulseaudio
+pipewire-alsa
+pavucontrol
+
+# ── Utilità sistema ───────────────────────────────────────────────────────────
+distrobox
+podman
+flatpak
+NetworkManager
+NetworkManager-wifi
+bluez
+bluez-tools
+
+# ── Tool CLI moderni ─────────────────────────────────────────────────────────
+eza
+bat
+ripgrep
+fd-find
+htop
+fastfetch
+
+# ── VPN e gestione rete ──────────────────────────────────────────────────────
+nm-connection-editor
+network-manager-applet
+NetworkManager-openvpn-gnome
+wireguard-tools
+
+# ── AppImage support ──────────────────────────────────────────────────────
+fuse
+fuse-libs
+cifs-utils
