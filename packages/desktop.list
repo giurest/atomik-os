@@ -41,6 +41,7 @@ NetworkManager
 NetworkManager-wifi
 bluez
 bluez-tools
+justs
 
 # ── Tool CLI moderni ─────────────────────────────────────────────────────────
 eza

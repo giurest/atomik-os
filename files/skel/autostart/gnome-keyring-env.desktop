@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=GNOME Keyring Environment
+Type=Application
+Exec=bash -c 'dbus-update-activation-environment --systemd GNOME_KEYRING_CONTROL SSH_AUTH_SOCK; gnome-keyring-daemon --start --components=secrets,pkcs11'
+NoDisplay=true

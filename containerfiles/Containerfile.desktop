@@ -88,6 +88,7 @@ RUN mkdir -p /etc/skel/.config/fastfetch && \
 # ── Autostart wallpaper per nuovi utenti ──────────────────────────────────────
 RUN mkdir -p /etc/skel/.config/autostart
 COPY files/skel/autostart/atomik-wallpaper.desktop /etc/skel/.config/autostart/atomik-wallpaper.desktop
+COPY files/skel/autostart/gnome-keyring-env.desktop /etc/skel/.config/autostart/gnome-keyring-env.desktop
 
 # ── ujust: comandi di sistema Atomik ──────────────────────────────────────────
 RUN mkdir -p /usr/share/atomik
