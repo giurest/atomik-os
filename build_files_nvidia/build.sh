@@ -31,5 +31,8 @@ rm -f /opt && ln -s /var/opt /opt
 ## Plymouth plugin
 dnf -y install plymouth-plugin-script
 
+## Rimuovi repo Terra (chiave GPG mancante, blocca ISO builder)
+rm -f /etc/yum.repos.d/terra*.repo
+
 ## Pulizia
 dnf clean all

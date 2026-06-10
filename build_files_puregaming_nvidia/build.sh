@@ -12,5 +12,8 @@ if [ -n "$PKGS" ]; then
     dnf -y install --skip-unavailable $PKGS
 fi
 
+## Rimuovi repo Terra (chiave GPG mancante, blocca ISO builder)
+rm -f /etc/yum.repos.d/terra*.repo
+
 ## Pulizia
 dnf clean all
