@@ -50,6 +50,10 @@ sed -i 's|^SHELL=.*|SHELL=/usr/bin/fish|' /etc/default/useradd 2>/dev/null || tr
 ## Aggiungi just ai pacchetti
 dnf -y install just
 
+## Fish config per nuovi utenti
+mkdir -p /etc/skel/.config/fish
+printf 'starship init fish | source\nset fish_greeting\n' > /etc/skel/.config/fish/config.fish
+
 ## Rigenera initramfs con tema Plymouth Atomik
 KERNEL_VERSION=$(ls /lib/modules/ | sort -V | tail -1)
 dracut --force --kver "$KERNEL_VERSION" 2>/dev/null || true
