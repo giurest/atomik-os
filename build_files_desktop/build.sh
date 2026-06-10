@@ -34,5 +34,9 @@ dnf -y install plymouth-plugin-script
 ## Rimuovi repo Terra (chiave GPG mancante, blocca ISO builder)
 rm -f /etc/yum.repos.d/terra*.repo
 
+## Rigenera initramfs con tema Plymouth Atomik
+KERNEL_VERSION=$(ls /lib/modules/ | sort -V | tail -1)
+dracut --force --kver "$KERNEL_VERSION" 2>/dev/null || true
+
 ## Pulizia
 dnf clean all
