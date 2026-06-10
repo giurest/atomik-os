@@ -34,6 +34,22 @@ dnf -y install plymouth-plugin-script
 ## Rimuovi repo Terra (chiave GPG mancante, blocca ISO builder)
 rm -f /etc/yum.repos.d/terra*.repo
 
+## Container policy: consenti immagini Atomik OS da ghcr.io/giurest
+python3 -c "
+import json
+with open('/etc/containers/policy.json') as f:
+    p = json.load(f)
+p['transports']['docker']['ghcr.io/giurest'] = [{'type': 'insecureAcceptAnything'}]
+with open('/etc/containers/policy.json', 'w') as f:
+    json.dump(p, f, indent=2)
+"
+
+## Fish come shell di default per nuovi utenti
+sed -i 's|^SHELL=.*|SHELL=/usr/bin/fish|' /etc/default/useradd 2>/dev/null || true
+
+## Aggiungi just ai pacchetti
+dnf -y install just
+
 ## Rigenera initramfs con tema Plymouth Atomik
 KERNEL_VERSION=$(ls /lib/modules/ | sort -V | tail -1)
 dracut --force --kver "$KERNEL_VERSION" 2>/dev/null || true
