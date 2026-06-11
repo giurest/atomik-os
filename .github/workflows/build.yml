@@ -35,6 +35,17 @@ jobs:
           - desktop
 
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -85,8 +96,6 @@ jobs:
           COSIGN_EXPERIMENTAL: true
 
   # ── Fase 2: varianti derivate da desktop ───────────────────────────────────
-  # ⚠ MIGRAZIONE IN CORSO: commentate durante migrazione a Silverblue F43
-  # Decommentare dopo aver verificato desktop su Silverblue
   build-derived:
     name: Build ${{ matrix.variant }}
     runs-on: ubuntu-latest
@@ -105,6 +114,17 @@ jobs:
           - desktop-nvidia
 
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -155,7 +175,6 @@ jobs:
           COSIGN_EXPERIMENTAL: true
 
   # ── Fase 3: varianti derivate da desktop-nvidia ────────────────────────────
-  # ⚠ MIGRAZIONE IN CORSO: disabilitato
   build-nvidia-derived:
     name: Build ${{ matrix.variant }}
     runs-on: ubuntu-latest
@@ -172,6 +191,17 @@ jobs:
           - puregaming-nvidia
 
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
