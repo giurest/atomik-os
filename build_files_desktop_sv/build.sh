@@ -49,7 +49,7 @@ if [ -n "$PKGS" ]; then
 fi
 
 ## Starship prompt (non nei repo Fedora, binario ufficiale)
-curl -fsSL https://starship.rs/install.sh | sh -s -- --yes
+curl -fsSL https://starship.rs/install.sh | sh -s -- --yes -b /usr/bin
 
 ## Brave browser RPM
 rm -f /opt && mkdir -p /usr/lib/opt && ln -s /usr/lib/opt /opt

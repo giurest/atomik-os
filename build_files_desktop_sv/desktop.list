@@ -2,7 +2,6 @@
 
 # ── Shell e terminale ─────────────────────────────────────────────────────────
 fish
-starship
 
 # ── Compositor Niri ──────────────────────────────────────────────────────────
 niri
@@ -41,7 +40,6 @@ NetworkManager
 NetworkManager-wifi
 bluez
 bluez-tools
-justs
 
 # ── Tool CLI moderni ─────────────────────────────────────────────────────────
 eza
