@@ -1,19 +1,45 @@
-# Build context con script e lista pacchetti
 FROM scratch AS ctx
-COPY build_files_desktop /
+COPY build_files_desktop_sv /
 
-# Base Image — RakuOS (successore di Origami Linux)
-FROM ghcr.io/rakuos/rakuos-base:latest
+FROM quay.io/fedora/fedora-silverblue:43
 
 # ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Desktop"
-LABEL org.opencontainers.image.description="Atomik OS — variante Desktop minimalista con Niri + DMS (base RakuOS)"
+LABEL org.opencontainers.image.description="Atomik OS — variante Desktop con Niri + DMS (base Fedora Silverblue)"
 
-# ── ID=fedora (necessario per bootc-image-builder) ────────────────────────────
-RUN sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
-    sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release
+# ── Rimozione GNOME e GDM ─────────────────────────────────────────────────────
+# Silverblue include GNOME. Lo rimuoviamo e lo sostituiamo con Niri + greetd.
+# Meno invasivo di COSMIC: pochi pacchetti, niente roba esoterica.
+RUN dnf remove -y \
+    gnome-shell \
+    gnome-session \
+    gnome-session-wayland-session \
+    gdm \
+    gnome-control-center \
+    gnome-software \
+    gnome-terminal \
+    nautilus \
+    gnome-text-editor \
+    gnome-calculator \
+    gnome-calendar \
+    gnome-clocks \
+    gnome-connections \
+    gnome-contacts \
+    gnome-logs \
+    gnome-maps \
+    gnome-weather \
+    gnome-tour \
+    gnome-user-docs \
+    yelp \
+    totem \
+    evince \
+    loupe \
+    snapshot \
+    firefox \
+    2>/dev/null || true && \
+    dnf clean all
 
-# ── Build: repo, pacchetti, Brave (via build.sh con mount RakuOS) ─────────────
+# ── Build: RPMFusion, DMS, pacchetti, Brave (via build.sh) ────────────────────
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
@@ -29,7 +55,9 @@ COPY files/system/usr/share/brave-policies/managed/atomik-policy.json \
      /etc/brave/policies/managed/atomik-policy.json
 
 # ── greetd come display manager ───────────────────────────────────────────────
-RUN ln -sf /usr/lib/systemd/system/greetd.service \
+RUN systemctl disable gdm.service 2>/dev/null || true && \
+    systemctl enable greetd.service && \
+    ln -sf /usr/lib/systemd/system/greetd.service \
            /etc/systemd/system/display-manager.service
 
 # ── DMS avvia automaticamente con Niri ───────────────────────────────────────
@@ -40,7 +68,10 @@ RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
 # ── Maschera waybar globalmente ───────────────────────────────────────────────
 RUN mkdir -p /etc/systemd/user && \
     ln -sf /dev/null /etc/systemd/user/waybar.service && \
-    ln -sf /dev/null /usr/lib/systemd/user/waybar.service
+    ln -sf /dev/null /usr/lib/systemd/user/waybar.service 2>/dev/null || true
+
+# ── Keyring: abilita globalmente per tutte le sessioni ────────────────────────
+RUN systemctl --global enable gnome-keyring-daemon.socket 2>/dev/null || true
 
 # ── App Flatpak di base al primo boot ─────────────────────────────────────────
 COPY files/system/usr/lib/systemd/system/atomik-flatpak-base.service \
@@ -52,14 +83,19 @@ RUN chmod +x /usr/bin/atomik-flatpak-base && \
     ln -sf /usr/lib/systemd/system/atomik-flatpak-base.service \
            /usr/lib/systemd/system/multi-user.target.wants/atomik-flatpak-base.service
 
-# ── Plymouth theme ────────────────────────────────────────────────────────────
+# ── Plymouth theme Atomik ─────────────────────────────────────────────────────
 COPY files/plymouth/atomik/ /usr/share/plymouth/themes/atomik/
+RUN mkdir -p /etc/plymouth && \
+    printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
+    plymouth-set-default-theme atomik 2>/dev/null || true && \
+    KERNEL_VERSION=$(ls /lib/modules/ | sort -V | tail -1) && \
+    dracut --force --kver "$KERNEL_VERSION" 2>/dev/null || true
 
 # ── Wallpaper predefinito ─────────────────────────────────────────────────────
 RUN mkdir -p /usr/share/backgrounds/atomik
 COPY files/backgrounds/atomik-wall.jpg /usr/share/backgrounds/atomik/wall.jpg
 
-# ── Hostname persistente via tmpfiles ─────────────────────────────────────────
+# ── Hostname ──────────────────────────────────────────────────────────────────
 RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
     mkdir -p /usr/lib/tmpfiles.d && \
     printf 'L+ /etc/hostname - - - - /usr/lib/hostname\n' \
@@ -77,7 +113,7 @@ RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
 RUN mkdir -p /etc/niri
 COPY files/niri/config.kdl /etc/niri/config.kdl
 
-# ── Fastfetch config di sistema ───────────────────────────────────────────────
+# ── Fastfetch config ──────────────────────────────────────────────────────────
 RUN mkdir -p /etc/fastfetch
 COPY files/fastfetch/desktop.jsonc /etc/fastfetch/config.jsonc
 COPY files/fastfetch/atomik-logo.txt /etc/fastfetch/atomik-logo.txt
@@ -85,25 +121,19 @@ RUN mkdir -p /etc/skel/.config/fastfetch && \
     ln -sf /etc/fastfetch/config.jsonc /etc/skel/.config/fastfetch/config.jsonc && \
     ln -sf /etc/fastfetch/atomik-logo.txt /etc/skel/.config/fastfetch/atomik-logo.txt
 
-# ── Autostart wallpaper per nuovi utenti ──────────────────────────────────────
+# ── Autostart wallpaper + keyring per nuovi utenti ────────────────────────────
 RUN mkdir -p /etc/skel/.config/autostart
-COPY files/skel/autostart/atomik-wallpaper.desktop /etc/skel/.config/autostart/atomik-wallpaper.desktop
-COPY files/skel/autostart/gnome-keyring-env.desktop /etc/skel/.config/autostart/gnome-keyring-env.desktop
+COPY files/skel/autostart/atomik-wallpaper.desktop \
+     /etc/skel/.config/autostart/atomik-wallpaper.desktop
+COPY files/skel/autostart/gnome-keyring-env.desktop \
+     /etc/skel/.config/autostart/gnome-keyring-env.desktop
 
-# ── ujust: comandi di sistema Atomik ──────────────────────────────────────────
+# ── ujust ─────────────────────────────────────────────────────────────────────
 RUN mkdir -p /usr/share/atomik
 COPY files/ujust/justfile /usr/share/atomik/justfile
 COPY files/system/usr/bin/ujust /usr/bin/ujust
-RUN chmod +x /usr/bin/ujust
-
-# ── Powerwash prepare script ──────────────────────────────────────────────────
 COPY files/system/usr/bin/atomik-powerwash-prepare /usr/bin/atomik-powerwash-prepare
-RUN chmod +x /usr/bin/atomik-powerwash-prepare
-
-# ── Plymouth theme Atomik ─────────────────────────────────────────────────────
-RUN mkdir -p /etc/plymouth && \
-    printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
-    plymouth-set-default-theme atomik 2>/dev/null || true
+RUN chmod +x /usr/bin/ujust /usr/bin/atomik-powerwash-prepare
 
 # ── Configurazione default Niri + DMS ─────────────────────────────────────────
 COPY files/atomik-defaults/ /usr/share/atomik/defaults/

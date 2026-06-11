@@ -84,7 +84,9 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: true
 
-  # ── Fase 2: varianti derivate da desktop (FROM atomik-desktop:latest) ──────
+  # ── Fase 2: varianti derivate da desktop ───────────────────────────────────
+  # ⚠ MIGRAZIONE IN CORSO: commentate durante migrazione a Silverblue F43
+  # Decommentare dopo aver verificato desktop su Silverblue
   build-derived:
     name: Build ${{ matrix.variant }}
     runs-on: ubuntu-latest
@@ -93,6 +95,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    if: false  # ← Disabilitato durante migrazione
 
     strategy:
       fail-fast: false
@@ -153,6 +156,7 @@ jobs:
           COSIGN_EXPERIMENTAL: true
 
   # ── Fase 3: varianti derivate da desktop-nvidia ────────────────────────────
+  # ⚠ MIGRAZIONE IN CORSO: disabilitato
   build-nvidia-derived:
     name: Build ${{ matrix.variant }}
     runs-on: ubuntu-latest
@@ -161,6 +165,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    if: false  # ← Disabilitato durante migrazione
 
     strategy:
       fail-fast: false
