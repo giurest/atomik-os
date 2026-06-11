@@ -11,31 +11,19 @@ dnf copr enable -y avengemedia/dms
 dnf copr enable -y avengemedia/danklinux
 
 ## Pacchetti desktop
-dnf install -y \
+## Nota: molti pacchetti sono già in Silverblue (NetworkManager, pipewire, ecc.)
+## polkit-gnome non esiste su F43, networkmanager va scritto NetworkManager
+## starship non è nei repo Fedora, si installa separatamente
+dnf install -y --skip-unavailable \
     niri \
     dms \
     dms-greeter \
     greetd \
     greetd-selinux \
     fish \
-    starship \
     just \
     fastfetch \
     alacritty \
-    gnome-keyring \
-    gnome-keyring-pam \
-    xdg-desktop-portal-gnome \
-    xdg-desktop-portal-gtk \
-    xdg-user-dirs \
-    polkit \
-    polkit-gnome \
-    wireplumber \
-    pipewire \
-    pipewire-alsa \
-    pipewire-pulseaudio \
-    pipewire-gstreamer \
-    networkmanager \
-    nm-connection-editor \
     network-manager-applet \
     NetworkManager-openvpn-gnome \
     wireguard-tools \
@@ -54,11 +42,14 @@ dnf install -y \
     rsync \
     wget
 
-## Pacchetti aggiuntivi da lista
+## Pacchetti aggiuntivi da lista (opzionale)
 PKGS="$(grep -v '^#' /ctx/desktop.list 2>/dev/null | grep -v '^$' | tr '\n' ' ')"
 if [ -n "$PKGS" ]; then
     dnf install -y --skip-unavailable $PKGS
 fi
+
+## Starship prompt (non nei repo Fedora, binario ufficiale)
+curl -fsSL https://starship.rs/install.sh | sh -s -- --yes
 
 ## Brave browser RPM
 rm -f /opt && mkdir -p /usr/lib/opt && ln -s /usr/lib/opt /opt
@@ -68,7 +59,7 @@ rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
 dnf install -y brave-browser
 rm -f /opt && ln -s /var/opt /opt
 
-## Skel: fish config con starship e no greeting
+## Fish config: starship + no greeting per nuovi utenti
 mkdir -p /etc/skel/.config/fish
 printf 'starship init fish | source\nset fish_greeting\n' \
     > /etc/skel/.config/fish/config.fish
