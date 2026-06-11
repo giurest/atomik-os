@@ -95,7 +95,6 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    if: false  # ← Disabilitato durante migrazione
 
     strategy:
       fail-fast: false
@@ -165,7 +164,6 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    if: false  # ← Disabilitato durante migrazione
 
     strategy:
       fail-fast: false

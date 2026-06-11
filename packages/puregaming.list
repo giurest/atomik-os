@@ -1,7 +1,5 @@
 # Pacchetti aggiuntivi variante PureGaming
-# (mangohud e gamemode sono installati direttamente nel Containerfile via RPMFusion)
-pipewire
-wireplumber
-pipewire-pulseaudio
-pipewire-alsa
-pavucontrol
+# steam, mangohud, gamemode, lutris, gamescope sono in build.sh
+vulkan-tools
+mesa-vulkan-drivers
+mesa-vulkan-drivers.i686

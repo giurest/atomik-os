@@ -1,19 +1,23 @@
 #!/bin/bash
 set -ouex pipefail
 
-## RPMFusion free (mangohud, gamemode)
-dnf -y install \
-    https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
-dnf -y install mangohud gamemode
+## RPMFusion e già installato dal desktop base.
+## Installiamo solo i pacchetti gaming nativi.
 
-## Pacchetti aggiuntivi puregaming (da lista)
-PKGS="$(grep -v '^#' /ctx/puregaming.list | grep -v '^$' | tr '\n' ' ')"
+## Steam nativo + gaming tools (RPMFusion gia abilitato su base desktop)
+dnf -y install --skip-unavailable \
+    steam \
+    mangohud \
+    gamemode \
+    gamemode-devel \
+    lutris \
+    gamescope
+
+## Pacchetti aggiuntivi da lista
+PKGS="$(grep -v '^#' /ctx/puregaming.list 2>/dev/null | grep -v '^$' | tr '\n' ' ')"
 if [ -n "$PKGS" ]; then
     dnf -y install --skip-unavailable $PKGS
 fi
-
-## Rimuovi repo Terra
-rm -f /etc/yum.repos.d/terra*.repo
 
 ## Pulizia
 dnf clean all
