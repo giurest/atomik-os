@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Atomik OS - Crea fish config per tutti gli utenti reali se non esiste già
+set -euo pipefail
+
+for HOME_DIR in /var/home/*; do
+    [ -d "$HOME_DIR" ] || continue
+    USERNAME=$(basename "$HOME_DIR")
+
+    # Solo utenti reali (UID >= 1000)
+    UID_VAL=$(id -u "$USERNAME" 2>/dev/null) || continue
+    [ "$UID_VAL" -ge 1000 ] || continue
+
+    FISH_CONFIG="$HOME_DIR/.config/fish/config.fish"
+    if [ ! -f "$FISH_CONFIG" ]; then
+        mkdir -p "$HOME_DIR/.config/fish"
+        printf 'starship init fish | source\nset fish_greeting\n' > "$FISH_CONFIG"
+        chown -R "$USERNAME:$USERNAME" "$HOME_DIR/.config/fish"
+        echo "✓ Fish config creato per $USERNAME"
+    else
+        echo "  Fish config già presente per $USERNAME, skip"
+    fi
+done

@@ -431,3 +431,4 @@ cosign.key
 # ISO generate localmente
 installer/*.iso
 installer/*.iso.sha256
+!files/system/usr/bin/atomik-*

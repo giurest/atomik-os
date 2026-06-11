@@ -145,5 +145,14 @@ RUN mkdir -p /etc/skel/.config/DankMaterialShell && \
     cp /usr/share/atomik/defaults/DankMaterialShell/settings.json \
        /etc/skel/.config/DankMaterialShell/settings.json
 
+# ── Fish config per utenti esistenti (oneshot al primo boot) ──────────────────
+COPY files/system/usr/lib/systemd/system/atomik-fish-setup.service \
+     /usr/lib/systemd/system/atomik-fish-setup.service
+COPY files/system/usr/bin/atomik-fish-setup \
+     /usr/bin/atomik-fish-setup
+RUN chmod +x /usr/bin/atomik-fish-setup && \
+    ln -sf /usr/lib/systemd/system/atomik-fish-setup.service \
+           /usr/lib/systemd/system/multi-user.target.wants/atomik-fish-setup.service	   
+
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
