@@ -295,6 +295,15 @@ reset-fastfetch:
     ln -sf /etc/fastfetch/atomik-logo.txt ~/.config/fastfetch/atomik-logo.txt
     echo "✓ Configurazione fastfetch ripristinata."
 
+# Ripristina configurazione MangoHud di default
+reset-mangohud:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p ~/.config/MangoHud
+    cp /usr/share/atomik/defaults/MangoHud/MangoHud.conf \
+       ~/.config/MangoHud/MangoHud.conf
+    echo "✓ Configurazione MangoHud ripristinata."
+
 # Installa WinBoat (Windows app runner via container)
 install-winboat:
     #!/usr/bin/env bash

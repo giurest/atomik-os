@@ -39,5 +39,13 @@ RUN printf 'atomik-puregaming\n' > /usr/lib/hostname
 RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (PureGaming)"/' /etc/os-release && \
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (PureGaming)"/' /usr/lib/os-release
 
+# ── MangoHud config default (layout orizzontale) ─────────────────────────────
+RUN mkdir -p /etc/skel/.config/MangoHud && \
+    mkdir -p /usr/share/atomik/defaults/MangoHud
+COPY files/atomik-defaults/MangoHud/MangoHud.conf \
+     /usr/share/atomik/defaults/MangoHud/MangoHud.conf
+RUN cp /usr/share/atomik/defaults/MangoHud/MangoHud.conf \
+       /etc/skel/.config/MangoHud/MangoHud.conf
+
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
