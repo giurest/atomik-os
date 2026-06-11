@@ -331,19 +331,19 @@ mangohud-enable:
         echo ""
         echo "  Toggle overlay in-game: Shift_R+F12"
     elif [[ "$CHOICE" == "2" ]]; then
-        FISH_CONFIG="$HOME/.config/fish/config.fish"
-        if grep -q "MANGOHUD" "$FISH_CONFIG" 2>/dev/null; then
-            echo "✓ MangoHud già attivo globalmente."
-        else
-            echo 'set -gx MANGOHUD 1' >> "$FISH_CONFIG"
-            echo "✓ MangoHud attivato globalmente."
-        fi
+        mkdir -p "$HOME/.config/environment.d"
+        echo 'MANGOHUD=1' > "$HOME/.config/environment.d/mangohud.conf"
+        systemctl --user import-environment MANGOHUD 2>/dev/null || true
+        echo "✓ MangoHud attivato globalmente."
+        echo "⚠ Riavvia la sessione (logout/login) per applicare."
+        echo "⚠ Per giochi Proton usa anche: mangohud %command% nelle opzioni di avvio del singolo gioco che non viene riconosciuto"
         echo ""
         echo "  Heroic:"
         echo "    → Impostazioni → Impostazioni di gioco predefinite"
         echo "    → Variabili d'ambiente → Aggiungi: MANGOHUD = 1"
         echo ""
-        echo "  Riavvia Steam e Heroic per applicare."
+        echo "  ⚠ Riavvia la sessione (logout/login) per applicare."
+        echo "  ⚠ Per giochi Proton usa anche: mangohud %command%"
         echo "  Toggle overlay in-game: Shift_R+F12"
     else
         echo "✗ Scelta non valida."
