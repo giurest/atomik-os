@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
-# Atomik OS - Crea fish config per tutti gli utenti reali se non esiste già
+# Atomik OS - Fish shell setup per utenti esistenti
 set -euo pipefail
+
+MARKER=/var/lib/atomik-fish-setup-done
+SCRIPT_HASH=$(sha256sum /usr/bin/atomik-fish-setup | cut -d' ' -f1)
+
+# Se il sentinella esiste ed è aggiornato, esci
+if [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$SCRIPT_HASH" ]; then
+    exit 0
+fi
+
+# Rimuovi il vecchio sentinella (versione precedente)
+rm -f "$MARKER"
 
 for HOME_DIR in /var/home/*; do
     [ -d "$HOME_DIR" ] || continue
@@ -10,6 +21,16 @@ for HOME_DIR in /var/home/*; do
     UID_VAL=$(id -u "$USERNAME" 2>/dev/null) || continue
     [ "$UID_VAL" -ge 1000 ] || continue
 
+    # Imposta fish come shell se non lo è già
+    CURRENT_SHELL=$(getent passwd "$USERNAME" | cut -d: -f7)
+    if [ "$CURRENT_SHELL" != "/usr/bin/fish" ]; then
+        chsh -s /usr/bin/fish "$USERNAME"
+        echo "✓ Shell fish impostata per $USERNAME"
+    else
+        echo "  Shell già fish per $USERNAME, skip"
+    fi
+
+    # Crea fish config se non esiste
     FISH_CONFIG="$HOME_DIR/.config/fish/config.fish"
     if [ ! -f "$FISH_CONFIG" ]; then
         mkdir -p "$HOME_DIR/.config/fish"
@@ -20,3 +41,7 @@ for HOME_DIR in /var/home/*; do
         echo "  Fish config già presente per $USERNAME, skip"
     fi
 done
+
+# Scrivi il nuovo hash come sentinella
+echo "$SCRIPT_HASH" > "$MARKER"
+echo "✓ Fish setup completato (versione: ${SCRIPT_HASH:0:8})"
