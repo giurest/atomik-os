@@ -4,11 +4,9 @@
 # Selezionabile dal greeter come sessione alternativa a Niri.
 
 # Esporta DISPLAY al bus D-Bus (richiesto da Steam Flatpak)
-export DISPLAY=:0
-dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY XDG_SESSION_TYPE
-
-exec gamescope \
-    --steam \
-    --force-orientation right \
-    -f \
-    -- bash -c 'dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY; flatpak run com.valvesoftware.Steam -gamepadui -steamos3 -steampal -nointro'
+#!/usr/bin/env bash
+export LIBSEAT_BACKEND=seatd
+export XDG_SESSION_TYPE=wayland
+dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_SESSION_TYPE
+exec gamescope --steam -f -- steam -gamepadui -steamos3 -steampal -nointro
+dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY; flatpak run com.valvesoftware.Steam -gamepadui -steamos3 -steampal -nointro'

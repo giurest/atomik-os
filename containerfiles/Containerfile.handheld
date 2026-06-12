@@ -36,8 +36,11 @@ COPY files/fastfetch/handheld.jsonc /etc/fastfetch/config.jsonc
 RUN printf 'atomik-handheld\n' > /usr/lib/hostname
 
 # ── OS Identity ───────────────────────────────────────────────────────────────
-RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Handheld) [SPERIMENTALE]"/' /etc/os-release && \
-    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Handheld) [SPERIMENTALE]"/' /usr/lib/os-release
+RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS Handheld"/' /etc/os-release && \
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS Handheld"/' /usr/lib/os-release
+
+# ── Config Niri per display Deck (eDP-1 ruotato 90°, scale 1.5) ──────────────
+RUN printf '\noutput "eDP-1" {\n    mode "800x1280@90"\n    scale 1.5\n    transform "90"\n}\n' >> /etc/skel/.config/niri/config.kdl    
 
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
