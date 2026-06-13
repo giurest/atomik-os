@@ -1,6 +1,6 @@
 # Atomik OS
 
-Distribuzione Linux immutabile basata su **Origami Linux** (Fedora Atomic + kernel **CachyOS**), con compositor **Niri** e shell **DankMaterialShell (DMS)** forzati su tutte le varianti.
+Distribuzione Linux immutabile basata su **Fedora Silverblue**, con compositor **Niri** e shell **DankMaterialShell (DMS)** forzati su tutte le varianti.
 
 ## Varianti
 
