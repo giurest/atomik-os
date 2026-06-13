@@ -6,9 +6,15 @@ Distribuzione Linux immutabile basata su **Origami Linux** (Fedora Atomic + kern
 
 | Variante | Base | Uso | Stato |
 |---|---|---|---|
-| `desktop` | Origami Linux | Workstation minimalista + sviluppo | ✅ Disponibile |
+|---------------|
+| ✅ AMD/INTEL  |
+|---------------|
+| `desktop` | F43 | Workstation minimalista + sviluppo | ✅ Disponibile |
 | `puregaming` | `atomik-desktop` | Gaming puro su base desktop | ✅ Disponibile |
-| `desktop-nvidia` | RAKU-OS + driver NVIDIA | Workstation con GPU NVIDIA | ✅ Disponibile - BETA |
+|---------------|
+| ✅ NVIDIA  |
+|---------------|
+| `desktop-nvidia` | F43 + driver NVIDIA | Workstation con GPU NVIDIA | ✅ Disponibile - BETA |
 | `puregaming-nvidia` | `desktop-nvidia` + driver NVIDIA | Gaming con GPU NVIDIA |  ✅ Disponibile - BETA |
 
 `puregaming` eredita interamente da `desktop`: tutto ciò che è nella base (Niri, DMS, greetd, ujust, Brave, Bazaar) è presente anche in gaming.
