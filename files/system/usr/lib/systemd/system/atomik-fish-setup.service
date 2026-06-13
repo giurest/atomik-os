@@ -1,12 +1,10 @@
 [Unit]
 Description=Atomik OS - Fish shell setup per utenti esistenti
 After=local-fs.target systemd-user-sessions.service
-ConditionPathExists=!/var/lib/atomik-fish-setup-done
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/atomik-fish-setup
-ExecStartPost=/usr/bin/touch /var/lib/atomik-fish-setup-done
 RemainAfterExit=yes
 
 [Install]
