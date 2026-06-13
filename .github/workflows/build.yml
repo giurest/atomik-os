@@ -110,7 +110,6 @@ jobs:
       matrix:
         variant:
           - puregaming
-          - handheld
           - desktop-nvidia
 
     steps:
