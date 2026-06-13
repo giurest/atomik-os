@@ -6,14 +6,8 @@ Distribuzione Linux immutabile basata su **Origami Linux** (Fedora Atomic + kern
 
 | Variante | Base | Uso | Stato |
 |---|---|---|---|
-|---------------|
-| ✅ AMD/INTEL  |
-|---------------|
 | `desktop` | F43 | Workstation minimalista + sviluppo | ✅ Disponibile |
 | `puregaming` | `atomik-desktop` | Gaming puro su base desktop | ✅ Disponibile |
-|---------------|
-| ✅ NVIDIA  |
-|---------------|
 | `desktop-nvidia` | F43 + driver NVIDIA | Workstation con GPU NVIDIA | ✅ Disponibile - BETA |
 | `puregaming-nvidia` | `desktop-nvidia` + driver NVIDIA | Gaming con GPU NVIDIA |  ✅ Disponibile - BETA |
 
@@ -80,7 +74,7 @@ ujust set-wallpaper    # imposta lo sfondo Atomik
 - **File manager**: Nautilus
 - **Tema**: Papirus icons
 - **Boot**: Plymouth con tema Atomik
-- **Browser**: Brave (Flatpak)
+- **Browser**: Brave NATIVO Debloated
 - **Store app**: Bazaar (Flatpak) — per installare facilmente altre applicazioni
 - **Utility Flatpak**: Flatseal, Telegram
 - **CLI**: eza, bat, ripgrep, fd, htop, fastfetch
@@ -89,7 +83,7 @@ ujust set-wallpaper    # imposta lo sfondo Atomik
 ### PureGaming (in aggiunta alla base)
 
 - **Tool di sistema**: MangoHud, GameMode (via RPMFusion)
-- **Client di gioco** (Flatpak): Steam, Lutris, Heroic
+- **Client di gioco** (RPM): Steam, Lutris, (Flatpak) Heroic
 - **Comunicazione** (Flatpak): Discord, TeamSpeak3
 - **Ottimizzazioni**: sysctl gaming (swappiness, max_map_count)
 
@@ -97,7 +91,7 @@ ujust set-wallpaper    # imposta lo sfondo Atomik
 
 Usa **Bazaar** (lo store grafico) per installare qualsiasi altra applicazione Flatpak da Flathub, senza modificare l'immagine. In alternativa, da terminale:
 
-```bash
+```Shell
 flatpak install flathub <app-id>
 ```
 
@@ -109,11 +103,15 @@ atomik-os/
 │   ├── build.yml          # Build immagini OCI → ghcr.io (desktop + derivate)
 │   └── iso-manual.yml     # Genera ISO per variante (workflow_dispatch)
 ├── containerfiles/
-│   ├── Containerfile.desktop      # base (FROM Origami)
+│   ├── Containerfile.desktop      # base (FROM F43 Silverblue)
 │   └── Containerfile.puregaming   # FROM atomik-desktop
+│   ├── Containerfile.desktop-nvidia      # base (FROM F43 Silverblue + drivers Nvidia)
+│   └── Containerfile.puregaming-nvidia   # FROM atomik-desktop Nvidia
 ├── installer/
 │   ├── atomik-desktop.toml        # kickstart ISO desktop
 │   └── atomik-puregaming.toml     # kickstart ISO puregaming
+│   ├── atomik-desktop-nvidia.toml        # kickstart ISO desktop-nvidia
+│   └── atomik-puregaming-nvidia.toml     # kickstart ISO puregaming-nvidia
 ├── files/
 │   ├── niri/              # config Niri di sistema
 │   ├── plymouth/atomik/   # tema Plymouth
@@ -124,14 +122,10 @@ atomik-os/
 └── packages/              # liste pacchetti per variante
 ```
 
-## Personalizzare i pacchetti
-
-Modifica i file in `packages/` — un pacchetto per riga, commenti con `#`. Ogni variante legge la propria lista. I client di gioco e le app desktop sono invece gestiti come Flatpak negli script in `files/system/usr/bin/atomik-flatpak-*`.
-
 ## Build locale (opzionale)
 
-```bash
-# Richiede podman o buildah
+```Shell
+# Richiede podman o buildah non è possibile sviluppare al di fuori di una distro Bootc
 buildah build -f containerfiles/Containerfile.desktop -t atomik-desktop:local .
 ```
 
@@ -140,7 +134,6 @@ buildah build -f containerfiles/Containerfile.desktop -t atomik-desktop:local .
 ## Note tecniche
 
 - Il sistema è **bootc/OSTree**: aggiornamenti atomici con `bootc upgrade`, rollback con `bootc rollback`.
-- **Non rimuovere `podman`**: su bootc trascina via `bootc` e `rpm-ostree`, rendendo il sistema non aggiornabile.
 - `ID` in `/etc/os-release` resta `fedora` (richiesto da bootc-image-builder per la ISO); il branding Atomik è in `NAME`/`PRETTY_NAME`.
 
 ---
