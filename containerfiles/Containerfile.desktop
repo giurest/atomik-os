@@ -154,5 +154,11 @@ RUN chmod +x /usr/bin/atomik-fish-setup && \
     ln -sf /usr/lib/systemd/system/atomik-fish-setup.service \
            /usr/lib/systemd/system/multi-user.target.wants/atomik-fish-setup.service	   
 
+           # ── Atomik Panel ──────────────────────────────────────────────────────────────
+COPY files/system/usr/bin/atomik-panel /usr/bin/atomik-panel
+COPY files/system/usr/share/applications/atomik-panel.desktop \
+     /usr/share/applications/atomik-panel.desktop
+RUN chmod +x /usr/bin/atomik-panel
+
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint

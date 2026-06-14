@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Atomik Panel
+Comment=Centro di controllo per Atomik OS
+Exec=/usr/bin/atomik-panel
+Icon=preferences-system
+Terminal=false
+Type=Application
+Categories=System;Settings;
+Keywords=atomik;panel;ujust;settings;sistema;
