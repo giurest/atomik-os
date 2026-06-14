@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+"""Atomik Panel — Centro di controllo per Atomik OS"""
+
+import subprocess
+import os
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+from gi.repository import Gtk, Adw
+
+ATOMIK_RECIPES = [
+    {
+        "name": "Sistema",
+        "recipes": [
+            {"id": "update", "name": "Aggiorna sistema", "desc": "Scarica e applica gli aggiornamenti (bootc upgrade)"},
+            {"id": "status", "name": "Stato sistema", "desc": "Mostra lo stato dell'immagine bootc"},
+            {"id": "rollback", "name": "Rollback", "desc": "Torna all'immagine precedente"},
+            {"id": "reboot", "name": "Riavvia", "desc": "Riavvia il sistema"},
+            {"id": "cleanup", "name": "Pulizia", "desc": "Pulisci cache e file temporanei"},
+        ]
+    },
+    {
+        "name": "Utenti",
+        "recipes": [
+            {"id": "create-user", "name": "Crea utente", "desc": "Crea un nuovo utente di sistema"},
+            {"id": "delete-user", "name": "Elimina utente", "desc": "Elimina un utente esistente"},
+            {"id": "passwd-user", "name": "Cambia password", "desc": "Cambia la password di un utente"},
+            {"id": "toggle-sudo", "name": "Toggle sudo", "desc": "Abilita o disabilita i privilegi sudo"},
+            {"id": "list-users", "name": "Lista utenti", "desc": "Mostra tutti gli utenti del sistema"},
+        ]
+    },
+    {
+        "name": "Desktop",
+        "recipes": [
+            {"id": "reset-desktop", "name": "Reset desktop", "desc": "Ripristina configurazione Niri e DMS"},
+            {"id": "set-wallpaper", "name": "Sfondo Atomik", "desc": "Imposta lo sfondo predefinito Atomik"},
+            {"id": "reset-fastfetch", "name": "Reset fastfetch", "desc": "Ripristina configurazione fastfetch"},
+        ]
+    },
+    {
+        "name": "Gaming",
+        "recipes": [
+            {"id": "mangohud-enable", "name": "MangoHud", "desc": "Abilita MangoHud (per gioco o globale)"},
+            {"id": "reset-mangohud", "name": "Reset MangoHud", "desc": "Ripristina configurazione MangoHud di default"},
+        ]
+    },
+    {
+        "name": "Rete",
+        "recipes": [
+            {"id": "sshd", "name": "Abilita SSH", "desc": "Avvia il server SSH"},
+            {"id": "sshd-off", "name": "Disabilita SSH", "desc": "Ferma il server SSH"},
+            {"id": "smb-connect", "name": "Monta SMB", "desc": "Monta una condivisione di rete SMB/CIFS"},
+            {"id": "smb-disconnect", "name": "Smonta SMB", "desc": "Smonta una condivisione SMB/CIFS"},
+            {"id": "smb-list", "name": "Lista SMB", "desc": "Mostra le condivisioni SMB montate"},
+        ]
+    },
+    {
+        "name": "Git",
+        "recipes": [
+            {"id": "git-config", "name": "Configura Git", "desc": "Imposta nome e email per Git"},
+            {"id": "git", "name": "Git workflow", "desc": "Fetch, pull, commit e push interattivo"},
+        ]
+    },
+    {
+        "name": "Avanzato",
+        "recipes": [
+            {"id": "powerwash", "name": "Powerwash", "desc": "Reset completo del sistema (mantiene dati utente)"},
+            {"id": "install-winboat", "name": "Installa WinBoat", "desc": "Installa Windows in dual-boot via WinBoat"},
+            {"id": "unlock-winboat", "name": "Sblocca WinBoat", "desc": "Sblocca la partizione WinBoat"},
+        ]
+    },
+]
+
+SWITCH_CATEGORY = {
+    "name": "Installa Atomik OS",
+    "recipes": [
+        {"id": "__switch_desktop", "name": "Switch → Desktop", "desc": "bootc switch verso Atomik Desktop"},
+        {"id": "__switch_puregaming", "name": "Switch → PureGaming", "desc": "bootc switch verso Atomik PureGaming"},
+        {"id": "__switch_desktop_nvidia", "name": "Switch → Desktop NVIDIA", "desc": "bootc switch verso Atomik Desktop NVIDIA"},
+        {"id": "__switch_puregaming_nvidia", "name": "Switch → PureGaming NVIDIA", "desc": "bootc switch verso Atomik PureGaming NVIDIA"},
+    ]
+}
+
+SWITCH_MAP = {
+    "__switch_desktop": "ghcr.io/giurest/atomik-desktop:latest",
+    "__switch_puregaming": "ghcr.io/giurest/atomik-puregaming:latest",
+    "__switch_desktop_nvidia": "ghcr.io/giurest/atomik-desktop-nvidia:latest",
+    "__switch_puregaming_nvidia": "ghcr.io/giurest/atomik-puregaming-nvidia:latest",
+}
+
+TERMINAL = None
+
+
+def is_atomik():
+    """Rileva se siamo su Atomik OS leggendo os-release"""
+    try:
+        with open("/etc/os-release") as f:
+            return "Atomik" in f.read()
+    except Exception:
+        return False
+
+
+def find_terminal():
+    for t in ["alacritty", "gnome-terminal", "konsole", "xfce4-terminal", "xterm"]:
+        if subprocess.run(["which", t], capture_output=True).returncode == 0:
+            return t
+    return "xterm"
+
+
+class AtomikPanel(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="io.github.giurest.atomik-panel")
+        self.connect("activate", self.on_activate)
+
+    def on_activate(self, app):
+        global TERMINAL
+        TERMINAL = find_terminal()
+
+        on_atomik = is_atomik()
+
+        win = Adw.ApplicationWindow(application=app)
+        win.set_title("Atomik Panel")
+        win.set_default_size(520, 720)
+
+        header = Adw.HeaderBar()
+        title_label = Gtk.Label(label="Atomik Panel")
+        title_label.add_css_class("title-1")
+        header.set_title_widget(title_label)
+
+        scrolled = Gtk.ScrolledWindow(vexpand=True)
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        main_box.set_margin_top(18)
+        main_box.set_margin_bottom(18)
+        main_box.set_margin_start(18)
+        main_box.set_margin_end(18)
+
+        if on_atomik:
+            categories = ATOMIK_RECIPES + [SWITCH_CATEGORY]
+        else:
+            info = Adw.PreferencesGroup(title="Benvenuto")
+            info_row = Adw.ActionRow(
+                title="Non sei su Atomik OS",
+                subtitle="Usa i pulsanti qui sotto per passare ad Atomik OS tramite bootc switch",
+            )
+            info.add(info_row)
+            main_box.append(info)
+            categories = [SWITCH_CATEGORY]
+
+        for category in categories:
+            group = Adw.PreferencesGroup(title=category["name"])
+            for recipe in category["recipes"]:
+                row = Adw.ActionRow(
+                    title=recipe["name"],
+                    subtitle=recipe["desc"],
+                )
+                btn = Gtk.Button(
+                    icon_name="media-playback-start-symbolic",
+                    valign=Gtk.Align.CENTER,
+                    css_classes=["flat"],
+                )
+                btn.connect("clicked", self.on_run, recipe["id"])
+                row.add_suffix(btn)
+                row.set_activatable_widget(btn)
+                group.add(row)
+            main_box.append(group)
+
+        scrolled.set_child(main_box)
+
+        toolbar_view = Adw.ToolbarView()
+        toolbar_view.add_top_bar(header)
+        toolbar_view.set_content(scrolled)
+
+        win.set_content(toolbar_view)
+        win.present()
+
+    def on_run(self, button, recipe_id):
+        if recipe_id.startswith("__switch_"):
+            image = SWITCH_MAP[recipe_id]
+            cmd = f"sudo bootc switch {image}; echo ''; read -rp 'Premi INVIO per chiudere...'"
+        else:
+            cmd = f"ujust {recipe_id}; echo ''; read -rp 'Premi INVIO per chiudere...'"
+
+        if TERMINAL == "alacritty":
+            subprocess.Popen([
+                "alacritty",
+                "--title", f"Atomik — {recipe_id}",
+                "-e", "bash", "-c", cmd,
+            ])
+        elif TERMINAL == "gnome-terminal":
+            subprocess.Popen([
+                "gnome-terminal", "--", "bash", "-c", cmd,
+            ])
+        elif TERMINAL == "konsole":
+            subprocess.Popen([
+                "konsole", "-e", "bash", "-c", cmd,
+            ])
+        else:
+            subprocess.Popen([
+                TERMINAL, "-e", f"bash -c '{cmd}'",
+            ])
+
+
+if __name__ == "__main__":
+    app = AtomikPanel()
+    app.run()
