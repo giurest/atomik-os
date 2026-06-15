@@ -15,9 +15,6 @@
   "BuiltInDnsClientEnabled": false,
   "DnsOverHttpsMode": "automatic",
   "NetworkPredictionOptions": 2,
-  "PasswordManagerEnabled": false,
-  "AutofillAddressEnabled": false,
-  "AutofillCreditCardEnabled": false,
 
   "ShowHomeButton": false,
   "BookmarkBarEnabled": false,
