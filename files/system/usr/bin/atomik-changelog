@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Atomik OS — Mostra le differenze tra il sistema pre-update e quello attuale
+set -euo pipefail
+
+BEFORE="/var/lib/atomik-rpms-before.txt"
+CURRENT=$(mktemp)
+
+rpm -qa --queryformat '%{NAME} %{EVR}\n' | sort > "$CURRENT"
+
+if [ ! -f "$BEFORE" ]; then
+    echo "Nessun aggiornamento precedente registrato."
+    echo "Esegui 'ujust update' per tracciare il prossimo aggiornamento."
+    rm -f "$CURRENT"
+    exit 0
+fi
+
+ADDED=$(comm -13 <(awk '{print $1}' "$BEFORE") <(awk '{print $1}' "$CURRENT"))
+REMOVED=$(comm -23 <(awk '{print $1}' "$BEFORE") <(awk '{print $1}' "$CURRENT"))
+UPDATED=""
+
+while IFS=' ' read -r name ver; do
+    new_ver=$(grep "^${name} " "$CURRENT" | awk '{print $2}')
+    if [ -n "$new_ver" ] && [ "$ver" != "$new_ver" ]; then
+        UPDATED="${UPDATED}  ${name}: ${ver} → ${new_ver}\n"
+    fi
+done < "$BEFORE"
+
+echo "┌──────────────────────────────────────────┐"
+echo "│  Atomik OS — Changelog aggiornamento     │"
+echo "└──────────────────────────────────────────┘"
+echo ""
+
+COUNT_ADD=$(echo "$ADDED" | grep -c . 2>/dev/null || echo 0)
+COUNT_REM=$(echo "$REMOVED" | grep -c . 2>/dev/null || echo 0)
+COUNT_UPD=$(echo -e "$UPDATED" | grep -c "→" 2>/dev/null || echo 0)
+
+if [ "$COUNT_ADD" -eq 0 ] && [ "$COUNT_REM" -eq 0 ] && [ "$COUNT_UPD" -eq 0 ]; then
+    echo "  Nessuna differenza rilevata."
+else
+    if [ "$COUNT_UPD" -gt 0 ]; then
+        echo "📦 Aggiornati ($COUNT_UPD):"
+        echo -e "$UPDATED"
+    fi
+    if [ "$COUNT_ADD" -gt 0 ]; then
+        echo "✚ Aggiunti ($COUNT_ADD):"
+        echo "$ADDED" | sed 's/^/  /'
+        echo ""
+    fi
+    if [ "$COUNT_REM" -gt 0 ]; then
+        echo "✖ Rimossi ($COUNT_REM):"
+        echo "$REMOVED" | sed 's/^/  /'
+        echo ""
+    fi
+fi
+
+rm -f "$CURRENT"

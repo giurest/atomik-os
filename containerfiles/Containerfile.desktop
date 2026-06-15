@@ -160,5 +160,8 @@ COPY files/system/usr/share/applications/atomik-panel.desktop \
      /usr/share/applications/atomik-panel.desktop
 RUN chmod +x /usr/bin/atomik-panel
 
+COPY files/system/usr/bin/atomik-changelog /usr/bin/atomik-changelog
+RUN chmod +x /usr/bin/atomik-changelog
+
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint

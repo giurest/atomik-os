@@ -90,10 +90,22 @@ list-users:
 # Sistema (bootc)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Aggiorna Atomik OS all'ultima immagine disponibile
+# Aggiorna il sistema
 update:
-    @echo "Controllo aggiornamenti Atomik OS…"
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "→ Salvataggio stato pacchetti..."
+    rpm -qa --queryformat '%{NAME} %{EVR}\n' | sort > /var/lib/atomik-rpms-before.txt
+    echo "→ Controllo aggiornamenti..."
     sudo bootc upgrade
+    echo ""
+    echo "✓ Aggiornamento scaricato."
+    echo "  Dopo il riavvio esegui: ujust changelog"
+    echo ""
+    read -rp "Riavviare ora? [s/N]: " R
+    if [[ "$R" =~ ^[sS]$ ]]; then
+        sudo systemctl reboot
+    fi
 
 # Mostra lo stato corrente dell'immagine bootc
 status:
@@ -104,6 +116,10 @@ rollback:
     @echo "Rollback alla versione precedente…"
     sudo bootc rollback
     @echo "✓ Riavvia per applicare il rollback."
+
+# Mostra cosa è cambiato dopo l'ultimo aggiornamento
+changelog:
+    /usr/bin/atomik-changelog    
 
 # Riavvia il sistema
 reboot:
