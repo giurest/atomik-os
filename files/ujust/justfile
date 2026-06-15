@@ -90,7 +90,7 @@ list-users:
 # Sistema (bootc)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Aggiorna il sistema
+# [Atomik-OS] Aggiorna il sistema
 update:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -107,21 +107,21 @@ update:
         sudo systemctl reboot
     fi
 
-# Mostra lo stato corrente dell'immagine bootc
+# [Atomik-OS] Mostra lo stato corrente dell'immagine bootc
 status:
     sudo bootc status
 
-# Torna alla versione precedente del sistema (rollback)
+# [Atomik-OS] Torna alla versione precedente del sistema (rollback)
 rollback:
     @echo "Rollback alla versione precedente…"
     sudo bootc rollback
     @echo "✓ Riavvia per applicare il rollback."
 
-# Mostra cosa è cambiato dopo l'ultimo aggiornamento
+# [Atomik-OS] Mostra cosa è cambiato dopo l'ultimo aggiornamento
 changelog:
     /usr/bin/atomik-changelog    
 
-# Riavvia il sistema
+# [Atomik-OS] Riavvia il sistema
 reboot:
     sudo systemctl reboot
 
@@ -129,7 +129,7 @@ reboot:
 # GESTORE GIT
 # ─────────────────────────────────────────────────────────────────────────────    
 
-# Configura Git e chiavi SSH per un repo
+# [GIT] Configura Git e chiavi SSH per un repo
 git-config:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -192,7 +192,7 @@ git-config:
         echo "✓ Repository clonato in $CODE_DIR"
     fi
 
-# Workflow git rapido: fetch, pull, add, commit, push
+# [GIT] Workflow git rapido: fetch, pull, add, commit, push
 git project="":
     #!/usr/bin/env bash
     set -euo pipefail
