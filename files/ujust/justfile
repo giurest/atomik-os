@@ -262,7 +262,7 @@ git project="":
 # Manutenzione
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Ripristina TUTTA la configurazione desktop (Niri + DMS + Fastfetch + Wallpaper)
+# [Manutenzione] Ripristina TUTTA la configurazione desktop (Niri + DMS + Fastfetch + Wallpaper)
 reset-desktop:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -298,12 +298,12 @@ reset-desktop:
     echo "✓ Configurazione desktop ripristinata."
     echo "  Riavvia DMS o fai logout/login per applicare."
 
-# Reimposta il wallpaper di Atomik
+# [Manutenzione] Reimposta il wallpaper di Atomik
 set-wallpaper:
     dms ipc call wallpaper set /usr/share/backgrounds/atomik/wall.jpg
     @echo "✓ Wallpaper Atomik impostato."
 
-# Ripristina la configurazione fastfetch di default
+# [Manutenzione] Ripristina la configurazione fastfetch di default
 reset-fastfetch:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -312,7 +312,7 @@ reset-fastfetch:
     ln -sf /etc/fastfetch/atomik-logo.txt ~/.config/fastfetch/atomik-logo.txt
     echo "✓ Configurazione fastfetch ripristinata."
 
-# Ripristina configurazione MangoHud di default
+# [Manutenzione] Ripristina configurazione MangoHud di default
 reset-mangohud:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -321,7 +321,7 @@ reset-mangohud:
        ~/.config/MangoHud/MangoHud.conf
     echo "✓ Configurazione MangoHud ripristinata."
 
-# Abilita MangoHud (per gioco o globalmente)
+# [Manutenzione] Abilita MangoHud (per gioco o globalmente)
 mangohud-enable:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -367,7 +367,7 @@ mangohud-enable:
         exit 1
     fi
 
-# Installa WinBoat (Windows app runner via container)
+# [Manutenzione] Installa WinBoat (Windows app runner via container)
 install-winboat:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -398,7 +398,7 @@ install-winboat:
     echo "✓ WinBoat installato e integrato nel launcher."
     echo "  Prerequisiti: Podman (✓), FreeRDP (✓), KVM abilitato"
 
-# Sblocca WinBoat (riavvia il container)
+# [Manutenzione] Sblocca WinBoat (riavvia il container)
 unlock-winboat:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -428,10 +428,17 @@ unlock-winboat:
         exit 1
     fi
 
+# [Manutenzione] Applica le regole udev o configurazioni rapide che abbiamo visto prima
+fix-solaar:
+    @echo "Applicazione permessi Solaar e uinput..."
+    sudo curl -sSL https://raw.githubusercontent.com/pwr-Solaar/Solaar/master/rules.d-uinput/42-logitech-unify-permissions.rules -o /etc/udev/rules.d/42-logitech-unify-permissions.rules
+    sudo udevadm control --reload-rules && sudo udevadm trigger
+    flatpak override --user --device=all io.github.pwr_solaar.solaar    
+
 
 # ── SMB / Condivisioni di rete ───────────────────────────────────────────────
  
-# Crea una connessione SMB persistente (NAS, PC Windows)
+# [Rete] Crea una connessione SMB persistente (NAS, PC Windows)
 smb-connect:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -486,7 +493,7 @@ smb-connect:
     echo "  Accedi a: $MOUNT_PATH"
     echo "  Si monta automaticamente al primo accesso."
  
-# Rimuovi una connessione SMB
+# [Rete] Rimuovi una connessione SMB
 smb-disconnect:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -525,7 +532,7 @@ smb-disconnect:
     fi
     echo "✓ Connessione '$CONNECTION' rimossa."
  
-# Elenca le connessioni SMB attive
+# [Rete] Elenca le connessioni SMB attive
 smb-list:
     #!/usr/bin/env bash
     echo "┌──────────────────────────────────────┐"
@@ -546,7 +553,7 @@ smb-list:
         echo "  Nessuna connessione SMB configurata."
     fi
  
-# Powerwash: backup dati essenziali + reset completo del sistema
+# [Manutenzione] Powerwash: backup dati essenziali + reset completo del sistema
 powerwash:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -641,7 +648,7 @@ powerwash:
 
 # ── SSH ──────────────────────────────────────────────────────────────────────
 
-# Abilita e avvia il server SSH
+# [Rete] Abilita e avvia il server SSH
 sshd:
     #!/usr/bin/env bash
     if systemctl is-active --quiet sshd.service; then
@@ -665,7 +672,7 @@ sshd:
     echo ""
     echo "Stato: $(systemctl is-active sshd.service) | Abilitato al boot: $(systemctl is-enabled sshd.service)"
 
-# Disabilita e ferma il server SSH
+# [Rete] Disabilita e ferma il server SSH
 sshd-off:
     #!/usr/bin/env bash
     if systemctl is-active --quiet sshd.service; then
@@ -681,7 +688,7 @@ sshd-off:
         fi
     fi
 
-# Pulisci le immagini bootc non più referenziate
+# [Manutenzione] Pulisci le immagini bootc non più referenziate
 cleanup:
     sudo bootc image prune 2>/dev/null || sudo podman image prune -f
     @echo "✓ Pulizia completata."
