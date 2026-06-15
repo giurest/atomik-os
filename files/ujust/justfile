@@ -94,8 +94,9 @@ list-users:
 update:
     #!/usr/bin/env bash
     set -euo pipefail
+    mkdir -p "$HOME/.local/share/atomik"
     echo "→ Salvataggio stato pacchetti..."
-    rpm -qa --queryformat '%{NAME} %{EVR}\n' | sort > /var/lib/atomik-rpms-before.txt
+    rpm -qa --queryformat '%{NAME} %{EVR}\n' | sort > "$HOME/.local/share/atomik/rpms-before.txt"
     echo "→ Controllo aggiornamenti..."
     sudo bootc upgrade
     echo ""

@@ -2,7 +2,7 @@
 # Atomik OS — Mostra le differenze tra il sistema pre-update e quello attuale
 set -euo pipefail
 
-BEFORE="/var/lib/atomik-rpms-before.txt"
+BEFORE="$HOME/.local/share/atomik/rpms-before.txt"
 CURRENT=$(mktemp)
 
 rpm -qa --queryformat '%{NAME} %{EVR}\n' | sort > "$CURRENT"
