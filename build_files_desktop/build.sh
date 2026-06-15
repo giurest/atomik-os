@@ -28,6 +28,9 @@ rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
 dnf -y install brave-browser
 rm -f /opt && ln -s /var/opt /opt
 
+## Rimuovi policy residue di terze parti
+rm -f /etc/brave/policies/managed/brave_debullshitinator-policies.json
+
 ## Plymouth plugin
 dnf -y install plymouth-plugin-script
 
