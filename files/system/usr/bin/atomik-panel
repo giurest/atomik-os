@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Atomik Panel — Centro di controllo per Atomik OS"""
+"""
+Atomik Panel v0.2.0 — Centro di controllo universale per sistemi bootc
+Legge dinamicamente le ricette da ujust/just, compatibile con qualsiasi distro bootc.
+"""
 
 import subprocess
 import os
@@ -8,78 +11,16 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw
 
-ATOMIK_RECIPES = [
-    {
-        "name": "Sistema",
-        "recipes": [
-            {"id": "update", "name": "Aggiorna sistema", "desc": "Scarica e applica gli aggiornamenti (bootc upgrade)"},
-            {"id": "status", "name": "Stato sistema", "desc": "Mostra lo stato dell'immagine bootc"},
-            {"id": "rollback", "name": "Rollback", "desc": "Torna all'immagine precedente"},
-            {"id": "reboot", "name": "Riavvia", "desc": "Riavvia il sistema"},
-            {"id": "cleanup", "name": "Pulizia", "desc": "Pulisci cache e file temporanei"},
-        ]
-    },
-    {
-        "name": "Utenti",
-        "recipes": [
-            {"id": "create-user", "name": "Crea utente", "desc": "Crea un nuovo utente di sistema"},
-            {"id": "delete-user", "name": "Elimina utente", "desc": "Elimina un utente esistente"},
-            {"id": "passwd-user", "name": "Cambia password", "desc": "Cambia la password di un utente"},
-            {"id": "toggle-sudo", "name": "Toggle sudo", "desc": "Abilita o disabilita i privilegi sudo"},
-            {"id": "list-users", "name": "Lista utenti", "desc": "Mostra tutti gli utenti del sistema"},
-        ]
-    },
-    {
-        "name": "Desktop",
-        "recipes": [
-            {"id": "reset-desktop", "name": "Reset desktop", "desc": "Ripristina configurazione Niri e DMS"},
-            {"id": "set-wallpaper", "name": "Sfondo Atomik", "desc": "Imposta lo sfondo predefinito Atomik"},
-            {"id": "reset-fastfetch", "name": "Reset fastfetch", "desc": "Ripristina configurazione fastfetch"},
-        ]
-    },
-    {
-        "name": "Gaming",
-        "recipes": [
-            {"id": "mangohud-enable", "name": "MangoHud", "desc": "Abilita MangoHud (per gioco o globale)"},
-            {"id": "reset-mangohud", "name": "Reset MangoHud", "desc": "Ripristina configurazione MangoHud di default"},
-        ]
-    },
-    {
-        "name": "Rete",
-        "recipes": [
-            {"id": "sshd", "name": "Abilita SSH", "desc": "Avvia il server SSH"},
-            {"id": "sshd-off", "name": "Disabilita SSH", "desc": "Ferma il server SSH"},
-            {"id": "smb-connect", "name": "Monta SMB", "desc": "Monta una condivisione di rete SMB/CIFS"},
-            {"id": "smb-disconnect", "name": "Smonta SMB", "desc": "Smonta una condivisione SMB/CIFS"},
-            {"id": "smb-list", "name": "Lista SMB", "desc": "Mostra le condivisioni SMB montate"},
-        ]
-    },
-    {
-        "name": "Git",
-        "recipes": [
-            {"id": "git-config", "name": "Configura Git", "desc": "Imposta nome e email per Git"},
-            {"id": "git", "name": "Git workflow", "desc": "Fetch, pull, commit e push interattivo"},
-        ]
-    },
-    {
-        "name": "Avanzato",
-        "recipes": [
-            {"id": "powerwash", "name": "Powerwash", "desc": "Reset completo del sistema (mantiene dati utente)"},
-            {"id": "install-winboat", "name": "Installa WinBoat", "desc": "Installa Windows in dual-boot via WinBoat"},
-            {"id": "unlock-winboat", "name": "Sblocca WinBoat", "desc": "Sblocca la partizione WinBoat"},
-        ]
-    },
-]
+VERSION = "0.2.0"
 
-SWITCH_CATEGORY = {
-    "name": "Installa Atomik OS",
-    "recipes": [
-        {"id": "__switch_desktop", "name": "Switch → Desktop", "desc": "bootc switch verso Atomik Desktop"},
-        {"id": "__switch_puregaming", "name": "Switch → PureGaming", "desc": "bootc switch verso Atomik PureGaming"},
-        {"id": "__switch_desktop_nvidia", "name": "Switch → Desktop NVIDIA", "desc": "bootc switch verso Atomik Desktop NVIDIA"},
-        {"id": "__switch_puregaming_nvidia", "name": "Switch → PureGaming NVIDIA", "desc": "bootc switch verso Atomik PureGaming NVIDIA"},
-    ]
-}
+CATEGORY_ORDER = ["Sistema", "Utenti", "Desktop", "Gaming", "Rete", "Git", "Avanzato", "Altro"]
+
+SWITCH_RECIPES = [
+    {"id": "__switch_desktop", "name": "Switch → Desktop", "desc": "bootc switch verso Atomik Desktop"},
+    {"id": "__switch_puregaming", "name": "Switch → PureGaming", "desc": "bootc switch verso Atomik PureGaming"},
+    {"id": "__switch_desktop_nvidia", "name": "Switch → Desktop NVIDIA", "desc": "bootc switch verso Atomik Desktop NVIDIA"},
+    {"id": "__switch_puregaming_nvidia", "name": "Switch → PureGaming NVIDIA", "desc": "bootc switch verso Atomik PureGaming NVIDIA"},
+]
 
 SWITCH_MAP = {
     "__switch_desktop": "ghcr.io/giurest/atomik-desktop:latest",
@@ -89,10 +30,23 @@ SWITCH_MAP = {
 }
 
 TERMINAL = None
+JUST_CMD = None
+
+
+def get_os_name():
+    """Legge il nome OS da os-release"""
+    try:
+        with open("/etc/os-release") as f:
+            for line in f:
+                if line.startswith("PRETTY_NAME="):
+                    return line.split("=", 1)[1].strip().strip('"')
+    except Exception:
+        pass
+    return "Sistema sconosciuto"
 
 
 def is_atomik():
-    """Rileva se siamo su Atomik OS leggendo os-release"""
+    """Rileva se siamo su Atomik OS"""
     try:
         with open("/etc/os-release") as f:
             return "Atomik" in f.read()
@@ -100,11 +54,104 @@ def is_atomik():
         return False
 
 
+def find_just_command():
+    """Trova ujust o just disponibile nel sistema"""
+    for cmd in ["ujust", "just"]:
+        if subprocess.run(["which", cmd], capture_output=True).returncode == 0:
+            return cmd
+    return None
+
+
 def find_terminal():
-    for t in ["alacritty", "gnome-terminal", "konsole", "xfce4-terminal", "xterm"]:
+    """Rileva il terminale disponibile"""
+    for t in ["alacritty", "gnome-terminal", "konsole", "xfce4-terminal", "foot", "kitty", "xterm"]:
         if subprocess.run(["which", t], capture_output=True).returncode == 0:
             return t
     return "xterm"
+
+
+def parse_just_list():
+    """Legge le ricette da ujust/just con categorie dal tag [Categoria]"""
+    recipes = []
+    if not JUST_CMD:
+        return recipes
+    try:
+        result = subprocess.run(
+            [JUST_CMD, "--list", "--list-heading", "", "--list-prefix", ""],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode != 0:
+            return recipes
+
+        for line in result.stdout.strip().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if "#" in line:
+                name, desc = line.split("#", 1)
+                name = name.strip()
+                desc = desc.strip()
+                category = "Altro"
+                if desc.startswith("[") and "]" in desc:
+                    category = desc[1:desc.index("]")]
+                    desc = desc[desc.index("]") + 1:].strip()
+                recipes.append({
+                    "id": name,
+                    "name": name,
+                    "desc": desc,
+                    "category": category,
+                })
+            else:
+                recipes.append({
+                    "id": line.strip(),
+                    "name": line.strip(),
+                    "desc": "",
+                    "category": "Altro",
+                })
+    except Exception:
+        pass
+    return recipes
+
+
+def categorize_recipes(recipes):
+    """Raggruppa le ricette per categoria mantenendo l'ordine definito"""
+    groups = {}
+    for r in recipes:
+        cat = r.get("category", "Altro")
+        if cat not in groups:
+            groups[cat] = []
+        groups[cat].append(r)
+
+    categories = []
+    for name in CATEGORY_ORDER:
+        if name in groups:
+            categories.append({"name": name, "recipes": groups.pop(name)})
+    for name, recs in groups.items():
+        categories.append({"name": name, "recipes": recs})
+    return categories
+
+
+def launch_in_terminal(recipe_id):
+    """Lancia un comando nel terminale rilevato"""
+    if recipe_id.startswith("__switch_"):
+        image = SWITCH_MAP[recipe_id]
+        cmd = f"sudo bootc switch {image}; echo ''; read -rp 'Premi INVIO per chiudere...'"
+    else:
+        run_cmd = JUST_CMD or "ujust"
+        cmd = f"{run_cmd} {recipe_id}; echo ''; read -rp 'Premi INVIO per chiudere...'"
+
+    if TERMINAL == "alacritty":
+        subprocess.Popen(["alacritty", "--title", f"Atomik — {recipe_id}", "-e", "bash", "-c", cmd])
+    elif TERMINAL == "gnome-terminal":
+        subprocess.Popen(["gnome-terminal", "--", "bash", "-c", cmd])
+    elif TERMINAL == "konsole":
+        subprocess.Popen(["konsole", "-e", "bash", "-c", cmd])
+    elif TERMINAL == "foot":
+        subprocess.Popen(["foot", "bash", "-c", cmd])
+    elif TERMINAL == "kitty":
+        subprocess.Popen(["kitty", "bash", "-c", cmd])
+    else:
+        subprocess.Popen([TERMINAL, "-e", f"bash -c '{cmd}'"])
 
 
 class AtomikPanel(Adw.Application):
@@ -112,20 +159,27 @@ class AtomikPanel(Adw.Application):
         super().__init__(application_id="io.github.giurest.atomik-panel")
         self.connect("activate", self.on_activate)
 
-    def on_activate(self, app):
-        global TERMINAL
-        TERMINAL = find_terminal()
-
+    def build_ui(self, win):
+        """Costruisce l'interfaccia leggendo le ricette"""
         on_atomik = is_atomik()
-
-        win = Adw.ApplicationWindow(application=app)
-        win.set_title("Atomik Panel")
-        win.set_default_size(520, 720)
+        os_name = get_os_name()
+        recipes = parse_just_list()
+        categories = categorize_recipes(recipes) if recipes else []
 
         header = Adw.HeaderBar()
+        title_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
         title_label = Gtk.Label(label="Atomik Panel")
         title_label.add_css_class("title-1")
-        header.set_title_widget(title_label)
+        title_box.append(title_label)
+        header.set_title_widget(title_box)
+
+        refresh_btn = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text="Ricarica ricette")
+        refresh_btn.connect("clicked", self.on_refresh, win)
+        header.pack_end(refresh_btn)
+
+        about_btn = Gtk.Button(icon_name="help-about-symbolic", tooltip_text="Informazioni")
+        about_btn.connect("clicked", self.on_about, win)
+        header.pack_end(about_btn)
 
         scrolled = Gtk.ScrolledWindow(vexpand=True)
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
@@ -134,35 +188,54 @@ class AtomikPanel(Adw.Application):
         main_box.set_margin_start(18)
         main_box.set_margin_end(18)
 
+        # Info sistema
+        sys_group = Adw.PreferencesGroup()
         if on_atomik:
-            categories = ATOMIK_RECIPES + [SWITCH_CATEGORY]
-        else:
-            info = Adw.PreferencesGroup(title="Benvenuto")
-            info_row = Adw.ActionRow(
-                title="Non sei su Atomik OS",
-                subtitle="Usa i pulsanti qui sotto per passare ad Atomik OS tramite bootc switch",
+            sys_row = Adw.ActionRow(title=os_name, subtitle=f"Atomik Panel v{VERSION}")
+        elif recipes:
+            sys_row = Adw.ActionRow(
+                title=os_name,
+                subtitle=f"Ricette locali caricate tramite {JUST_CMD} — Atomik Panel v{VERSION}",
             )
-            info.add(info_row)
-            main_box.append(info)
-            categories = [SWITCH_CATEGORY]
+        else:
+            sys_row = Adw.ActionRow(
+                title=os_name,
+                subtitle=f"Nessuna ricetta trovata — Atomik Panel v{VERSION}",
+            )
+        sys_group.add(sys_row)
+        main_box.append(sys_group)
 
+        # Ricette ujust/just
         for category in categories:
             group = Adw.PreferencesGroup(title=category["name"])
             for recipe in category["recipes"]:
-                row = Adw.ActionRow(
-                    title=recipe["name"],
-                    subtitle=recipe["desc"],
-                )
+                row = Adw.ActionRow(title=recipe["name"], subtitle=recipe["desc"])
                 btn = Gtk.Button(
                     icon_name="media-playback-start-symbolic",
                     valign=Gtk.Align.CENTER,
                     css_classes=["flat"],
+                    tooltip_text=f"{JUST_CMD or 'ujust'} {recipe['id']}",
                 )
                 btn.connect("clicked", self.on_run, recipe["id"])
                 row.add_suffix(btn)
                 row.set_activatable_widget(btn)
                 group.add(row)
             main_box.append(group)
+
+        # Sezione switch Atomik (sempre visibile)
+        switch_group = Adw.PreferencesGroup(title="Installa Atomik OS")
+        for recipe in SWITCH_RECIPES:
+            row = Adw.ActionRow(title=recipe["name"], subtitle=recipe["desc"])
+            btn = Gtk.Button(
+                icon_name="media-playback-start-symbolic",
+                valign=Gtk.Align.CENTER,
+                css_classes=["flat"],
+            )
+            btn.connect("clicked", self.on_run, recipe["id"])
+            row.add_suffix(btn)
+            row.set_activatable_widget(btn)
+            switch_group.add(row)
+        main_box.append(switch_group)
 
         scrolled.set_child(main_box)
 
@@ -171,33 +244,37 @@ class AtomikPanel(Adw.Application):
         toolbar_view.set_content(scrolled)
 
         win.set_content(toolbar_view)
+
+    def on_activate(self, app):
+        global TERMINAL, JUST_CMD
+        TERMINAL = find_terminal()
+        JUST_CMD = find_just_command()
+
+        win = Adw.ApplicationWindow(application=app)
+        win.set_title("Atomik Panel")
+        win.set_default_size(520, 760)
+
+        self.build_ui(win)
         win.present()
 
-    def on_run(self, button, recipe_id):
-        if recipe_id.startswith("__switch_"):
-            image = SWITCH_MAP[recipe_id]
-            cmd = f"sudo bootc switch {image}; echo ''; read -rp 'Premi INVIO per chiudere...'"
-        else:
-            cmd = f"ujust {recipe_id}; echo ''; read -rp 'Premi INVIO per chiudere...'"
+    def on_refresh(self, button, win):
+        """Ricostruisce l'UI con le ricette aggiornate"""
+        self.build_ui(win)
 
-        if TERMINAL == "alacritty":
-            subprocess.Popen([
-                "alacritty",
-                "--title", f"Atomik — {recipe_id}",
-                "-e", "bash", "-c", cmd,
-            ])
-        elif TERMINAL == "gnome-terminal":
-            subprocess.Popen([
-                "gnome-terminal", "--", "bash", "-c", cmd,
-            ])
-        elif TERMINAL == "konsole":
-            subprocess.Popen([
-                "konsole", "-e", "bash", "-c", cmd,
-            ])
-        else:
-            subprocess.Popen([
-                TERMINAL, "-e", f"bash -c '{cmd}'",
-            ])
+    def on_about(self, button, win):
+        """Mostra la finestra informazioni"""
+        about = Adw.AboutDialog(
+            application_name="Atomik Panel",
+            version=VERSION,
+            developer_name="Giurest Labs",
+            comments="Centro di controllo universale per sistemi bootc.\nLegge dinamicamente le ricette da ujust/just.",
+            website="https://github.com/giurest/atomik-os",
+            license_type=Gtk.License.GPL_3_0,
+        )
+        about.present(win)
+
+    def on_run(self, button, recipe_id):
+        launch_in_terminal(recipe_id)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ _default:
 # Gestione utenti
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Crea un nuovo utente con home e shell, aggiunto al gruppo wheel (sudo)
+# [Gestione utenti] Crea un nuovo utente con home e shell, aggiunto al gruppo wheel (sudo)
 create-user username="":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -30,7 +30,7 @@ create-user username="":
     sudo passwd "$USERNAME"
     echo "✓ Utente '$USERNAME' creato e aggiunto al gruppo wheel."
 
-# Elimina un utente esistente (opzionalmente con la sua home)
+# [Gestione utenti] Elimina un utente esistente (opzionalmente con la sua home)
 delete-user username="":
     #!/usr/bin/env bash
     set -euo pipefail
