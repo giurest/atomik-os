@@ -96,7 +96,7 @@ update:
     set -euo pipefail
     mkdir -p "$HOME/.local/share/atomik"
     echo "→ Salvataggio stato pacchetti..."
-    rpm -qa --queryformat '%{NAME} %{EVR}\n' | grep -v '^gpg-pubkey ' | sort > "$HOME/.local/share/atomik/rpms-before.txt"
+    rpm -qa --queryformat '%{NAME}.%{ARCH} %{EVR}\n' | grep -v '^gpg-pubkey' | sort > "$HOME/.local/share/atomik/rpms-before.txt"    
     echo "→ Controllo aggiornamenti..."
     sudo bootc upgrade
     echo ""

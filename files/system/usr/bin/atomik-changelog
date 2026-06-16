@@ -1,50 +1,50 @@
 #!/usr/bin/env bash
-# Atomik OS — Mostra le differenze tra il sistema pre-update e quello attuale
+# Atomik OS — Changelog aggiornamento (con colori e tabella)
 set -euo pipefail
+
+# Colori
+CYAN='\033[1;36m'
+GREEN='\033[1;32m'
+RED='\033[1;31m'
+YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
+DIM='\033[2m'
+BOLD='\033[1m'
+NC='\033[0m'
 
 BEFORE="$HOME/.local/share/atomik/rpms-before.txt"
 CURRENT=$(mktemp)
 
-# Escludi gpg-pubkey (chiavi RPM, non pacchetti reali)
-rpm -qa --queryformat '%{NAME} %{EVR}\n' | grep -v '^gpg-pubkey ' | sort > "$CURRENT"
+rpm -qa --queryformat '%{NAME}.%{ARCH} %{EVR}\n' | grep -v '^gpg-pubkey' | sort > "$CURRENT"
 
 if [ ! -f "$BEFORE" ]; then
-    echo "Nessun aggiornamento precedente registrato."
-    echo "Esegui 'ujust update' per tracciare il prossimo aggiornamento."
+    echo -e "${YELLOW}Nessun aggiornamento precedente registrato.${NC}"
+    echo -e "Esegui ${CYAN}ujust update${NC} per tracciare il prossimo aggiornamento."
     rm -f "$CURRENT"
     exit 0
 fi
 
-# Filtra gpg-pubkey anche dal file salvato
 BEFORE_CLEAN=$(mktemp)
-grep -v '^gpg-pubkey ' "$BEFORE" | sort > "$BEFORE_CLEAN"
+grep -v '^gpg-pubkey' "$BEFORE" | sort > "$BEFORE_CLEAN"
 
-# Pacchetti aggiunti (presenti solo nel nuovo)
+# Calcola differenze
 ADDED=$(comm -13 <(awk '{print $1}' "$BEFORE_CLEAN") <(awk '{print $1}' "$CURRENT"))
-
-# Pacchetti rimossi (presenti solo nel vecchio)
 REMOVED=$(comm -23 <(awk '{print $1}' "$BEFORE_CLEAN") <(awk '{print $1}' "$CURRENT"))
 
-# Pacchetti aggiornati (stesso nome, versione diversa)
-UPDATED=""
+UPDATED_LINES=""
 while IFS=' ' read -r name ver; do
     new_ver=$(awk -v n="$name" '$1 == n {print $2}' "$CURRENT")
     if [ -n "$new_ver" ] && [ "$ver" != "$new_ver" ]; then
-        UPDATED="${UPDATED}  ${name}: ${ver} → ${new_ver}\n"
+        UPDATED_LINES="${UPDATED_LINES}${name}|${ver}|${new_ver}\n"
     fi
 done < "$BEFORE_CLEAN"
-
-echo "┌──────────────────────────────────────────┐"
-echo "│  Atomik OS — Changelog aggiornamento     │"
-echo "└──────────────────────────────────────────┘"
-echo ""
 
 COUNT_UPD=0
 COUNT_ADD=0
 COUNT_REM=0
 
-if [ -n "$UPDATED" ]; then
-    COUNT_UPD=$(echo -e "$UPDATED" | grep -c "→" || true)
+if [ -n "$UPDATED_LINES" ]; then
+    COUNT_UPD=$(echo -e "$UPDATED_LINES" | grep -c "|" || true)
 fi
 if [ -n "$ADDED" ]; then
     COUNT_ADD=$(echo "$ADDED" | wc -l)
@@ -53,23 +53,57 @@ if [ -n "$REMOVED" ]; then
     COUNT_REM=$(echo "$REMOVED" | wc -l)
 fi
 
+# Header
+echo ""
+echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║${NC}${BOLD}          Atomik OS — Changelog aggiornamento              ${NC}${CYAN}║${NC}"
+echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+
 if [ "$COUNT_ADD" -eq 0 ] && [ "$COUNT_REM" -eq 0 ] && [ "$COUNT_UPD" -eq 0 ]; then
-    echo "  Nessuna differenza rilevata."
-else
-    if [ "$COUNT_UPD" -gt 0 ]; then
-        echo "📦 Aggiornati ($COUNT_UPD):"
-        echo -e "$UPDATED"
-    fi
-    if [ "$COUNT_ADD" -gt 0 ]; then
-        echo "✚ Aggiunti ($COUNT_ADD):"
-        echo "$ADDED" | sed 's/^/  /'
-        echo ""
-    fi
-    if [ "$COUNT_REM" -gt 0 ]; then
-        echo "✖ Rimossi ($COUNT_REM):"
-        echo "$REMOVED" | sed 's/^/  /'
-        echo ""
-    fi
+    echo -e "  ${DIM}Nessuna differenza rilevata.${NC}"
+    echo ""
+    rm -f "$CURRENT" "$BEFORE_CLEAN"
+    exit 0
+fi
+
+# Riepilogo
+echo -e "  ${BOLD}Riepilogo:${NC}  📦 ${BLUE}${COUNT_UPD}${NC} aggiornati  ${GREEN}✚ ${COUNT_ADD}${NC} aggiunti  ${RED}✖ ${COUNT_REM}${NC} rimossi"
+echo ""
+
+# Pacchetti aggiornati
+if [ "$COUNT_UPD" -gt 0 ]; then
+    echo -e "  ${BLUE}${BOLD}📦 Pacchetti aggiornati (${COUNT_UPD})${NC}"
+    echo -e "  ${DIM}┌──────────────────────────────────┬──────────────────┬──────────────────┐${NC}"
+    printf "  ${DIM}│${NC} ${BOLD}%-32s${NC} ${DIM}│${NC} ${BOLD}%-16s${NC} ${DIM}│${NC} ${BOLD}%-16s${NC} ${DIM}│${NC}\n" "Pacchetto" "Precedente" "Nuovo"
+    echo -e "  ${DIM}├──────────────────────────────────┼──────────────────┼──────────────────┤${NC}"
+    echo -e "$UPDATED_LINES" | grep "|" | sort | while IFS='|' read -r name old new; do
+        # Tronca nomi lunghi
+        short_name="${name:0:32}"
+        short_old="${old:0:16}"
+        short_new="${new:0:16}"
+        printf "  ${DIM}│${NC} %-32s ${DIM}│${NC} ${DIM}%-16s${NC} ${DIM}│${NC} ${GREEN}%-16s${NC} ${DIM}│${NC}\n" "$short_name" "$short_old" "$short_new"
+    done
+    echo -e "  ${DIM}└──────────────────────────────────┴──────────────────┴──────────────────┘${NC}"
+    echo ""
+fi
+
+# Pacchetti aggiunti
+if [ "$COUNT_ADD" -gt 0 ]; then
+    echo -e "  ${GREEN}${BOLD}✚ Pacchetti aggiunti (${COUNT_ADD})${NC}"
+    echo "$ADDED" | while read -r pkg; do
+        echo -e "    ${GREEN}+${NC} $pkg"
+    done
+    echo ""
+fi
+
+# Pacchetti rimossi
+if [ "$COUNT_REM" -gt 0 ]; then
+    echo -e "  ${RED}${BOLD}✖ Pacchetti rimossi (${COUNT_REM})${NC}"
+    echo "$REMOVED" | while read -r pkg; do
+        echo -e "    ${RED}-${NC} $pkg"
+    done
+    echo ""
 fi
 
 rm -f "$CURRENT" "$BEFORE_CLEAN"
