@@ -5,7 +5,8 @@ set -euo pipefail
 BEFORE="$HOME/.local/share/atomik/rpms-before.txt"
 CURRENT=$(mktemp)
 
-rpm -qa --queryformat '%{NAME} %{EVR}\n' | sort > "$CURRENT"
+# Escludi gpg-pubkey (chiavi RPM, non pacchetti reali)
+rpm -qa --queryformat '%{NAME} %{EVR}\n' | grep -v '^gpg-pubkey ' | sort > "$CURRENT"
 
 if [ ! -f "$BEFORE" ]; then
     echo "Nessun aggiornamento precedente registrato."
@@ -14,25 +15,43 @@ if [ ! -f "$BEFORE" ]; then
     exit 0
 fi
 
-ADDED=$(comm -13 <(awk '{print $1}' "$BEFORE") <(awk '{print $1}' "$CURRENT"))
-REMOVED=$(comm -23 <(awk '{print $1}' "$BEFORE") <(awk '{print $1}' "$CURRENT"))
-UPDATED=""
+# Filtra gpg-pubkey anche dal file salvato
+BEFORE_CLEAN=$(mktemp)
+grep -v '^gpg-pubkey ' "$BEFORE" | sort > "$BEFORE_CLEAN"
 
+# Pacchetti aggiunti (presenti solo nel nuovo)
+ADDED=$(comm -13 <(awk '{print $1}' "$BEFORE_CLEAN") <(awk '{print $1}' "$CURRENT"))
+
+# Pacchetti rimossi (presenti solo nel vecchio)
+REMOVED=$(comm -23 <(awk '{print $1}' "$BEFORE_CLEAN") <(awk '{print $1}' "$CURRENT"))
+
+# Pacchetti aggiornati (stesso nome, versione diversa)
+UPDATED=""
 while IFS=' ' read -r name ver; do
-    new_ver=$(grep "^${name} " "$CURRENT" | awk '{print $2}')
+    new_ver=$(awk -v n="$name" '$1 == n {print $2}' "$CURRENT")
     if [ -n "$new_ver" ] && [ "$ver" != "$new_ver" ]; then
         UPDATED="${UPDATED}  ${name}: ${ver} → ${new_ver}\n"
     fi
-done < "$BEFORE"
+done < "$BEFORE_CLEAN"
 
 echo "┌──────────────────────────────────────────┐"
 echo "│  Atomik OS — Changelog aggiornamento     │"
 echo "└──────────────────────────────────────────┘"
 echo ""
 
-COUNT_ADD=$(echo "$ADDED" | grep -c . 2>/dev/null || echo 0)
-COUNT_REM=$(echo "$REMOVED" | grep -c . 2>/dev/null || echo 0)
-COUNT_UPD=$(echo -e "$UPDATED" | grep -c "→" 2>/dev/null || echo 0)
+COUNT_UPD=0
+COUNT_ADD=0
+COUNT_REM=0
+
+if [ -n "$UPDATED" ]; then
+    COUNT_UPD=$(echo -e "$UPDATED" | grep -c "→" || true)
+fi
+if [ -n "$ADDED" ]; then
+    COUNT_ADD=$(echo "$ADDED" | wc -l)
+fi
+if [ -n "$REMOVED" ]; then
+    COUNT_REM=$(echo "$REMOVED" | wc -l)
+fi
 
 if [ "$COUNT_ADD" -eq 0 ] && [ "$COUNT_REM" -eq 0 ] && [ "$COUNT_UPD" -eq 0 ]; then
     echo "  Nessuna differenza rilevata."
@@ -53,4 +72,4 @@ else
     fi
 fi
 
-rm -f "$CURRENT"
+rm -f "$CURRENT" "$BEFORE_CLEAN"
