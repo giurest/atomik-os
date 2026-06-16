@@ -55,7 +55,7 @@ delete-user username="":
         echo "✓ Utente '$USERNAME' eliminato (home conservata)."
     fi
 
-# Cambia la password di un utente
+# [Gestione utenti] Cambia la password di un utente
 passwd-user username="":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -65,7 +65,7 @@ passwd-user username="":
     fi
     sudo passwd "$USERNAME"
 
-# Aggiungi o rimuovi i privilegi sudo (gruppo wheel) per un utente
+# [Gestione utenti] Aggiungi o rimuovi i privilegi sudo (gruppo wheel) per un utente
 toggle-sudo username="":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -81,7 +81,7 @@ toggle-sudo username="":
         echo "✓ Privilegi sudo concessi a '$USERNAME'."
     fi
 
-# Elenca gli utenti umani del sistema (UID >= 1000)
+# [Gestione utenti] Elenca gli utenti umani del sistema (UID >= 1000)
 list-users:
     #!/usr/bin/env bash
     awk -F: '$3 >= 1000 && $3 < 65534 { print $1 " (uid " $3 ")" }' /etc/passwd
@@ -287,6 +287,9 @@ reset-desktop:
     echo "→ Reset configurazione DMS..."
     mkdir -p ~/.config/DankMaterialShell
     cp /usr/share/atomik/defaults/DankMaterialShell/settings.json ~/.config/DankMaterialShell/settings.json
+    cp /usr/share/atomik/defaults/DankMaterialShell/plugin_settings.json ~/.config/DankMaterialShell/plugin_settings.json
+    echo "→ Installazione plugin DankActions..."
+    dms plugins install dankActions 2>/dev/null || true
     echo "→ Reset Fastfetch..."
     mkdir -p ~/.config/fastfetch
     ln -sf /etc/fastfetch/config.jsonc ~/.config/fastfetch/config.jsonc

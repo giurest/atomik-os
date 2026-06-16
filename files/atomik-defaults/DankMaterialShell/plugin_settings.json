@@ -6,7 +6,7 @@
         "icon": "download",
         "displayText": "",
         "displayCommand": "",
-        "clickCommand": "alacritty -e sh -c \"ujust update\"",
+        "clickCommand": "alacritty -e sh -c \"ujust update\" && read -rp 'Premi INVIO per chiudere...'",
         "middleClickCommand": "",
         "rightClickCommand": "",
         "updateInterval": 0,

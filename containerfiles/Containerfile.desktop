@@ -163,5 +163,22 @@ RUN chmod +x /usr/bin/atomik-panel
 COPY files/system/usr/bin/atomik-changelog /usr/bin/atomik-changelog
 RUN chmod +x /usr/bin/atomik-changelog
 
+# ── DMS + Niri default config ────────────────────────────────────────────────
+RUN mkdir -p /usr/share/atomik/defaults/DankMaterialShell \
+             /usr/share/atomik/defaults/niri/dms \
+             /etc/skel/.config/DankMaterialShell \
+             /etc/skel/.config/niri/dms
+COPY files/atomik-defaults/DankMaterialShell/settings.json \
+     /usr/share/atomik/defaults/DankMaterialShell/settings.json
+COPY files/atomik-defaults/DankMaterialShell/plugin_settings.json \
+     /usr/share/atomik/defaults/DankMaterialShell/plugin_settings.json
+COPY files/atomik-defaults/niri/config.kdl \
+     /usr/share/atomik/defaults/niri/config.kdl
+COPY files/atomik-defaults/niri/dms/ /usr/share/atomik/defaults/niri/dms/
+RUN cp -r /usr/share/atomik/defaults/DankMaterialShell/* \
+          /etc/skel/.config/DankMaterialShell/ && \
+    cp -r /usr/share/atomik/defaults/niri/* \
+          /etc/skel/.config/niri/
+
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
