@@ -59,6 +59,10 @@ RUN systemctl disable gdm.service 2>/dev/null || true && \
     systemctl enable greetd.service && \
     ln -sf /usr/lib/systemd/system/greetd.service \
            /etc/systemd/system/display-manager.service
+# ── Logo Atomik nel greeter DMS ───────────────────────────────────────────────
+COPY files/dms/SystemLogo.qml /usr/share/quickshell/dms/Widgets/SystemLogo.qml
+COPY files/dms/SystemLogo.qml /usr/share/quickshell/dms-greeter/Widgets/SystemLogo.qml
+COPY files/branding/logo-dark.svg /usr/share/icons/hicolor/scalable/apps/atomik-os.svg
 
 # ── DMS avvia automaticamente con Niri ───────────────────────────────────────
 RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
@@ -89,7 +93,7 @@ RUN mkdir -p /etc/plymouth && \
     printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
     plymouth-set-default-theme atomik 2>/dev/null || true && \
     KERNEL_VERSION=$(ls /lib/modules/ | sort -V | tail -1) && \
-    dracut --force --kver "$KERNEL_VERSION" 2>/dev/null || true
+    dracut --force --add plymouth --kver "$KERNEL_VERSION" 2>/dev/null || true
 
 # ── Wallpaper predefinito ─────────────────────────────────────────────────────
 RUN mkdir -p /usr/share/backgrounds/atomik
@@ -107,8 +111,9 @@ RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
     sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
     sed -i 's/^NAME=.*/NAME="Atomik OS"/' /usr/lib/os-release && \
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /usr/lib/os-release && \
-    sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release
-
+    sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release \
+    echo 'LOGO=atomik-os' >> /etc/os-release && \
+    echo 'LOGO=atomik-os' >> /usr/lib/os-release
 # ── Niri config di sistema ────────────────────────────────────────────────────
 RUN mkdir -p /etc/niri
 COPY files/niri/config.kdl /etc/niri/config.kdl
@@ -181,6 +186,7 @@ RUN cp -r /usr/share/atomik/defaults/DankMaterialShell/* \
           /etc/skel/.config/niri/
 
 COPY files/system/usr/share/icons/hicolor/ /usr/share/icons/hicolor/
+RUN gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
 
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
