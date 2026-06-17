@@ -2,7 +2,7 @@
 Name=Atomik Panel
 Comment=Centro di controllo per Atomik OS
 Exec=/usr/bin/atomik-panel
-Icon=preferences-system
+Icon=atomik-os
 Terminal=false
 Type=Application
 Categories=System;Settings;

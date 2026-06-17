@@ -180,5 +180,7 @@ RUN cp -r /usr/share/atomik/defaults/DankMaterialShell/* \
     cp -r /usr/share/atomik/defaults/niri/* \
           /etc/skel/.config/niri/
 
+COPY files/system/usr/share/icons/hicolor/ /usr/share/icons/hicolor/
+
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
