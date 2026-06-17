@@ -12,7 +12,7 @@ echo "→ Kernel rilevato: ${KERNEL_VERSION}"
 dnf install -y kernel-devel-${KERNEL_VERSION}
 
 ## Installa driver NVIDIA da RPMFusion
-dnf install -y \
+dnf install -y --setopt=tsflags=noscripts \
     akmod-nvidia \
     xorg-x11-drv-nvidia \
     xorg-x11-drv-nvidia-cuda \
