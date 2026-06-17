@@ -1,114 +1,22 @@
-# Build context con script e lista pacchetti
 FROM scratch AS ctx
-COPY build_files_nvidia /
+COPY build_files_puregaming /
 
-# Base Image
-FROM ghcr.io/rakuos/rakuos-base-nvidia:latest
+FROM ghcr.io/giurest/atomik-desktop-nvidia:latest
 
-# ── Metadata ──────────────────────────────────────────────────────────────────
-LABEL org.opencontainers.image.title="Atomik OS Desktop NVIDIA"
-LABEL org.opencontainers.image.description="Atomik OS — variante Desktop con driver NVIDIA proprietari (base RakuOS)"
+LABEL org.opencontainers.image.title="Atomik OS PureGaming NVIDIA"
+LABEL org.opencontainers.image.description="Atomik OS — variante PureGaming con driver NVIDIA"
 
-# ── ID=fedora (necessario per bootc-image-builder) ────────────────────────────
-RUN sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
-    sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release
-
-# ── Build: repo, pacchetti, Brave (via build.sh con mount RakuOS) ─────────────
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/build.sh
 
-# ── Brave: tmpfiles per /opt e policy debloat ─────────────────────────────────
-RUN mkdir -p /usr/lib/tmpfiles.d && \
-    printf 'L+ /var/opt/brave.com - - - - /usr/lib/opt/brave.com\n' \
-    > /usr/lib/tmpfiles.d/atomik-brave-opt.conf
-RUN mkdir -p /etc/brave/policies/managed
-COPY files/system/usr/share/brave-policies/managed/atomik-policy.json \
-     /etc/brave/policies/managed/atomik-policy.json
+COPY files/fastfetch/puregaming-nvidia.jsonc /etc/fastfetch/config.jsonc
 
-# ── greetd come display manager ───────────────────────────────────────────────
-RUN ln -sf /usr/lib/systemd/system/greetd.service \
-           /etc/systemd/system/display-manager.service
+RUN printf 'atomik-puregaming-nvidia\n' > /usr/lib/hostname
 
-# ── DMS avvia automaticamente con Niri ───────────────────────────────────────
-RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
-    ln -sf /usr/lib/systemd/user/dms.service \
-           /usr/lib/systemd/user/niri.service.wants/dms.service
+RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (PureGaming NVIDIA)"/' /etc/os-release && \
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (PureGaming NVIDIA)"/' /usr/lib/os-release
 
-# ── Maschera waybar globalmente ───────────────────────────────────────────────
-RUN mkdir -p /etc/systemd/user && \
-    ln -sf /dev/null /etc/systemd/user/waybar.service && \
-    ln -sf /dev/null /usr/lib/systemd/user/waybar.service
-
-# ── App Flatpak di base al primo boot ─────────────────────────────────────────
-COPY files/system/usr/lib/systemd/system/atomik-flatpak-base.service \
-     /usr/lib/systemd/system/atomik-flatpak-base.service
-COPY files/system/usr/bin/atomik-flatpak-base \
-     /usr/bin/atomik-flatpak-base
-RUN chmod +x /usr/bin/atomik-flatpak-base && \
-    mkdir -p /usr/lib/systemd/system/multi-user.target.wants && \
-    ln -sf /usr/lib/systemd/system/atomik-flatpak-base.service \
-           /usr/lib/systemd/system/multi-user.target.wants/atomik-flatpak-base.service
-
-# ── Plymouth theme ────────────────────────────────────────────────────────────
-COPY files/plymouth/atomik/ /usr/share/plymouth/themes/atomik/
-
-# ── Wallpaper predefinito ─────────────────────────────────────────────────────
-RUN mkdir -p /usr/share/backgrounds/atomik
-COPY files/backgrounds/atomik-wall.jpg /usr/share/backgrounds/atomik/wall.jpg
-
-# ── Hostname persistente via tmpfiles ─────────────────────────────────────────
-RUN printf 'atomik-desktop-nvidia\n' > /usr/lib/hostname && \
-    mkdir -p /usr/lib/tmpfiles.d && \
-    printf 'L+ /etc/hostname - - - - /usr/lib/hostname\n' \
-    > /usr/lib/tmpfiles.d/atomik-hostname.conf
-
-# ── OS Identity ───────────────────────────────────────────────────────────────
-RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
-    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop NVIDIA)"/' /etc/os-release && \
-    sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
-    sed -i 's/^NAME=.*/NAME="Atomik OS"/' /usr/lib/os-release && \
-    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop NVIDIA)"/' /usr/lib/os-release && \
-    sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release
-
-# ── Niri config di sistema ────────────────────────────────────────────────────
-RUN mkdir -p /etc/niri
-COPY files/niri/config.kdl /etc/niri/config.kdl
-
-# ── Fastfetch config di sistema ───────────────────────────────────────────────
-RUN mkdir -p /etc/fastfetch
-COPY files/fastfetch/desktop.jsonc /etc/fastfetch/config.jsonc
-COPY files/fastfetch/atomik-logo.txt /etc/fastfetch/atomik-logo.txt
-RUN mkdir -p /etc/skel/.config/fastfetch && \
-    ln -sf /etc/fastfetch/config.jsonc /etc/skel/.config/fastfetch/config.jsonc && \
-    ln -sf /etc/fastfetch/atomik-logo.txt /etc/skel/.config/fastfetch/atomik-logo.txt
-
-# ── Autostart wallpaper per nuovi utenti ──────────────────────────────────────
-RUN mkdir -p /etc/skel/.config/autostart
-COPY files/skel/autostart/atomik-wallpaper.desktop /etc/skel/.config/autostart/atomik-wallpaper.desktop
-
-# ── ujust: comandi di sistema Atomik ──────────────────────────────────────────
-RUN mkdir -p /usr/share/atomik
-COPY files/ujust/justfile /usr/share/atomik/justfile
-COPY files/system/usr/bin/ujust /usr/bin/ujust
-RUN chmod +x /usr/bin/ujust
-
-# ── Plymouth theme Atomik ─────────────────────────────────────────────────────
-RUN mkdir -p /etc/plymouth && \
-    printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
-    plymouth-set-default-theme atomik 2>/dev/null || true
-
-# ── Configurazione default Niri + DMS ─────────────────────────────────────────
-COPY files/atomik-defaults/ /usr/share/atomik/defaults/
-RUN mkdir -p /etc/skel/.config/niri/dms && \
-    cp /usr/share/atomik/defaults/niri/config.kdl /etc/skel/.config/niri/config.kdl && \
-    cp /usr/share/atomik/defaults/niri/dms/binds.kdl /etc/skel/.config/niri/dms/binds.kdl && \
-    cp /usr/share/atomik/defaults/niri/dms/windowrules.kdl /etc/skel/.config/niri/dms/windowrules.kdl
-RUN mkdir -p /etc/skel/.config/DankMaterialShell && \
-    cp /usr/share/atomik/defaults/DankMaterialShell/settings.json \
-       /etc/skel/.config/DankMaterialShell/settings.json
-
-# ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
