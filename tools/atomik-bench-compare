@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Atomik Bench Compare — Confronta risultati di benchmark
+#  Uso:  atomik-bench-compare result1.json result2.json [result3.json ...]
+# ═══════════════════════════════════════════════════════════════════════════════
+set -euo pipefail
+
+# ── Colori ────────────────────────────────────────────────────────────────────
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m'
+
+if [[ $# -lt 2 ]]; then
+    echo "Uso: atomik-bench-compare file1.json file2.json [file3.json ...]"
+    echo ""
+    echo "Confronta i risultati di più esecuzioni di atomik-bench."
+    echo "I file JSON si trovano in ~/.local/share/atomik-bench/"
+    exit 1
+fi
+
+# Verifica jq
+if ! command -v jq &>/dev/null; then
+    echo -e "${RED}Errore:${NC} jq è necessario per il confronto. Installalo con:"
+    echo "  dnf install jq  |  apt install jq  |  pacman -S jq"
+    exit 1
+fi
+
+# ── Raccogli dati ─────────────────────────────────────────────────────────────
+FILES=("$@")
+N=${#FILES[@]}
+
+# Funzione per estrarre valore da JSON
+jval() {
+    jq -r "$2" "$1" 2>/dev/null || echo "N/A"
+}
+
+# ── Header ────────────────────────────────────────────────────────────────────
+echo -e "\n${CYAN}${BOLD}═══════════════════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}${BOLD}  Atomik Bench — Confronto ${N} sistemi${NC}"
+echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════════════════${NC}\n"
+
+# ── Calcola larghezza colonne ─────────────────────────────────────────────────
+COL_LABEL=20
+COL_VAL=22
+
+# ── Costruisci tabella ────────────────────────────────────────────────────────
+
+# Header riga
+printf "  ${BOLD}%-${COL_LABEL}s${NC}" "Metrica"
+for f in "${FILES[@]}"; do
+    os=$(jval "$f" '.system.os' | cut -c1-20)
+    printf " │ ${BOLD}%-${COL_VAL}s${NC}" "$os"
+done
+echo ""
+
+# Separatore
+printf "  "
+printf '%.0s─' $(seq 1 $COL_LABEL)
+for ((i=0; i<N; i++)); do
+    printf "─┼─"
+    printf '%.0s─' $(seq 1 $COL_VAL)
+done
+echo ""
+
+# Funzione per stampare una riga
+print_row() {
+    local label="$1"
+    local jq_path="$2"
+    local suffix="${3:-}"
+    local color="${4:-$NC}"
+    local highlight_low="${5:-false}"  # true = il più basso è il migliore (es. RAM idle, boot time)
+
+    printf "  %-${COL_LABEL}s" "$label"
+
+    local values=()
+    for f in "${FILES[@]}"; do
+        local val
+        val=$(jval "$f" "$jq_path")
+        values+=("$val")
+    done
+
+    # Trova min/max numerico per evidenziare
+    local best_idx=-1
+    local best_val=""
+    for i in "${!values[@]}"; do
+        local v="${values[$i]}"
+        # Rimuovi suffissi non numerici
+        local num
+        num=$(echo "$v" | grep -oP '^[\d.]+' || echo "")
+        if [[ -n "$num" && "$num" != "N/A" ]]; then
+            if [[ -z "$best_val" ]]; then
+                best_val="$num"
+                best_idx=$i
+            else
+                if [[ "$highlight_low" == "true" ]]; then
+                    if (( $(echo "$num < $best_val" | bc -l 2>/dev/null || echo 0) )); then
+                        best_val="$num"
+                        best_idx=$i
+                    fi
+                else
+                    if (( $(echo "$num > $best_val" | bc -l 2>/dev/null || echo 0) )); then
+                        best_val="$num"
+                        best_idx=$i
+                    fi
+                fi
+            fi
+        fi
+    done
+
+    for i in "${!values[@]}"; do
+        local display="${values[$i]}${suffix}"
+        if [[ $i -eq $best_idx ]]; then
+            printf " │ ${GREEN}%-${COL_VAL}s${NC}" "$display"
+        else
+            printf " │ %-${COL_VAL}s" "$display"
+        fi
+    done
+    echo ""
+}
+
+# ── Sezione Sistema ──────────────────────────────────────────────────────────
+echo -e "\n  ${DIM}Sistema${NC}"
+print_row "Kernel"      '.system.kernel'
+print_row "CPU"         '.system.cpu.model'
+print_row "Core/Thread" '"\(.system.cpu.cores)C/\(.system.cpu.threads // .system.cpu.cores)T"'
+print_row "RAM totale"  '"\(.system.ram_total_mb) MB"'
+print_row "GPU"         '.system.gpu'
+print_row "Pacchetti"   '.system.packages'       "" "$NC" "true"
+print_row "Immutabile"  '.system.immutable'
+
+# Separatore
+printf "  "
+printf '%.0s─' $(seq 1 $COL_LABEL)
+for ((i=0; i<N; i++)); do
+    printf "─┼─"
+    printf '%.0s─' $(seq 1 $COL_VAL)
+done
+echo ""
+
+# ── Sezione Risultati ─────────────────────────────────────────────────────────
+echo -e "\n  ${DIM}Risultati${NC}"
+print_row "RAM idle"         '.results.ram_idle_mb'           " MB"   "$NC" "true"
+print_row "Boot totale"      '.results.boot.total_s'         "s"     "$NC" "true"
+print_row "Boot kernel"      '.results.boot.kernel_s'        "s"     "$NC" "true"
+print_row "Boot initrd"     '.results.boot.initrd_s'        "s"     "$NC" "true"
+print_row "Boot userspace"   '.results.boot.userspace_s'     "s"     "$NC" "true"
+print_row "CPU single"       '.results.cpu.single_thread_eps' " e/s"
+print_row "CPU multi"        '.results.cpu.multi_thread_eps'  " e/s"
+print_row "Mem read"         '.results.memory.read'
+print_row "Mem write"        '.results.memory.write'
+print_row "Disco seq read"   '.results.disk.seq_read_mbs'    " MB/s"
+print_row "Disco seq write"  '.results.disk.seq_write_mbs'   " MB/s"
+print_row "Disco rand read"  '.results.disk.rand_read_iops'  " IOPS"
+print_row "Disco rand write" '.results.disk.rand_write_iops' " IOPS"
+print_row "GPU glmark2"      '.results.gpu.glmark2_score'
+
+echo -e "\n  ${DIM}Verde = migliore per quella metrica${NC}\n"
