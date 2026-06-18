@@ -8,8 +8,6 @@ LABEL org.opencontainers.image.title="Atomik OS Desktop"
 LABEL org.opencontainers.image.description="Atomik OS — variante Desktop con Niri + DMS (base Fedora Silverblue)"
 
 # ── Rimozione GNOME e GDM ─────────────────────────────────────────────────────
-# Silverblue include GNOME. Lo rimuoviamo e lo sostituiamo con Niri + greetd.
-# Meno invasivo di COSMIC: pochi pacchetti, niente roba esoterica.
 RUN dnf remove -y \
     gnome-shell \
     gnome-session \
@@ -59,12 +57,8 @@ RUN systemctl disable gdm.service 2>/dev/null || true && \
     systemctl enable greetd.service && \
     ln -sf /usr/lib/systemd/system/greetd.service \
            /etc/systemd/system/display-manager.service
-# ── Logo Atomik nel greeter DMS ───────────────────────────────────────────────
-COPY files/dms/SystemLogo.qml /usr/share/quickshell/dms/Widgets/SystemLogo.qml
-COPY files/dms/SystemLogo.qml /usr/share/quickshell/dms-greeter/Widgets/SystemLogo.qml
-COPY files/branding/logo-dark.svg /usr/share/icons/hicolor/scalable/apps/atomik-os.svg
 
-# ── DMS avvia automaticamente con Niri ───────────────────────────────────────
+# ── DMS avvia automaticamente con Niri ────────────────────────────────────────
 RUN mkdir -p /usr/lib/systemd/user/niri.service.wants && \
     ln -sf /usr/lib/systemd/user/dms.service \
            /usr/lib/systemd/user/niri.service.wants/dms.service
@@ -99,21 +93,6 @@ RUN mkdir -p /etc/plymouth && \
 RUN mkdir -p /usr/share/backgrounds/atomik
 COPY files/backgrounds/atomik-wall.jpg /usr/share/backgrounds/atomik/wall.jpg
 
-# ── Hostname ──────────────────────────────────────────────────────────────────
-RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
-    mkdir -p /usr/lib/tmpfiles.d && \
-    printf 'L+ /etc/hostname - - - - /usr/lib/hostname\n' \
-    > /usr/lib/tmpfiles.d/atomik-hostname.conf
-
-# ── OS Identity ───────────────────────────────────────────────────────────────
-RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
-    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /etc/os-release && \
-    sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
-    sed -i 's/^NAME=.*/NAME="Atomik OS"/' /usr/lib/os-release && \
-    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /usr/lib/os-release && \
-    sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release && \
-    echo 'LOGO=atomik-os' >> /etc/os-release && \
-    echo 'LOGO=atomik-os' >> /usr/lib/os-release
 # ── Niri config di sistema ────────────────────────────────────────────────────
 RUN mkdir -p /etc/niri
 COPY files/niri/config.kdl /etc/niri/config.kdl
@@ -140,15 +119,16 @@ COPY files/system/usr/bin/ujust /usr/bin/ujust
 COPY files/system/usr/bin/atomik-powerwash-prepare /usr/bin/atomik-powerwash-prepare
 RUN chmod +x /usr/bin/ujust /usr/bin/atomik-powerwash-prepare
 
-# ── Configurazione default Niri + DMS ─────────────────────────────────────────
+# ── DMS + Niri default config ─────────────────────────────────────────────────
 COPY files/atomik-defaults/ /usr/share/atomik/defaults/
-RUN mkdir -p /etc/skel/.config/niri/dms && \
-    cp /usr/share/atomik/defaults/niri/config.kdl /etc/skel/.config/niri/config.kdl && \
-    cp /usr/share/atomik/defaults/niri/dms/binds.kdl /etc/skel/.config/niri/dms/binds.kdl && \
-    cp /usr/share/atomik/defaults/niri/dms/windowrules.kdl /etc/skel/.config/niri/dms/windowrules.kdl
-RUN mkdir -p /etc/skel/.config/DankMaterialShell && \
-    cp /usr/share/atomik/defaults/DankMaterialShell/settings.json \
-       /etc/skel/.config/DankMaterialShell/settings.json
+RUN sed -i 's|"greeterWallpaperPath": ""|"greeterWallpaperPath": "/usr/share/backgrounds/atomik/wall.jpg"|' \
+    /usr/share/atomik/defaults/DankMaterialShell/settings.json
+RUN mkdir -p /etc/skel/.config/niri/dms \
+             /etc/skel/.config/DankMaterialShell && \
+    cp -r /usr/share/atomik/defaults/DankMaterialShell/* \
+          /etc/skel/.config/DankMaterialShell/ && \
+    cp -r /usr/share/atomik/defaults/niri/* \
+          /etc/skel/.config/niri/
 
 # ── Fish config per utenti esistenti (oneshot al primo boot) ──────────────────
 COPY files/system/usr/lib/systemd/system/atomik-fish-setup.service \
@@ -157,36 +137,51 @@ COPY files/system/usr/bin/atomik-fish-setup \
      /usr/bin/atomik-fish-setup
 RUN chmod +x /usr/bin/atomik-fish-setup && \
     ln -sf /usr/lib/systemd/system/atomik-fish-setup.service \
-           /usr/lib/systemd/system/multi-user.target.wants/atomik-fish-setup.service	   
+           /usr/lib/systemd/system/multi-user.target.wants/atomik-fish-setup.service
 
-           # ── Atomik Panel ──────────────────────────────────────────────────────────────
+# ── Atomik Panel ──────────────────────────────────────────────────────────────
 COPY files/system/usr/bin/atomik-panel /usr/bin/atomik-panel
 COPY files/system/usr/share/applications/atomik-panel.desktop \
      /usr/share/applications/atomik-panel.desktop
 RUN chmod +x /usr/bin/atomik-panel
 
+# ── Atomik Changelog ──────────────────────────────────────────────────────────
 COPY files/system/usr/bin/atomik-changelog /usr/bin/atomik-changelog
 RUN chmod +x /usr/bin/atomik-changelog
 
-# ── DMS + Niri default config ────────────────────────────────────────────────
-RUN mkdir -p /usr/share/atomik/defaults/DankMaterialShell \
-             /usr/share/atomik/defaults/niri/dms \
-             /etc/skel/.config/DankMaterialShell \
-             /etc/skel/.config/niri/dms
-COPY files/atomik-defaults/DankMaterialShell/settings.json \
-     /usr/share/atomik/defaults/DankMaterialShell/settings.json
-COPY files/atomik-defaults/DankMaterialShell/plugin_settings.json \
-     /usr/share/atomik/defaults/DankMaterialShell/plugin_settings.json
-COPY files/atomik-defaults/niri/config.kdl \
-     /usr/share/atomik/defaults/niri/config.kdl
-COPY files/atomik-defaults/niri/dms/ /usr/share/atomik/defaults/niri/dms/
-RUN cp -r /usr/share/atomik/defaults/DankMaterialShell/* \
-          /etc/skel/.config/DankMaterialShell/ && \
-    cp -r /usr/share/atomik/defaults/niri/* \
-          /etc/skel/.config/niri/
-
+# ── Branding: icone, logo greeter, icon cache ─────────────────────────────────
+COPY files/branding/logo-dark.svg /usr/share/icons/hicolor/scalable/apps/atomik-os.svg
 COPY files/system/usr/share/icons/hicolor/ /usr/share/icons/hicolor/
+COPY files/dms/SystemLogo.qml /usr/share/quickshell/dms/Widgets/SystemLogo.qml
+COPY files/dms/SystemLogo.qml /usr/share/quickshell/dms-greeter/Widgets/SystemLogo.qml
 RUN gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
+
+# ── Hostname ──────────────────────────────────────────────────────────────────
+RUN printf 'atomik-desktop\n' > /usr/lib/hostname && \
+    mkdir -p /usr/lib/tmpfiles.d && \
+    printf 'L+ /etc/hostname - - - - /usr/lib/hostname\n' \
+    > /usr/lib/tmpfiles.d/atomik-hostname.conf
+
+# ── OS Identity ───────────────────────────────────────────────────────────────
+RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /etc/os-release && \
+    sed -i 's/^ID=.*/ID=fedora/' /etc/os-release && \
+    sed -i '/^LOGO=/d' /etc/os-release && \
+    echo 'LOGO=atomik-os' >> /etc/os-release && \
+    sed -i 's/^NAME=.*/NAME="Atomik OS"/' /usr/lib/os-release && \
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Desktop)"/' /usr/lib/os-release && \
+    sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release && \
+    sed -i '/^LOGO=/d' /usr/lib/os-release && \
+    echo 'LOGO=atomik-os' >> /usr/lib/os-release
+
+# ── Config greeter DMS (logo + wallpaper) ─────────────────────────────────────
+# Il greeter legge da /var/cache/dms-greeter/settings.json (NON da skel o home greetd).
+# Per il wallpaper usa greeter_wallpaper_override.jpg nella stessa dir.
+RUN mkdir -p /var/cache/dms-greeter && \
+    printf '{\n  "greeterWallpaperPath": "/var/cache/dms-greeter/greeter_wallpaper_override.jpg",\n  "useOSLogo": true\n}\n' \
+    > /var/cache/dms-greeter/settings.json
+COPY files/backgrounds/atomik-wall.jpg /var/cache/dms-greeter/greeter_wallpaper_override.jpg
+RUN chown -R greeter:greeter /var/cache/dms-greeter 2>/dev/null || true
 
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint

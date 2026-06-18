@@ -48,6 +48,10 @@ Item {
                     iconImage.source = "file:///run/current-system/profile/share/icons/hicolor/scalable/apps/guix-icon.svg"
                     return
                 }
+                if (logo === "atomik-os") {
+                    iconImage.source = "file:///usr/share/icons/hicolor/scalable/apps/atomik-os.svg"
+                    return
+                }
                 iconImage.source = Quickshell.iconPath(logo, true)
                 return
             }
