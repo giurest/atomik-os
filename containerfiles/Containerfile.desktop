@@ -92,7 +92,7 @@ RUN mkdir -p /etc/plymouth && \
 
 # ── Wallpaper predefinito ─────────────────────────────────────────────────────
 RUN mkdir -p /usr/share/backgrounds/atomik
-COPY files/backgrounds/atomik-wall.jpg /usr/share/backgrounds/atomik/wall.jpg
+COPY files/backgrounds/atomik-wall.jpg /usr/share/backgrounds/atomik/atomik-wall.jpg
 
 # ── Niri config di sistema ────────────────────────────────────────────────────
 RUN mkdir -p /etc/niri
@@ -122,7 +122,7 @@ RUN chmod +x /usr/bin/ujust /usr/bin/atomik-powerwash-prepare
 
 # ── DMS + Niri default config ─────────────────────────────────────────────────
 COPY files/atomik-defaults/ /usr/share/atomik/defaults/
-RUN sed -i 's|"greeterWallpaperPath": ""|"greeterWallpaperPath": "/usr/share/backgrounds/atomik/wall.jpg"|' \
+RUN sed -i 's|"greeterWallpaperPath": ""|"greeterWallpaperPath": "/usr/share/backgrounds/atomik/atomik-wall.jpg"|' \
     /usr/share/atomik/defaults/DankMaterialShell/settings.json
 RUN mkdir -p /etc/skel/.config/niri/dms \
              /etc/skel/.config/DankMaterialShell && \

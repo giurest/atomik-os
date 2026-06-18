@@ -296,14 +296,14 @@ reset-desktop:
     ln -sf /etc/fastfetch/config.jsonc ~/.config/fastfetch/config.jsonc
     ln -sf /etc/fastfetch/atomik-logo.txt ~/.config/fastfetch/atomik-logo.txt
     echo "→ Reset Wallpaper..."
-    dms ipc call wallpaper set /usr/share/backgrounds/atomik/wall.jpg 2>/dev/null || true
+    dms ipc call wallpaper set /usr/share/backgrounds/atomik/atomik-wall.jpg 2>/dev/null || true
     echo ""
     echo "✓ Configurazione desktop ripristinata."
     echo "  Riavvia DMS o fai logout/login per applicare."
 
 # [Manutenzione] Reimposta il wallpaper di Atomik
 set-wallpaper:
-    dms ipc call wallpaper set /usr/share/backgrounds/atomik/wall.jpg
+    dms ipc call wallpaper set /usr/share/backgrounds/atomik/atomik-wall.jpg
     @echo "✓ Wallpaper Atomik impostato."
 
 # [Manutenzione] Ripristina la configurazione fastfetch di default
