@@ -82,22 +82,13 @@ RUN chmod +x /usr/bin/atomik-flatpak-base && \
            /usr/lib/systemd/system/multi-user.target.wants/atomik-flatpak-base.service
 
 # ── Plymouth theme Atomik ─────────────────────────────────────────────────────
+# NOTA: su ostree/bootc NON si rigenera l'initramfs con dracut --force, perché
+# si perde il modulo ostree (il boot fallisce con "os-release file is missing").
+# Impostiamo solo il tema; il logo iniziale dipende dall'initramfs della base.
 COPY files/plymouth/atomik/ /usr/share/plymouth/themes/atomik/
 RUN mkdir -p /etc/plymouth && \
     printf '[Daemon]\nTheme=atomik\n' > /etc/plymouth/plymouthd.conf && \
     plymouth-set-default-theme atomik
-# Config dracut per includere il tema atomik (con plugin script.so necessario)
-RUN mkdir -p /usr/lib/dracut/dracut.conf.d && \
-    printf 'add_dracutmodules+=" plymouth "\n' \
-    > /usr/lib/dracut/dracut.conf.d/99-atomik-plymouth.conf
-# Rigenera l'initramfs. NIENTE "|| true": se dracut fallisce, vogliamo vederlo nel CI.
-RUN KERNEL_VERSION=$(ls /lib/modules/ | sort -V | tail -1) && \
-    echo "Rigenero initramfs per kernel: $KERNEL_VERSION" && \
-    dracut --force --verbose --add plymouth --kver "$KERNEL_VERSION" \
-        /lib/modules/"$KERNEL_VERSION"/initramfs.img && \
-    echo "=== Verifica tema atomik nell'initramfs ===" && \
-    lsinitrd /lib/modules/"$KERNEL_VERSION"/initramfs.img | grep "themes/atomik" || \
-        (echo "ERRORE: tema atomik NON incluso nell'initramfs" && exit 1)
 
 # ── Wallpaper predefinito ─────────────────────────────────────────────────────
 RUN mkdir -p /usr/share/backgrounds/atomik
