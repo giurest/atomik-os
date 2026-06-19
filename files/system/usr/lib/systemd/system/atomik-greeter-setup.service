@@ -1,0 +1,13 @@
+[Unit]
+Description=Atomik OS — Setup config greeter DMS
+After=local-fs.target
+Before=greetd.service
+ConditionPathExists=!/var/cache/dms-greeter/settings.json
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/atomik-greeter-setup
+
+[Install]
+WantedBy=multi-user.target

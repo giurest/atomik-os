@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Atomik Panel v0.2.0 — Centro di controllo universale per sistemi bootc
+Atomik Panel v0.2.1 — Centro di controllo universale per sistemi bootc
 Legge dinamicamente le ricette da ujust/just, compatibile con qualsiasi distro bootc.
 """
 
@@ -167,7 +167,10 @@ class AtomikPanel(Adw.Application):
         categories = categorize_recipes(recipes) if recipes else []
 
         header = Adw.HeaderBar()
-        title_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
+        title_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8, valign=Gtk.Align.CENTER)
+        icon = Gtk.Image.new_from_icon_name("atomik-os")
+        icon.set_pixel_size(24)
+        title_box.append(icon)
         title_label = Gtk.Label(label="Atomik Panel")
         title_label.add_css_class("title-1")
         title_box.append(title_label)

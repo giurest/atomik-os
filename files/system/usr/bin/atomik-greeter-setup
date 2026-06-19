@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Atomik OS — Setup config greeter DMS al primo avvio
+set -euo pipefail
+
+GREETER_CACHE="/var/cache/dms-greeter"
+WALLPAPER="/usr/share/backgrounds/atomik/atomik-wall.jpg"
+
+mkdir -p "$GREETER_CACHE"
+
+# Crea settings.json solo se non esiste già
+if [[ ! -f "$GREETER_CACHE/settings.json" ]]; then
+    cat > "$GREETER_CACHE/settings.json" << JSONEOF
+{
+  "greeterWallpaperPath": "$GREETER_CACHE/greeter_wallpaper_override.jpg",
+  "useOSLogo": true
+}
+JSONEOF
+fi
+
+# Copia il wallpaper override se non esiste già
+if [[ ! -f "$GREETER_CACHE/greeter_wallpaper_override.jpg" ]]; then
+    cp "$WALLPAPER" "$GREETER_CACHE/greeter_wallpaper_override.jpg"
+fi
+
+chown -R greeter:greeter "$GREETER_CACHE"
+chmod 750 "$GREETER_CACHE"
+
+echo "✓ Config greeter DMS inizializzata"

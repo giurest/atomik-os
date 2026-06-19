@@ -176,13 +176,14 @@ RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
     echo 'LOGO=atomik-os' >> /usr/lib/os-release
 
 # ── Config greeter DMS (logo + wallpaper) ─────────────────────────────────────
-# Il greeter legge da /var/cache/dms-greeter/settings.json (NON da skel o home greetd).
-# Per il wallpaper usa greeter_wallpaper_override.jpg nella stessa dir.
-RUN mkdir -p /var/cache/dms-greeter && \
-    printf '{\n  "greeterWallpaperPath": "/var/cache/dms-greeter/greeter_wallpaper_override.jpg",\n  "useOSLogo": true\n}\n' \
-    > /var/cache/dms-greeter/settings.json
-COPY files/backgrounds/atomik-wall.jpg /var/cache/dms-greeter/greeter_wallpaper_override.jpg
-RUN chown -R greeter:greeter /var/cache/dms-greeter 2>/dev/null || true
+# /var non persiste dalla build su ostree — servizio oneshot che crea
+# settings.json e copia il wallpaper al primo avvio, prima di greetd.
+COPY files/system/usr/bin/atomik-greeter-setup /usr/bin/atomik-greeter-setup
+COPY files/system/usr/lib/systemd/system/atomik-greeter-setup.service \
+     /usr/lib/systemd/system/atomik-greeter-setup.service
+RUN chmod +x /usr/bin/atomik-greeter-setup && \
+    ln -sf /usr/lib/systemd/system/atomik-greeter-setup.service \
+           /usr/lib/systemd/system/multi-user.target.wants/atomik-greeter-setup.service
 
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
