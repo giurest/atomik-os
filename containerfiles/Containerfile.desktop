@@ -1,7 +1,7 @@
 FROM scratch AS ctx
 COPY build_files_desktop_sv /
 
-FROM quay.io/fedora/fedora-silverblue:43
+FROM quay.io/fedora/fedora-silverblue:44
 
 # ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Desktop"
