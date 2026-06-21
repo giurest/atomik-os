@@ -131,7 +131,11 @@ RUN mkdir -p /etc/skel/.config/niri/dms \
     cp -r /usr/share/atomik/defaults/niri/* \
           /etc/skel/.config/niri/
 
-# ── Fish config per utenti esistenti (oneshot al primo boot) ──────────────────
+# ── Fish greeting (fastfetch + suggerimento ujust) ────────────────────────────
+COPY files/system/usr/share/fish/vendor_functions.d/fish_greeting.fish \
+     /usr/share/fish/vendor_functions.d/fish_greeting.fish
+
+
 COPY files/system/usr/lib/systemd/system/atomik-fish-setup.service \
      /usr/lib/systemd/system/atomik-fish-setup.service
 COPY files/system/usr/bin/atomik-fish-setup \

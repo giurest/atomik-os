@@ -48,6 +48,11 @@ for HOME_DIR in /var/home/*; do
             echo 'bind f12 "commandline -i \\~"' >> "$FISH_CONFIG"
             echo "✓ bind f12 aggiunto per $USERNAME"
         fi
+        # Rimuovi set fish_greeting se presente (ora usiamo vendor_functions.d)
+        if grep -q 'set fish_greeting' "$FISH_CONFIG"; then
+            sed -i '/set fish_greeting/d' "$FISH_CONFIG"
+            echo "✓ set fish_greeting rimosso per $USERNAME (ora gestito da vendor_functions.d)"
+        fi
     fi
 done
 
