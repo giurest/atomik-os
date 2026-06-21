@@ -30,15 +30,24 @@ for HOME_DIR in /var/home/*; do
         echo "  Shell già fish per $USERNAME, skip"
     fi
 
-    # Crea fish config se non esiste
     FISH_CONFIG="$HOME_DIR/.config/fish/config.fish"
+
+    # Crea fish config se non esiste
     if [ ! -f "$FISH_CONFIG" ]; then
         mkdir -p "$HOME_DIR/.config/fish"
-        printf 'starship init fish | source\nset fish_greeting\n' > "$FISH_CONFIG"
+        printf 'starship init fish | source\nset fish_greeting\ncd $HOME\nbind f12 "commandline -i \\\\~"\n' > "$FISH_CONFIG"
         chown -R "$USERNAME:$USERNAME" "$HOME_DIR/.config/fish"
         echo "✓ Fish config creato per $USERNAME"
     else
-        echo "  Fish config già presente per $USERNAME, skip"
+        # Aggiorna config esistente con le righe mancanti
+        if ! grep -q 'cd \$HOME' "$FISH_CONFIG"; then
+            echo 'cd $HOME' >> "$FISH_CONFIG"
+            echo "✓ cd \$HOME aggiunto per $USERNAME"
+        fi
+        if ! grep -q 'bind f12' "$FISH_CONFIG"; then
+            echo 'bind f12 "commandline -i \\~"' >> "$FISH_CONFIG"
+            echo "✓ bind f12 aggiunto per $USERNAME"
+        fi
     fi
 done
 
