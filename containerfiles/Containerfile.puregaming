@@ -22,7 +22,7 @@ RUN mkdir -p /etc/sysctl.d && \
 # ── LACT (GPU tuning daemon) ──────────────────────────────────────────────────
 RUN systemctl enable lactd.service 2>/dev/null || true
 
- ── Kernel CachyOS (scheduler BORE, bassa latenza) ───────────────────────────
+# ── Kernel CachyOS (scheduler BORE, bassa latenza) ───────────────────────────
 RUN dnf copr enable -y bieszczaders/kernel-cachyos
 
 # Installa disabilitando il kernel-install hook di rpm-ostree
