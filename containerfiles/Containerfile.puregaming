@@ -22,20 +22,6 @@ RUN mkdir -p /etc/sysctl.d && \
 # ── LACT (GPU tuning daemon) ──────────────────────────────────────────────────
 RUN systemctl enable lactd.service 2>/dev/null || true
 
-# -- Kernel CachyOS (scheduler BORE, bassa latenza) --
-RUN mkdir -p /etc/kernel/install.d && \
-    printf '#!/bin/sh\nexit 0\n' > /etc/kernel/install.d/00-skip.install && \
-    chmod +x /etc/kernel/install.d/00-skip.install && \
-    dnf copr enable -y bieszczaders/kernel-cachyos && \
-    dnf install -y kernel-cachyos kernel-cachyos-devel-matched || true && \
-    rm -f /etc/kernel/install.d/00-skip.install
-RUN QUALIFIED_KERNEL=$(rpm -q --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-cachyos 2>/dev/null) && \
-    test -n "$QUALIFIED_KERNEL" && \
-    depmod "$QUALIFIED_KERNEL" && \
-    dracut --no-hostonly --kver "$QUALIFIED_KERNEL" --reproducible --zstd \
-        --add ostree -f "/usr/lib/modules/$QUALIFIED_KERNEL/initramfs.img" && \
-    chmod 0600 "/usr/lib/modules/$QUALIFIED_KERNEL/initramfs.img"
-
 # ── Flatpak gaming al primo boot ──────────────────────────────────────────────
 COPY files/system/usr/lib/systemd/system/atomik-flatpak-gaming.service \
      /usr/lib/systemd/system/atomik-flatpak-gaming.service
