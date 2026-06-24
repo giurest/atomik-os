@@ -108,6 +108,10 @@ update:
         sudo systemctl reboot
     fi
 
+# [Atomik-OS] Mostra cosa è cambiato dopo l'ultimo aggiornamento
+changelog:
+    /usr/bin/atomik-changelog    
+
 # [Atomik-OS] Mostra lo stato corrente dell'immagine bootc
 status:
     sudo bootc status
@@ -118,13 +122,18 @@ rollback:
     sudo bootc rollback
     @echo "✓ Riavvia per applicare il rollback."
 
-# [Atomik-OS] Mostra cosa è cambiato dopo l'ultimo aggiornamento
-changelog:
-    /usr/bin/atomik-changelog    
-
 # [Atomik-OS] Riavvia il sistema
 reboot:
     sudo systemctl reboot
+
+# [Atomik-OS] Benchmark tool 
+bench:
+    #!/usr/bin/env bash
+    SCRIPT=$(mktemp)
+    curl -fsSL https://raw.githubusercontent.com/giurest/atomik-os/main/tools/atomik-bench -o "$SCRIPT"
+    chmod +x "$SCRIPT"
+    bash "$SCRIPT"
+    rm -f "$SCRIPT"    
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GESTORE GIT

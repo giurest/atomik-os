@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # ── Atomik OS — Setup Flatpak apps ───────────────────────────────────────────
 # Eseguire dopo il primo boot per installare le app via Flatpak
-# Uso: bash setup-flatpaks.sh [desktop|puregaming|handheld]
+# Uso: bash setup-flatpaks.sh [desktop|puregaming|desktop-nvidia|puregaming-nvidia]
 
 set -euo pipefail
 
 VARIANT="${1:-desktop}"
+# Le varianti nvidia ereditano lo stesso set di flatpak delle base:
+# desktop-nvidia → desktop, puregaming-nvidia → puregaming
+BASE_VARIANT="${VARIANT%-nvidia}"
 
 echo "🔧 Atomik OS — installazione Flatpak per variante: $VARIANT"
 
@@ -37,12 +40,6 @@ GAMING_APPS=(
     "net.davidotek.pupgui2"
 )
 
-# ── App variante Handheld ─────────────────────────────────────────────────────
-HANDHELD_APPS=(
-    "com.heroicgameslauncher.hgl"
-    "net.lutris.Lutris"
-)
-
 install_apps() {
     local apps=("$@")
     for app in "${apps[@]}"; do
@@ -55,18 +52,14 @@ install_apps() {
 echo "📦 Installazione app comuni..."
 install_apps "${COMMON_APPS[@]}"
 
-case "$VARIANT" in
+case "$BASE_VARIANT" in
     desktop)
         echo "📦 Installazione app Desktop..."
         install_apps "${DESKTOP_APPS[@]}"
         ;;
-    puregaming|puregaming-nvidia)
+    puregaming)
         echo "📦 Installazione app Gaming..."
         install_apps "${GAMING_APPS[@]}"
-        ;;
-    handheld)
-        echo "📦 Installazione app Handheld..."
-        install_apps "${HANDHELD_APPS[@]}"
         ;;
     *)
         echo "⚠️  Variante '$VARIANT' non riconosciuta, installazione solo app comuni"
