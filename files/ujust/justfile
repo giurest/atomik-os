@@ -453,6 +453,158 @@ reapply-fish:
     sudo systemctl restart atomik-fish-setup
     @echo "✓ Fish setup riapplicato"
 
+# ── Configurazione rete (nmcli) ──────────────────────────────────────────────
+
+# [Rete] Mostra configurazione eth/wifi e stato della connessione
+network-status:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "═══ Dispositivi ═══"
+    nmcli -f DEVICE,TYPE,STATE,CONNECTION device status
+    echo ""
+    echo "═══ Connessioni attive ═══"
+    for c in $(nmcli -t -f NAME connection show --active); do
+        echo "── $c ──"
+        nmcli -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS connection show "$c" \
+            | grep -vE 'IP4\.(ADDRESS|GATEWAY|DNS)\[?[0-9]*\]?:\s*--' || true
+        echo ""
+    done
+    echo "═══ Routing ═══"
+    ip route show | grep '^default' || echo "(nessun default gateway)"
+
+# [Rete] Rende una connessione statica (IP, subnet, gateway, DNS)
+network-static:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Selezione connessione (menu numerato)
+    mapfile -t CONNS < <(nmcli -t -f NAME,TYPE,DEVICE connection show --active \
+        | awk -F: '$2 ~ /ethernet|wireless/ {print $1" ("$3")"}')
+    [ "${#CONNS[@]}" -eq 0 ] && { echo "Nessuna connessione attiva."; exit 1; }
+    echo "Connessioni attive:"
+    for i in "${!CONNS[@]}"; do echo "  $((i+1))) ${CONNS[$i]}"; done
+    read -rp "Scegli [1-${#CONNS[@]}]: " choice
+    [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#CONNS[@]}" ] \
+        || { echo "Scelta non valida."; exit 1; }
+    CONN="${CONNS[$((choice-1))]% (*}"
+    echo "Connessione selezionata: $CONN"
+    # Parametri statici
+    read -rp "Indirizzo IP (es. 192.168.1.50): " IP
+    read -rp "Subnet prefix (es. 24): " PREFIX
+    read -rp "Gateway (es. 192.168.1.1): " GW
+    read -rp "DNS primario (es. 192.168.1.1): " DNS1
+    read -rp "DNS secondario (vuoto per nessuno): " DNS2
+    DNS="$DNS1"; [ -n "$DNS2" ] && DNS="$DNS1,$DNS2"
+    sudo nmcli connection modify "$CONN" \
+        ipv4.method manual \
+        ipv4.addresses "$IP/$PREFIX" \
+        ipv4.gateway "$GW" \
+        ipv4.dns "$DNS" \
+        ipv4.ignore-auto-dns yes
+    echo "✓ Configurazione statica impostata su '$CONN'."
+    read -rp "Riapplico ora (down/up)? [s/N]: " ans
+    if [[ "$ans" =~ ^[sS]$ ]]; then
+        sudo nmcli connection down "$CONN" || true
+        sudo nmcli connection up "$CONN"
+        echo "✓ Connessione riapplicata."
+    else
+        echo "ℹ Applica con: sudo nmcli connection up \"$CONN\""
+    fi
+
+# [Rete] Riporta una connessione in DHCP completo (azzera override)
+network-dhcp:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mapfile -t CONNS < <(nmcli -t -f NAME,TYPE,DEVICE connection show --active \
+        | awk -F: '$2 ~ /ethernet|wireless/ {print $1" ("$3")"}')
+    [ "${#CONNS[@]}" -eq 0 ] && { echo "Nessuna connessione attiva."; exit 1; }
+    echo "Connessioni attive:"
+    for i in "${!CONNS[@]}"; do echo "  $((i+1))) ${CONNS[$i]}"; done
+    read -rp "Scegli [1-${#CONNS[@]}]: " choice
+    [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#CONNS[@]}" ] \
+        || { echo "Scelta non valida."; exit 1; }
+    CONN="${CONNS[$((choice-1))]% (*}"
+    echo "Connessione selezionata: $CONN"
+    sudo nmcli connection modify "$CONN" \
+        ipv4.method auto \
+        ipv4.addresses "" \
+        ipv4.gateway "" \
+        ipv4.dns "" \
+        ipv4.routes "" \
+        ipv4.ignore-auto-dns no
+    echo "✓ '$CONN' riportata in DHCP completo."
+    read -rp "Riapplico ora (down/up)? [s/N]: " ans
+    if [[ "$ans" =~ ^[sS]$ ]]; then
+        sudo nmcli connection down "$CONN" || true
+        sudo nmcli connection up "$CONN"
+        echo "✓ Connessione riapplicata."
+    else
+        echo "ℹ Applica con: sudo nmcli connection up \"$CONN\""
+    fi
+
+# [Rete] Cambia i DNS mantenendo IP/gateway da DHCP (override selettivo)
+network-dns:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mapfile -t CONNS < <(nmcli -t -f NAME,TYPE,DEVICE connection show --active \
+        | awk -F: '$2 ~ /ethernet|wireless/ {print $1" ("$3")"}')
+    [ "${#CONNS[@]}" -eq 0 ] && { echo "Nessuna connessione attiva."; exit 1; }
+    echo "Connessioni attive:"
+    for i in "${!CONNS[@]}"; do echo "  $((i+1))) ${CONNS[$i]}"; done
+    read -rp "Scegli [1-${#CONNS[@]}]: " choice
+    [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#CONNS[@]}" ] \
+        || { echo "Scelta non valida."; exit 1; }
+    CONN="${CONNS[$((choice-1))]% (*}"
+    echo "Connessione selezionata: $CONN"
+    read -rp "DNS primario (es. 192.168.1.1): " DNS1
+    read -rp "DNS secondario (vuoto per nessuno): " DNS2
+    DNS="$DNS1"; [ -n "$DNS2" ] && DNS="$DNS1,$DNS2"
+    sudo nmcli connection modify "$CONN" \
+        ipv4.dns "$DNS" \
+        ipv4.ignore-auto-dns yes
+    echo "✓ DNS impostati su '$CONN': $DNS (override DHCP)."
+    read -rp "Riapplico ora (down/up)? [s/N]: " ans
+    if [[ "$ans" =~ ^[sS]$ ]]; then
+        sudo nmcli connection down "$CONN" || true
+        sudo nmcli connection up "$CONN"
+        echo "✓ Connessione riapplicata."
+    else
+        echo "ℹ Applica con: sudo nmcli connection up \"$CONN\""
+    fi
+
+# [Rete] Verifica connettività (gateway, internet, DNS)
+network-ping:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "═══ Gateway ═══"
+    GW=$(ip route show default | awk '/default/ {print $3; exit}')
+    if [ -n "$GW" ]; then
+        ping -c 3 -W 2 "$GW" && echo "✓ Gateway raggiungibile" || echo "✗ Gateway irraggiungibile"
+    else
+        echo "✗ Nessun default gateway configurato"
+    fi
+    echo ""
+    echo "═══ Internet (1.1.1.1) ═══"
+    ping -c 3 -W 2 1.1.1.1 && echo "✓ Internet raggiungibile" || echo "✗ Internet irraggiungibile"
+    echo ""
+    echo "═══ DNS (risoluzione) ═══"
+    if getent hosts cloudflare.com >/dev/null; then
+        echo "✓ Risoluzione DNS funzionante"
+    else
+        echo "✗ Risoluzione DNS fallita"
+    fi
+
+# [Rete] Riavvia NetworkManager e ripristina le connessioni
+network-reset:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "⚠ Questo riavvia NetworkManager e tutte le connessioni."
+    read -rp "Procedo? [s/N]: " ans
+    [[ "$ans" =~ ^[sS]$ ]] || { echo "Annullato."; exit 0; }
+    sudo systemctl restart NetworkManager
+    sleep 2
+    echo "✓ NetworkManager riavviato."
+    nmcli -f DEVICE,STATE,CONNECTION device status
+
 # ── SMB / Condivisioni di rete ───────────────────────────────────────────────
  
 # [Rete] Crea una connessione SMB persistente (NAS, PC Windows)

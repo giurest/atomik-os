@@ -9,15 +9,27 @@ SCRIPT_HASH=$(sha256sum /usr/bin/atomik-fish-setup | cut -d' ' -f1)
 if [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$SCRIPT_HASH" ]; then
     exit 0
 fi
-
-# Rimuovi il vecchio sentinella (versione precedente)
 rm -f "$MARKER"
+
+# Blocco gestito da Atomik: viene riscritto integralmente ad ogni run,
+# delimitato da marcatori. Tutto ciò che l'utente mette FUORI dai marcatori
+# viene preservato. Questo rende lo script idempotente: niente duplicati.
+read -r -d '' ATOMIK_BLOCK << 'BLOCK' || true
+# >>> atomik fish config >>>
+# Blocco gestito automaticamente da atomik-fish-setup — non modificare a mano.
+if status is-interactive
+    starship init fish | source
+    set -gx MANGOHUD 1
+    cd $HOME
+    bind f12 'commandline -i \~'
+end
+# <<< atomik fish config <<<
+BLOCK
 
 for HOME_DIR in /var/home/*; do
     [ -d "$HOME_DIR" ] || continue
     USERNAME=$(basename "$HOME_DIR")
 
-    # Solo utenti reali (UID >= 1000)
     UID_VAL=$(id -u "$USERNAME" 2>/dev/null) || continue
     [ "$UID_VAL" -ge 1000 ] || continue
 
@@ -26,36 +38,42 @@ for HOME_DIR in /var/home/*; do
     if [ "$CURRENT_SHELL" != "/usr/bin/fish" ]; then
         chsh -s /usr/bin/fish "$USERNAME"
         echo "✓ Shell fish impostata per $USERNAME"
-    else
-        echo "  Shell già fish per $USERNAME, skip"
     fi
 
     FISH_CONFIG="$HOME_DIR/.config/fish/config.fish"
+    mkdir -p "$HOME_DIR/.config/fish"
 
-    # Crea fish config se non esiste
     if [ ! -f "$FISH_CONFIG" ]; then
-        mkdir -p "$HOME_DIR/.config/fish"
-        printf 'starship init fish | source\nset fish_greeting\ncd $HOME\nbind f12 "commandline -i \\\\~"\n' > "$FISH_CONFIG"
-        chown -R "$USERNAME:$USERNAME" "$HOME_DIR/.config/fish"
+        # Config nuovo: scrivi solo il blocco gestito
+        printf '%s\n' "$ATOMIK_BLOCK" > "$FISH_CONFIG"
         echo "✓ Fish config creato per $USERNAME"
     else
-        # Aggiorna config esistente con le righe mancanti
-        if ! grep -q 'cd \$HOME' "$FISH_CONFIG"; then
-            echo 'cd $HOME' >> "$FISH_CONFIG"
-            echo "✓ cd \$HOME aggiunto per $USERNAME"
-        fi
-        if ! grep -q 'bind f12' "$FISH_CONFIG"; then
-            echo 'bind f12 "commandline -i \\~"' >> "$FISH_CONFIG"
-            echo "✓ bind f12 aggiunto per $USERNAME"
-        fi
-        # Rimuovi set fish_greeting se presente (ora usiamo vendor_functions.d)
-        if grep -q 'set fish_greeting' "$FISH_CONFIG"; then
-            sed -i '/set fish_greeting/d' "$FISH_CONFIG"
-            echo "✓ set fish_greeting rimosso per $USERNAME (ora gestito da vendor_functions.d)"
-        fi
+        # Config esistente: rimuovi il vecchio blocco gestito (se presente)
+        # e qualsiasi riga legacy sparsa, poi riscrivi il blocco pulito.
+        TMP=$(mktemp)
+        # 1) Elimina il blocco tra i marcatori (vecchie versioni)
+        sed '/# >>> atomik fish config >>>/,/# <<< atomik fish config <<</d' \
+            "$FISH_CONFIG" > "$TMP"
+        # 2) Pulisci righe legacy sparse di versioni precedenti
+        sed -i \
+            -e '/^starship init fish | source$/d' \
+            -e '/^set -gx MANGOHUD 1$/d' \
+            -e '/^set fish_greeting$/d' \
+            -e '/^cd \$HOME$/d' \
+            -e '/^bind .*F12.*~/d' \
+            -e '/^bind f12 /d' \
+            -e '/^echo bind /d' \
+            "$TMP"
+        # 3) Rimuovi eventuali righe vuote multiple in coda
+        sed -i -e :a -e '/^\n*$/{$d;N;ba}' "$TMP"
+        # 4) Riappendi il blocco gestito pulito
+        printf '%s\n' "$ATOMIK_BLOCK" >> "$TMP"
+        mv "$TMP" "$FISH_CONFIG"
+        echo "✓ Fish config aggiornato per $USERNAME"
     fi
+
+    chown -R "$USERNAME:$USERNAME" "$HOME_DIR/.config/fish"
 done
 
-# Scrivi il nuovo hash come sentinella
 echo "$SCRIPT_HASH" > "$MARKER"
 echo "✓ Fish setup completato (versione: ${SCRIPT_HASH:0:8})"
