@@ -5,5 +5,5 @@ format = "[$user]($style)@"
 
 [hostname]
 ssh_only = false
-style = "cyan"
+style = "green"
 format = "[$hostname]($style) "
