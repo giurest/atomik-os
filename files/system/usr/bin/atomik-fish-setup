@@ -73,6 +73,15 @@ for HOME_DIR in /var/home/*; do
     fi
 
     chown -R "$USERNAME:$USERNAME" "$HOME_DIR/.config/fish"
+
+    # starship.toml: copia il default solo se l'utente non ne ha già uno
+    # (rispetta le personalizzazioni). Default uguale per tutte le varianti.
+    STARSHIP_CONFIG="$HOME_DIR/.config/starship.toml"
+    if [ ! -f "$STARSHIP_CONFIG" ] && [ -f /usr/share/atomik/defaults/starship.toml ]; then
+        cp /usr/share/atomik/defaults/starship.toml "$STARSHIP_CONFIG"
+        chown "$USERNAME:$USERNAME" "$STARSHIP_CONFIG"
+        echo "✓ starship.toml installato per $USERNAME"
+    fi
 done
 
 echo "$SCRIPT_HASH" > "$MARKER"

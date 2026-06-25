@@ -24,7 +24,7 @@
     "separator",
     {
       "type": "os",
-      "format": "Atomik OS - Desktop Nvidia"
+      "format": "Atomik OS - Desktop NVIDIA"
     },
     {
       "type": "kernel",
@@ -36,6 +36,10 @@
     "display",
     "de",
     "cpu",
+    {
+      "type": "gpu",
+      "format": "{name} ({driver})"
+    },
     "memory",
     "disk",
     "colors"
