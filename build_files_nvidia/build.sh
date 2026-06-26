@@ -12,8 +12,10 @@ echo "→ Kernel rilevato: ${KERNEL_VERSION}"
 dnf install -y kernel-devel-${KERNEL_VERSION}
 
 ## Installa driver NVIDIA da RPMFusion
-## NB: niente tsflags=noscripts — servono gli scriptlet per la config base
-dnf install -y \
+## tsflags=noscripts: lo scriptlet %post di akmod-nvidia rifiuta di girare
+## come root (errore "Not to be used as root") e fa fallire la transazione.
+## Lo saltiamo e compiliamo manualmente con akmods subito dopo.
+dnf install -y --setopt=tsflags=noscripts \
     akmod-nvidia \
     xorg-x11-drv-nvidia \
     xorg-x11-drv-nvidia-cuda \
