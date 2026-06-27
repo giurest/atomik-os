@@ -38,6 +38,8 @@ GAMING_APPS=(
     "com.github.Matoking.protontricks"
     "io.github.benjamimgois.goverlay"
     "net.davidotek.pupgui2"
+    "com.discordapp.Discord"
+    "com.teamspeak.TeamSpeak"
 )
 
 install_apps() {

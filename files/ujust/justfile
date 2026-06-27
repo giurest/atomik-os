@@ -379,6 +379,202 @@ mangohud-enable:
         exit 1
     fi
 
+# [Manutenzione] Applica 'mangohud %command%' ai giochi Steam installati con launch options vuote
+mangohud-steam:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "┌──────────────────────────────────────┐"
+    echo "│  MangoHud → Steam launch options     │"
+    echo "└──────────────────────────────────────┘"
+    echo ""
+    echo "Applica 'mangohud %command%' SOLO ai giochi INSTALLATI con launch"
+    echo "options vuote. Salta i giochi gia configurati e i tool/runtime Steam."
+    echo ""
+    # Trova la directory base di Steam (nativo, dir flatpak residua ignorata)
+    STEAM_BASES=(
+        "$HOME/.local/share/Steam"
+        "$HOME/.steam/steam"
+    )
+    STEAM_BASE=""
+    for d in "${STEAM_BASES[@]}"; do
+        if [ -d "$d/steamapps" ] && [ -d "$d/userdata" ]; then
+            STEAM_BASE="$d"
+            break
+        fi
+    done
+    if [ -z "$STEAM_BASE" ]; then
+        echo "✗ Nessuna installazione Steam con giochi trovata."
+        exit 1
+    fi
+    echo "→ Steam: $STEAM_BASE"
+    # Estrai gli appid REALMENTE installati dagli appmanifest
+    INSTALLED_IDS=$(grep -h '"appid"' "$STEAM_BASE"/steamapps/appmanifest_*.acf 2>/dev/null | grep -oP '\d+' | sort -u)
+    if [ -z "$INSTALLED_IDS" ]; then
+        echo "✗ Nessun gioco installato trovato (appmanifest assenti)."
+        exit 1
+    fi
+    INSTALLED_COUNT=$(echo "$INSTALLED_IDS" | wc -l)
+    echo "→ Giochi/tool installati trovati: $INSTALLED_COUNT"
+    # Steam deve essere chiuso
+    if pgrep -x steam >/dev/null || pgrep -f "com.valvesoftware.Steam" >/dev/null; then
+        echo ""
+        echo "⚠ Steam è in esecuzione. Va chiuso per modificare le launch options."
+        read -rp "Chiudere Steam ora? [s/N]: " KILLSTEAM
+        if [[ "$KILLSTEAM" =~ ^[sS]$ ]]; then
+            steam -shutdown 2>/dev/null || true
+            flatpak kill com.valvesoftware.Steam 2>/dev/null || true
+            pkill -x steam 2>/dev/null || true
+            echo "→ Attendo la chiusura di Steam..."
+            sleep 5
+        else
+            echo "Operazione annullata."
+            exit 0
+        fi
+    fi
+    REOPEN=0
+    FOUND=0
+    BACKUPS=()
+    while IFS= read -r -d '' vdf; do
+        FOUND=1
+        echo ""
+        echo "── Account: $(basename "$(dirname "$(dirname "$vdf")")") ──"
+        BACKUP_FILE="${vdf}.$(date +%Y%m%d-%H%M%S).bk"
+        cp "$vdf" "$BACKUP_FILE"
+        BACKUPS+=("$BACKUP_FILE")
+        echo "→ Backup: $BACKUP_FILE"
+        echo "$INSTALLED_IDS" | python3 - "$vdf" << 'PYEOF'
+import sys, re
+
+vdf_path = sys.argv[1]
+# appid installati passati via stdin
+installed = set(line.strip() for line in sys.stdin if line.strip())
+
+# Blocklist: tool/runtime Steam che NON sono giochi (no mangohud)
+#  228980 = Steamworks Common Redistributables
+#  1070560 = Steam Linux Runtime 1.0 (Scout)
+#  1391110 = Steam Linux Runtime 2.0 (Soldier)
+#  1493710 = Proton Experimental
+#  1628350 = Steam Linux Runtime 3.0 area
+#  1774580 = Steam Linux Runtime 3.0 (Sniper)
+#  4183110 = runtime/tool Proton recente
+# In generale i runtime SLR e i Proton hanno appid noti; per sicurezza
+# escludiamo anche tutto cio che ha "Runtime"/"Proton"/"Redist" nel nome.
+TOOL_IDS = {
+    "228980", "1070560", "1391110", "1493710",
+    "1628350", "1774580", "4183110",
+}
+
+with open(vdf_path, 'r', encoding='utf-8', errors='replace') as f:
+    lines = f.readlines()
+n = len(lines)
+
+def is_appid_line(line):
+    return bool(re.fullmatch(r'"\d+"', line.strip()))
+
+result = []
+idx = 0
+added = 0
+skipped_opts = 0
+skipped_notinstalled = 0
+skipped_tool = 0
+while idx < n:
+    line = lines[idx]
+    result.append(line)
+    if is_appid_line(line):
+        appid = line.strip().strip('"')
+        j = idx + 1
+        while j < n and lines[j].strip() == "":
+            result.append(lines[j]); j += 1
+        if j < n and lines[j].strip() == "{":
+            result.append(lines[j])
+            brace_depth = 1
+            block_lines = []
+            k = j + 1
+            while k < n and brace_depth > 0:
+                stripped = lines[k].strip()
+                if stripped == "{":
+                    brace_depth += 1
+                elif stripped == "}":
+                    brace_depth -= 1
+                    if brace_depth == 0:
+                        break
+                block_lines.append(lines[k]); k += 1
+
+            # Filtri: solo se installato e non tool
+            apply = True
+            if appid not in installed:
+                apply = False; skipped_notinstalled += 1
+            elif appid in TOOL_IDS:
+                apply = False; skipped_tool += 1
+
+            if apply:
+                # indentazione figli
+                indent = "\t\t\t\t\t\t"
+                for b in block_lines:
+                    m = re.match(r'^(\t+)"', b)
+                    if m:
+                        indent = m.group(1); break
+                launch_idx = None
+                launch_val = None
+                for bi, b in enumerate(block_lines):
+                    mm = re.search(r'"LaunchOptions"\s*"(.*)"', b)
+                    if mm:
+                        launch_idx = bi; launch_val = mm.group(1); break
+                if launch_idx is None:
+                    block_lines.insert(0, f'{indent}"LaunchOptions"\t\t"mangohud %command%"\n')
+                    added += 1
+                elif launch_val.strip() == "":
+                    block_lines[launch_idx] = re.sub(
+                        r'("LaunchOptions"\s*")(")',
+                        r'\1mangohud %command%\2', block_lines[launch_idx])
+                    added += 1
+                else:
+                    skipped_opts += 1
+
+            result.extend(block_lines)
+            result.append(lines[k])
+            idx = k + 1
+            continue
+    idx += 1
+
+    with open(vdf_path, 'w', encoding='utf-8') as f:
+        f.writelines(result)
+
+    print(f"  ✓ mangohud aggiunto:              {added} giochi")
+    print(f"  ⏭  saltati (gia con opzioni):     {skipped_opts}")
+    print(f"  ⏭  saltati (tool/runtime):        {skipped_tool}")
+    print(f"  ·  ignorati (non installati):     {skipped_notinstalled}")
+    PYEOF
+        REOPEN=1
+    done < <(find "$STEAM_BASE/userdata" -name "localconfig.vdf" -print0 2>/dev/null)
+    if [ "$FOUND" -eq 0 ]; then
+        echo "✗ Nessun localconfig.vdf trovato."
+        exit 1
+    fi
+    echo ""
+    echo "✓ Completato."
+    echo ""
+    echo "┌──────────────────────────────────────────────────────────────┐"
+    echo "│  RIPRISTINO                                                   │"
+    echo "│  Se qualcosa non va, ripristina il VDF dal backup .bk con:    │"
+    echo "└──────────────────────────────────────────────────────────────┘"
+    for bk in "${BACKUPS[@]}"; do
+        orig="${bk%.????????-??????.bk}"
+        echo "  cp '$bk' '$orig'"
+    done
+    echo ""
+    if [ "$REOPEN" -eq 1 ]; then
+        read -rp "Riaprire Steam ora? [s/N]: " OPENSTEAM
+        if [[ "$OPENSTEAM" =~ ^[sS]$ ]]; then
+            if command -v steam >/dev/null; then
+                nohup steam >/dev/null 2>&1 &
+            else
+                nohup flatpak run com.valvesoftware.Steam >/dev/null 2>&1 &
+            fi
+            echo "→ Steam in avvio..."
+        fi
+    fi    
+
 # [Manutenzione] Installa WinBoat (Windows app runner via container)
 install-winboat:
     #!/usr/bin/env bash
