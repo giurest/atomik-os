@@ -3,10 +3,6 @@
 #  Host minimale per container (base fedora-bootc).
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Mostra l'elenco dei comandi (default)
-_default:
-    @just --justfile /usr/share/atomik-server/justfile --list
-
 # [Sistema] Aggiorna il sistema all'ultima immagine (bootc)
 update:
     #!/usr/bin/env bash

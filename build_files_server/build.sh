@@ -31,7 +31,11 @@ mkdir -p /usr/share/atomik-server
 cat > /usr/bin/ujust << 'UJUST'
 #!/bin/bash
 # Atomik Server — wrapper ujust
-exec just --justfile /usr/share/atomik-server/justfile --working-directory "${HOME:-/root}" "$@"
+# Senza argomenti mostra la lista; altrimenti esegue la ricetta richiesta.
+if [ $# -eq 0 ]; then
+    exec just --justfile /usr/share/atomik-server/justfile --list
+fi
+exec just --justfile /usr/share/atomik-server/justfile "$@"
 UJUST
 chmod +x /usr/bin/ujust
 
