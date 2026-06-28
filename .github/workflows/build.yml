@@ -6,6 +6,10 @@ on:
       - main
     paths-ignore:
       - "**.md"
+      - "containerfiles/Containerfile.server"
+      - "build_files_server/**"
+      - "files/ujust/server-justfile"
+      - ".github/workflows/build-server.yml"
   pull_request:
     branches:
       - main
