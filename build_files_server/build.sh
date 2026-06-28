@@ -25,8 +25,8 @@ dnf install -y \
     jq
 
 ## ── ujust: comando che punta al justfile server ──────────────────────────────
+## NOTA: il justfile viene copiato dal Containerfile (COPY files/ujust/server-justfile)
 mkdir -p /usr/share/atomik-server
-install -m 0644 /ctx/server-justfile /usr/share/atomik-server/justfile
 
 cat > /usr/bin/ujust << 'UJUST'
 #!/bin/bash

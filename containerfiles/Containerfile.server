@@ -20,4 +20,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/build.sh
 
+# Justfile server (sorgente in files/ujust, come le altre varianti)
+COPY files/ujust/server-justfile /usr/share/atomik-server/justfile
+
 RUN bootc container lint
