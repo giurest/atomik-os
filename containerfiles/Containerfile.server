@@ -1,0 +1,23 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Atomik OS — Variante Server
+#  Host minimale container-oriented. Parte da fedora-bootc, NESSUNA eredità
+#  dal ramo desktop. Solo Podman + tooling essenziale + ujust server.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Stage ctx: porta i build_files nel contesto di build
+FROM scratch AS ctx
+COPY build_files_server /
+
+# Immagine finale
+FROM quay.io/fedora/fedora-bootc:44
+
+LABEL org.opencontainers.image.title="Atomik OS Server"
+LABEL org.opencontainers.image.description="Atomik OS — variante Server minimale, host per container (base fedora-bootc)"
+
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/build.sh
+
+RUN bootc container lint

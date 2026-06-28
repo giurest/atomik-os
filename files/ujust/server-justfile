@@ -1,0 +1,28 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Atomik OS Server — ujust
+#  Host minimale per container (base fedora-bootc).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Mostra l'elenco dei comandi (default)
+_default:
+    @just --justfile /usr/share/atomik-server/justfile --list
+
+# [Sistema] Aggiorna il sistema all'ultima immagine (bootc)
+update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "→ Controllo aggiornamenti immagine Atomik Server..."
+    sudo bootc upgrade
+    echo ""
+    echo "✓ Se è stato scaricato un aggiornamento, riavvia con: ujust reboot"
+
+# [Sistema] Riavvia il sistema
+reboot:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    read -rp "Riavviare il sistema ora? [s/N]: " R
+    if [[ "$R" =~ ^[sS]$ ]]; then
+        sudo systemctl reboot
+    else
+        echo "Annullato."
+    fi
