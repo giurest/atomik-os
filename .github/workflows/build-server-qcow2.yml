@@ -54,7 +54,9 @@ jobs:
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 --rootfs xfs \
             "${IMAGE}"
-          # Rinomina il disco con un nome parlante
+          # Il disco è di proprietà di root (bootc-image-builder gira come root):
+          # prendo possesso e rinomino con un nome parlante.
+          sudo chown "$(id -u):$(id -g)" output/qcow2/disk.qcow2
           mv output/qcow2/disk.qcow2 output/atomik-server.qcow2
           ls -lh output/
 
