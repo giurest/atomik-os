@@ -25,9 +25,11 @@ dnf install -y \
     jq
 
 ## ── Coerenza utempter group/gshadow ──────────────────────────────────────────
-## Lo scriptlet di libutempter scrive in /etc/gshadow ma non sempre in /etc/group,
-## causando il fail di systemd-sysusers al boot. Allineiamo il gruppo.
-grep -q '^utempter:' /etc/group || groupadd -r utempter -g 35
+## Lo scriptlet di libutempter lascia utempter in /etc/gshadow ma NON in
+## /etc/group. Al boot systemd-sysusers prova a crearlo (group mancante) e
+## fallisce su gshadow ("already exists"). Rimuoviamo la entry orfana da
+## gshadow: cosi sysusers ricrea utempter coerente (group + gshadow) al boot.
+sed -i '/^utempter:/d' /etc/gshadow
 
 ## ── ujust: comando che punta al justfile server ──────────────────────────────
 ## NOTA: il justfile viene copiato dal Containerfile (COPY files/ujust/server-justfile)
