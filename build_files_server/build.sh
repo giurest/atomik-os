@@ -24,6 +24,11 @@ dnf install -y \
     just \
     jq
 
+## ── Coerenza utempter group/gshadow ──────────────────────────────────────────
+## Lo scriptlet di libutempter scrive in /etc/gshadow ma non sempre in /etc/group,
+## causando il fail di systemd-sysusers al boot. Allineiamo il gruppo.
+grep -q '^utempter:' /etc/group || groupadd -r utempter -g 35
+
 ## ── ujust: comando che punta al justfile server ──────────────────────────────
 ## NOTA: il justfile viene copiato dal Containerfile (COPY files/ujust/server-justfile)
 mkdir -p /usr/share/atomik-server
@@ -60,6 +65,11 @@ PROFILE
 systemctl enable sshd.service
 systemctl enable podman.socket
 systemctl enable firewalld.service
+
+## ── Maschera servizi non applicabili su bootc immutabile ─────────────────────
+## systemd-remount-fs tenta di rimontare / via fstab, ma su overlay immutabile
+## fallisce sempre ("No changes allowed in reconfigure"). Inutile su bootc.
+systemctl mask systemd-remount-fs.service
 
 ## ── Container policy: consenti immagini Atomik da ghcr.io/giurest ─────────────
 python3 -c "
