@@ -22,7 +22,8 @@ dnf install -y \
     firewalld \
     openssh-server \
     just \
-    jq
+    jq \
+    cloud-init
 
 ## ── Coerenza utempter group/gshadow ──────────────────────────────────────────
 ## Lo scriptlet di libutempter lascia utempter in /etc/gshadow ma NON in
@@ -72,6 +73,21 @@ systemctl enable firewalld.service
 ## systemd-remount-fs tenta di rimontare / via fstab, ma su overlay immutabile
 ## fallisce sempre ("No changes allowed in reconfigure"). Inutile su bootc.
 systemctl mask systemd-remount-fs.service
+
+## ── cloud-init: datasource per Proxmox (NoCloud + ConfigDrive) ────────────────
+## Proxmox passa la config cloud-init via drive (NoCloud/ConfigDrive). Limitiamo
+## i datasource a quelli rilevanti per evitare timeout di ricerca su rete/cloud.
+mkdir -p /etc/cloud/cloud.cfg.d
+cat > /etc/cloud/cloud.cfg.d/99-atomik-datasource.cfg << 'CLOUDCFG'
+datasource_list: [ NoCloud, ConfigDrive, None ]
+CLOUDCFG
+
+## Abilita i servizi cloud-init (target + unit principali)
+systemctl enable cloud-init.target 2>/dev/null || true
+systemctl enable cloud-init-local.service 2>/dev/null || true
+systemctl enable cloud-init.service 2>/dev/null || true
+systemctl enable cloud-config.service 2>/dev/null || true
+systemctl enable cloud-final.service 2>/dev/null || true
 
 ## ── Container policy: consenti immagini Atomik da ghcr.io/giurest ─────────────
 python3 -c "
