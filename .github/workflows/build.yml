@@ -10,9 +10,17 @@ on:
       - "build_files_server/**"
       - "files/ujust/server-justfile"
       - ".github/workflows/build-server.yml"
+      - ".github/workflows/build-server-qcow2.yml"
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "**.md"
+      - "containerfiles/Containerfile.server"
+      - "build_files_server/**"
+      - "files/ujust/server-justfile"
+      - ".github/workflows/build-server.yml"
+      - ".github/workflows/build-server-qcow2.yml"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:

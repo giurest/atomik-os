@@ -1,0 +1,77 @@
+name: Build Atomik Server qcow2
+
+# Genera l'immagine disco qcow2 di atomik-server e la pubblica nella release
+# "server-latest" (URL fisso). NON gira a ogni push: solo manuale o su tag,
+# perché il qcow2 serve a creare nuove istanze, non ad aggiornare quelle
+# esistenti (che usano bootc upgrade via ujust update).
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "server-v*"
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/atomik-server:latest
+  RELEASE_TAG: server-latest
+
+jobs:
+  build-qcow2:
+    name: Build and publish qcow2
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # per creare/aggiornare la release
+      packages: read    # per pullare l'immagine da ghcr
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull atomik-server image
+        run: |
+          sudo podman pull "${IMAGE}"
+
+      - name: Build qcow2 with bootc-image-builder
+        run: |
+          mkdir -p output
+          sudo podman run --rm --privileged \
+            --security-opt label=type:unconfined_t \
+            -v "$(pwd)/output":/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type qcow2 --rootfs xfs \
+            "${IMAGE}"
+          # Rinomina il disco con un nome parlante
+          mv output/qcow2/disk.qcow2 output/atomik-server.qcow2
+          ls -lh output/
+
+      - name: Publish to server-latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Crea la release se non esiste, altrimenti aggiorna l'asset
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} esiste, aggiorno l'asset"
+            gh release upload "${RELEASE_TAG}" output/atomik-server.qcow2 --clobber
+          else
+            echo "Creo la release ${RELEASE_TAG}"
+            gh release create "${RELEASE_TAG}" output/atomik-server.qcow2 \
+              --title "Atomik Server (latest disk image)" \
+              --notes "Immagine disco qcow2 di atomik-server, sempre aggiornata all'ultima build. Senza utente preconfigurato: l'utente viene creato via cloud-init (Proxmox). Per creare una VM usa lo script Proxmox o importala manualmente."
+          fi
+          echo ""
+          echo "Download URL fisso:"
+          echo "  https://github.com/${{ github.repository }}/releases/download/${RELEASE_TAG}/atomik-server.qcow2"
