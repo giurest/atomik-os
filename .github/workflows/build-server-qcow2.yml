@@ -54,10 +54,12 @@ jobs:
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 --rootfs xfs \
             "${IMAGE}"
-          # Il disco è di proprietà di root (bootc-image-builder gira come root):
-          # prendo possesso e rinomino con un nome parlante.
-          sudo chown "$(id -u):$(id -g)" output/qcow2/disk.qcow2
-          mv output/qcow2/disk.qcow2 output/atomik-server.qcow2
+          # Tutto l'output è di proprietà di root (bootc-image-builder gira come
+          # root): prendo possesso ricorsivo dell'intera cartella, poi copio il
+          # disco con un nome parlante usando comunque sudo per sicurezza.
+          sudo chown -R "$(id -u):$(id -g)" output
+          sudo cp output/qcow2/disk.qcow2 output/atomik-server.qcow2
+          sudo chown "$(id -u):$(id -g)" output/atomik-server.qcow2
           ls -lh output/
 
       - name: Publish to server-latest release
