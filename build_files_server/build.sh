@@ -77,17 +77,13 @@ systemctl mask systemd-remount-fs.service
 ## ── cloud-init: datasource per Proxmox (NoCloud + ConfigDrive) ────────────────
 ## Proxmox passa la config cloud-init via drive (NoCloud/ConfigDrive). Limitiamo
 ## i datasource a quelli rilevanti per evitare timeout di ricerca su rete/cloud.
+## NB: i servizi cloud-init (cloud-init-main, cloud-config, cloud-final,
+## cloud-init-local) sono gia abilitati di default dal pacchetto: non serve
+## abilitarli a mano.
 mkdir -p /etc/cloud/cloud.cfg.d
 cat > /etc/cloud/cloud.cfg.d/99-atomik-datasource.cfg << 'CLOUDCFG'
 datasource_list: [ NoCloud, ConfigDrive, None ]
 CLOUDCFG
-
-## Abilita i servizi cloud-init (target + unit principali)
-systemctl enable cloud-init.target 2>/dev/null || true
-systemctl enable cloud-init-local.service 2>/dev/null || true
-systemctl enable cloud-init.service 2>/dev/null || true
-systemctl enable cloud-config.service 2>/dev/null || true
-systemctl enable cloud-final.service 2>/dev/null || true
 
 ## ── Container policy: consenti immagini Atomik da ghcr.io/giurest ─────────────
 python3 -c "
