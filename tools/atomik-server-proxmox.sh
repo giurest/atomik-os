@@ -55,8 +55,9 @@ DEF_STORAGE="${DEF_STORAGE:-local-lvm}"
 # Storage che supporta 'snippets' (per il cloud-init custom)
 DEF_SNIPSTORE="$(pvesm status -content snippets 2>/dev/null | awk 'NR==2{print $1}')"
 DEF_SNIPSTORE="${DEF_SNIPSTORE:-local}"
-# Primo bridge di rete
-DEF_BRIDGE="$(ip -o link show 2>/dev/null | awk -F': ' '/vmbr/{print $2; exit}')"
+# Primo bridge Proxmox (vmbr*) dalla config di rete, con fallback su ip link
+DEF_BRIDGE="$(awk '/^auto vmbr|^iface vmbr/{gsub(/iface |auto /,""); print $1; exit}' /etc/network/interfaces 2>/dev/null)"
+[ -z "$DEF_BRIDGE" ] && DEF_BRIDGE="$(ip -o link show type bridge 2>/dev/null | awk -F': ' '/vmbr/{print $2; exit}')"
 DEF_BRIDGE="${DEF_BRIDGE:-vmbr0}"
 
 # ── Raccolta parametri ───────────────────────────────────────────────────────

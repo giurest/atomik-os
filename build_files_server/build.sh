@@ -85,6 +85,13 @@ cat > /etc/cloud/cloud.cfg.d/99-atomik-datasource.cfg << 'CLOUDCFG'
 datasource_list: [ NoCloud, ConfigDrive, None ]
 CLOUDCFG
 
+## ── Console pulita: riduci i messaggi kernel sulla console ────────────────────
+## Su VM (es. console Proxmox VGA) i messaggi kernel informativi spammano la
+## sessione interattiva. Alziamo la soglia: solo messaggi importanti a console.
+cat > /etc/sysctl.d/20-quiet-console.conf << 'SYSCTL'
+kernel.printk = 3 4 1 3
+SYSCTL
+
 ## ── Container policy: consenti immagini Atomik da ghcr.io/giurest ─────────────
 python3 -c "
 import json
