@@ -56,7 +56,7 @@ fi
 # Header
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║${NC}${BOLD}          Atomik OS — Changelog aggiornamento              ${NC}${CYAN}║${NC}"
+echo -e "${CYAN}║${NC}${BOLD}          Atomik OS — Changelog aggiornamento     ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
