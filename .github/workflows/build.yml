@@ -12,6 +12,11 @@ on:
       - ".github/workflows/build-server.yml"
       - ".github/workflows/build-server-qcow2.yml"
       - "tools/**"
+      - "containerfiles/Containerfile.hypervisor"
+      - "build_files_hypervisor/**"
+      - "files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules"
+      - "files/fastfetch/hypervisor.jsonc"
+      - ".github/workflows/build-hypervisor.yml"
   pull_request:
     branches:
       - main
@@ -23,6 +28,11 @@ on:
       - ".github/workflows/build-server.yml"
       - ".github/workflows/build-server-qcow2.yml"
       - "tools/**"
+      - "containerfiles/Containerfile.hypervisor"
+      - "build_files_hypervisor/**"
+      - "files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules"
+      - "files/fastfetch/hypervisor.jsonc"
+      - ".github/workflows/build-hypervisor.yml"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:

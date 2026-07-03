@@ -1,0 +1,9 @@
+// Atomik OS Hypervisor — accesso libvirt per il gruppo wheel.
+// Gli utenti amministratori (gruppo wheel) gestiscono le VM senza password.
+// Nessun utente hardcoded: vale per qualunque admin creato sulla macchina.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.libvirt.unix.manage" &&
+        subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});

@@ -1,0 +1,36 @@
+FROM scratch AS ctx
+COPY build_files_hypervisor /
+
+FROM ghcr.io/giurest/atomik-desktop:latest
+
+# ── Metadata ──────────────────────────────────────────────────────────────────
+LABEL org.opencontainers.image.title="Atomik OS Hypervisor"
+LABEL org.opencontainers.image.description="Atomik OS — variante Hypervisor su base Desktop (Niri + DMS) con libvirt/QEMU-KVM e virt-manager"
+
+# ── Build: stack virtualizzazione (via build.sh) ──────────────────────────────
+# Usiamo 'bash /ctx/build.sh' per non dipendere dal bit eseguibile in git.
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=tmpfs,dst=/tmp \
+    bash /ctx/build.sh
+
+# ── Polkit: accesso libvirt per il gruppo wheel (nessun utente hardcoded) ──────
+COPY files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules \
+     /etc/polkit-1/rules.d/50-libvirt-wheel.rules
+
+# ── Fastfetch config hypervisor ───────────────────────────────────────────────
+RUN mkdir -p /etc/fastfetch
+COPY files/fastfetch/hypervisor.jsonc /etc/fastfetch/config.jsonc
+# atomik-logo.txt è ereditato dalla base desktop; ricreiamo il symlink skel
+# perché la config punta a /etc/fastfetch/config.jsonc (già gestito dalla base).
+
+# ── Hostname ──────────────────────────────────────────────────────────────────
+RUN printf 'atomik-hypervisor\n' > /usr/lib/hostname
+
+# ── OS Identity ───────────────────────────────────────────────────────────────
+RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Hypervisor)"/' /etc/os-release && \
+    sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (Hypervisor)"/' /usr/lib/os-release
+
+# ── Lint finale ───────────────────────────────────────────────────────────────
+RUN bootc container lint
