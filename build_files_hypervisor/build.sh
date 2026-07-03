@@ -24,7 +24,7 @@ dnf install -y --skip-unavailable \
     bridge-utils
 
 ## ── Pacchetti aggiuntivi da lista (opzionale) ─────────────────────────────────
-PKGS="$(grep -v '^#' /ctx/hypervisor.list 2>/dev/null | grep -v '^$' | tr '\n' ' ')"
+PKGS="$( { grep -v '^#' /ctx/hypervisor.list 2>/dev/null || true; } | { grep -v '^$' || true; } | tr '\n' ' ')"
 if [ -n "$PKGS" ]; then
     dnf install -y --skip-unavailable $PKGS
 fi
