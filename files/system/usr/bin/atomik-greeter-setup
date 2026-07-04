@@ -22,7 +22,7 @@ if [[ ! -f "$GREETER_CACHE/greeter_wallpaper_override.jpg" ]]; then
     cp "$WALLPAPER" "$GREETER_CACHE/greeter_wallpaper_override.jpg"
 fi
 
-chown -R greeter:greeter "$GREETER_CACHE"
+chown -R greeter:greeter "$GREETER_CACHE" 2>/dev/null || echo "⚠ utente greeter non ancora disponibile, chown rimandato"
 chmod 750 "$GREETER_CACHE"
 
 echo "✓ Config greeter DMS inizializzata"

@@ -143,6 +143,9 @@ COPY files/system/usr/bin/atomik-fish-setup \
 RUN chmod +x /usr/bin/atomik-fish-setup && \
     ln -sf /usr/lib/systemd/system/atomik-fish-setup.service \
            /usr/lib/systemd/system/multi-user.target.wants/atomik-fish-setup.service
+# ── Utente greeter via sysusers.d (dms-greeter non lo dichiara) ──────────────
+COPY files/system/usr/lib/sysusers.d/greeter.conf \
+     /usr/lib/sysusers.d/greeter.conf
 
 # ── Atomik Panel ──────────────────────────────────────────────────────────────
 COPY files/system/usr/bin/atomik-panel /usr/bin/atomik-panel
