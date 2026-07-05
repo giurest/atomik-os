@@ -25,6 +25,16 @@ COPY files/fastfetch/hypervisor.jsonc /etc/fastfetch/config.jsonc
 # atomik-logo.txt è ereditato dalla base desktop; ricreiamo il symlink skel
 # perché la config punta a /etc/fastfetch/config.jsonc (già gestito dalla base).
 
+# ── Relabel SELinux path libvirt al primo boot ──────────────────────────────
+# /var materializzato da ostree ha label generici; i daemon virt richiedono
+# virt_*_t. Oneshot restorecon eseguito prima di sockets.target.
+COPY files/system/usr/bin/atomik-libvirt-relabel /usr/bin/atomik-libvirt-relabel
+COPY files/system/usr/lib/systemd/system/atomik-libvirt-relabel.service \
+     /usr/lib/systemd/system/atomik-libvirt-relabel.service
+RUN chmod +x /usr/bin/atomik-libvirt-relabel && \
+    ln -sf /usr/lib/systemd/system/atomik-libvirt-relabel.service \
+           /usr/lib/systemd/system/sysinit.target.wants/atomik-libvirt-relabel.service
+
 # ── Hostname ──────────────────────────────────────────────────────────────────
 RUN printf 'atomik-hypervisor\n' > /usr/lib/hostname
 

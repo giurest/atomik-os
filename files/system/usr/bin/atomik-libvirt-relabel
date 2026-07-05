@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Atomik OS — Relabel SELinux dei path di stato libvirt al primo boot.
+# Su bootc/ostree /var e' materializzato al primo boot con label generici
+# (var_lib_t, var_log_t, var_t) invece dei specifici virt_*_t attesi dalla
+# policy libvirt. Senza relabel i daemon virt falliscono con "Permesso negato".
+set -uo pipefail
+
+for path in /var/lib/libvirt /var/log/libvirt /var/cache/libvirt; do
+    if [[ -d "$path" ]]; then
+        restorecon -RF "$path" || echo "restorecon fallito su $path"
+    fi
+done
+echo "Relabel SELinux libvirt completato"
