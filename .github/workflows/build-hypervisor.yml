@@ -15,6 +15,7 @@ on:
       - "files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules"
       - "files/fastfetch/hypervisor.jsonc"
       - ".github/workflows/build-hypervisor.yml"
+      - "files/ujust/hypervisor.just"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:
