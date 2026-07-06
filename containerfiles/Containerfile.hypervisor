@@ -35,6 +35,11 @@ RUN chmod +x /usr/bin/atomik-libvirt-relabel && \
     ln -sf /usr/lib/systemd/system/atomik-libvirt-relabel.service \
            /usr/lib/systemd/system/sysinit.target.wants/atomik-libvirt-relabel.service
 
+# ── ujust: ricette specifiche hypervisor ────────────────────────────────────
+# Caricate via import? dal justfile condiviso (ereditato dalla base desktop).
+# Il file esiste solo qui, quindi le ricette appaiono solo sull'hypervisor.
+COPY files/ujust/hypervisor.just /usr/share/atomik/hypervisor.just
+
 # ── Hostname ──────────────────────────────────────────────────────────────────
 RUN printf 'atomik-hypervisor\n' > /usr/lib/hostname
 

@@ -1,6 +1,9 @@
 # Atomik OS — system justfile (ujust)
 # Eseguito tramite il wrapper `ujust`.
 
+# Ricette specifiche hypervisor: caricate solo se il file esiste (immagine hypervisor)
+import? 'hypervisor.just'
+
 # Mostra l'elenco delle ricette disponibili
 _default:
     @just --list --unsorted --justfile {{justfile()}}
