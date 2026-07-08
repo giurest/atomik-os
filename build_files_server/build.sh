@@ -23,7 +23,8 @@ dnf install -y \
     openssh-server \
     just \
     jq \
-    cloud-init
+    cloud-init \
+    cifs-utils
 
 ## ── Coerenza utempter group/gshadow ──────────────────────────────────────────
 ## Lo scriptlet di libutempter lascia utempter in /etc/gshadow ma NON in

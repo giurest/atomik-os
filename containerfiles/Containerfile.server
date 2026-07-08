@@ -23,4 +23,8 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 # Justfile server (sorgente in files/ujust, come le altre varianti)
 COPY files/ujust/server-justfile /usr/share/atomik-server/justfile
 
+# ── Atomik Changelog ──────────────────────────────────────────────────────────
+COPY files/system/usr/bin/atomik-changelog /usr/bin/atomik-changelog
+RUN chmod +x /usr/bin/atomik-changelog
+
 RUN bootc container lint
