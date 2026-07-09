@@ -39,6 +39,8 @@ RUN chmod +x /usr/bin/atomik-libvirt-relabel && \
 # Caricate via import? dal justfile condiviso (ereditato dalla base desktop).
 # Il file esiste solo qui, quindi le ricette appaiono solo sull'hypervisor.
 COPY files/ujust/hypervisor.just /usr/share/atomik/hypervisor.just
+COPY files/ujust/common.just /usr/share/atomik-server/common.just
+COPY files/ujust/enviroment.just /usr/share/atomik/enviroment.just
 
 # ── Hostname ──────────────────────────────────────────────────────────────────
 RUN printf 'atomik-hypervisor\n' > /usr/lib/hostname
