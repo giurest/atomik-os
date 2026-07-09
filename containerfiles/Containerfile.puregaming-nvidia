@@ -3,6 +3,10 @@ COPY build_files_puregaming /
 
 FROM ghcr.io/giurest/atomik-desktop-nvidia:latest
 
+# UJUST common, environment, desktop-tools ereditati da desktop-nvidia
+COPY files/ujust/entrypoint-puregaming.just /usr/share/atomik/justfile
+COPY files/ujust/gaming.just /usr/share/atomik/gaming.just
+
 LABEL org.opencontainers.image.title="Atomik OS PureGaming NVIDIA"
 LABEL org.opencontainers.image.description="Atomik OS — variante PureGaming con driver NVIDIA"
 

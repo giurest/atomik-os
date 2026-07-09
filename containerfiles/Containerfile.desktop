@@ -115,7 +115,11 @@ COPY files/skel/autostart/gnome-keyring-env.desktop \
 
 # ── ujust ─────────────────────────────────────────────────────────────────────
 RUN mkdir -p /usr/share/atomik
-COPY files/ujust/justfile /usr/share/atomik/justfile
+#COPY files/ujust/justfile /usr/share/atomik/justfile
+COPY files/ujust/entrypoint-desktop.just /usr/share/atomik/justfile
+COPY files/ujust/common.just        /usr/share/atomik/common.just
+COPY files/ujust/environment.just   /usr/share/atomik/environment.just
+COPY files/ujust/desktop-tools.just /usr/share/atomik/desktop-tools.just
 COPY files/system/usr/bin/ujust /usr/bin/ujust
 COPY files/system/usr/bin/atomik-powerwash-prepare /usr/bin/atomik-powerwash-prepare
 RUN chmod +x /usr/bin/ujust /usr/bin/atomik-powerwash-prepare
