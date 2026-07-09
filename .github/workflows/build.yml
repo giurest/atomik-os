@@ -18,6 +18,7 @@ on:
       - "files/fastfetch/hypervisor.jsonc"
       - ".github/workflows/build-hypervisor.yml"
       - "files/ujust/hypervisor.just"
+      - "files/ujust/server.just"
   pull_request:
     branches:
       - main
@@ -35,6 +36,7 @@ on:
       - "files/fastfetch/hypervisor.jsonc"
       - ".github/workflows/build-hypervisor.yml"
       - "files/ujust/hypervisor.just"
+      - "files/ujust/server.just"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:
