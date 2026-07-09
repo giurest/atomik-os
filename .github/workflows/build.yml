@@ -17,7 +17,9 @@ on:
       - "files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules"
       - "files/fastfetch/hypervisor.jsonc"
       - ".github/workflows/build-hypervisor.yml"
+      - "files/ujust/entrypoint-hypervisor.just"
       - "files/ujust/hypervisor.just"
+      - "files/ujust/entrypoint-server.just"
       - "files/ujust/server.just"
   pull_request:
     branches:
@@ -34,8 +36,9 @@ on:
       - "build_files_hypervisor/**"
       - "files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules"
       - "files/fastfetch/hypervisor.jsonc"
-      - ".github/workflows/build-hypervisor.yml"
+      - "files/ujust/entrypoint-hypervisor.just"
       - "files/ujust/hypervisor.just"
+      - "files/ujust/entrypoint-server.just"
       - "files/ujust/server.just"
   schedule:
     - cron: "0 6 1 * *"
