@@ -40,7 +40,7 @@ RUN chmod +x /usr/bin/atomik-libvirt-relabel && \
 # Il file esiste solo qui, quindi le ricette appaiono solo sull'hypervisor.
 COPY files/ujust/hypervisor.just /usr/share/atomik/hypervisor.just
 COPY files/ujust/common.just /usr/share/atomik/common.just
-COPY files/ujust/enviroment.just /usr/share/atomik/enviroment.just
+COPY files/ujust/environment.just /usr/share/atomik/environment.just
 
 # ── Hostname ──────────────────────────────────────────────────────────────────
 RUN printf 'atomik-hypervisor\n' > /usr/lib/hostname
