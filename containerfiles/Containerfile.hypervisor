@@ -35,6 +35,15 @@ RUN chmod +x /usr/bin/atomik-libvirt-relabel && \
     ln -sf /usr/lib/systemd/system/atomik-libvirt-relabel.service \
            /usr/lib/systemd/system/sysinit.target.wants/atomik-libvirt-relabel.service
 
+# ── Provisioning pool/rete libvirt (riproducibilità) ─────────────────────────
+# Ricrea pool boot/default e rete default a ogni boot (idempotente, auto-riparante).
+COPY files/system/usr/bin/atomik-libvirt-provision /usr/bin/atomik-libvirt-provision
+COPY files/system/usr/lib/systemd/system/atomik-libvirt-provision.service /usr/lib/systemd/system/atomik-libvirt-provision.service
+COPY files/system/usr/share/atomik/libvirt/ /usr/share/atomik/libvirt/
+RUN chmod +x /usr/bin/atomik-libvirt-provision && \
+    ln -sf /usr/lib/systemd/system/atomik-libvirt-provision.service \
+       /usr/lib/systemd/system/multi-user.target.wants/atomik-libvirt-provision.service           
+
 # ── ujust: ricette specifiche hypervisor ────────────────────────────────────
 # Caricate via import? dal justfile condiviso (ereditato dalla base desktop).
 # Il file esiste solo qui, quindi le ricette appaiono solo sull'hypervisor.

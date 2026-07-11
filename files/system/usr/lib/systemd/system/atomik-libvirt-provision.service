@@ -1,0 +1,14 @@
+[Unit]
+Description=Atomik OS — provisioning pool e rete libvirt
+# Gira a ogni boot: idempotente, ricrea pool/rete solo se mancano (auto-riparante).
+After=virtstoraged.socket virtnetworkd.socket virtqemud.socket
+Wants=virtstoraged.socket virtnetworkd.socket
+ConditionSecurity=selinux
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/atomik-libvirt-provision
+
+[Install]
+WantedBy=multi-user.target

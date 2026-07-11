@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Atomik OS — provisioning pool e rete libvirt.
+# Su bootc/ostree le definizioni libvirt (pool, rete) vivono in /etc e andrebbero
+# perse a una reinstallazione. Questo servizio le ricrea da definizioni versionate
+# nell'immagine, rendendo l'hypervisor pienamente riproducibile.
+# Gira a ogni boot ed e' idempotente: ricrea solo cio' che manca (auto-riparante).
+set -uo pipefail
+
+XMLDIR="/usr/share/atomik/libvirt"
+
+# Directory dei pool (label virt_content_t / virt_image_t da policy SELinux base)
+mkdir -p /var/lib/libvirt/boot /var/lib/libvirt/images
+restorecon -R /var/lib/libvirt/boot /var/lib/libvirt/images 2>/dev/null || true
+
+# Pool boot
+if ! virsh pool-info boot &>/dev/null; then
+    virsh pool-define "$XMLDIR/pool-boot.xml"
+    virsh pool-start boot
+    virsh pool-autostart boot
+fi
+
+# Pool default
+if ! virsh pool-info default &>/dev/null; then
+    virsh pool-define "$XMLDIR/pool-default.xml"
+    virsh pool-start default
+    virsh pool-autostart default
+fi
+
+# Rete default
+if ! virsh net-info default &>/dev/null; then
+    virsh net-define "$XMLDIR/network-default.xml"
+fi
+virsh net-autostart default 2>/dev/null || true
+virsh net-start default 2>/dev/null || true
+
+echo "Provisioning libvirt completato"
