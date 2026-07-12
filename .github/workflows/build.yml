@@ -21,6 +21,10 @@ on:
       - "files/ujust/hypervisor.just"
       - "files/ujust/entrypoint-server.just"
       - "files/ujust/server.just"
+      - "files/system/usr/share/atomik/cloud-init/user-data.template"
+      - "files/system/usr/bin/atomik-libvirt-provision"
+      - "files/system/usr/lib/systemd/system/atomik-libvirt-provision.service"
+      - "files/system/usr/share/atomik/libvirt/**"
   pull_request:
     branches:
       - main
@@ -40,6 +44,11 @@ on:
       - "files/ujust/hypervisor.just"
       - "files/ujust/entrypoint-server.just"
       - "files/ujust/server.just"
+      - "files/system/usr/share/atomik/cloud-init/user-data.template"
+      - "files/system/usr/share/atomik/cloud-init/user-data.template"
+      - "files/system/usr/bin/atomik-libvirt-provision"
+      - "files/system/usr/lib/systemd/system/atomik-libvirt-provision.service"
+      - "files/system/usr/share/atomik/libvirt/**"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:
