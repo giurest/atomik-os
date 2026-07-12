@@ -6,12 +6,14 @@ on:
       - main
     paths-ignore:
       - "**.md"
+      - "tools/**"
+      # server (catena separata)
       - "containerfiles/Containerfile.server"
       - "build_files_server/**"
-      - "files/ujust/server-justfile"
+      - "files/ujust/server.just"
       - ".github/workflows/build-server.yml"
       - ".github/workflows/build-server-qcow2.yml"
-      - "tools/**"
+      # hypervisor (catena separata)
       - "containerfiles/Containerfile.hypervisor"
       - "build_files_hypervisor/**"
       - "files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules"
@@ -19,36 +21,36 @@ on:
       - ".github/workflows/build-hypervisor.yml"
       - "files/ujust/entrypoint-hypervisor.just"
       - "files/ujust/hypervisor.just"
-      - "files/ujust/entrypoint-server.just"
-      - "files/ujust/server.just"
-      - "files/system/usr/share/atomik/cloud-init/user-data.template"
+      # provisioning + template VM (solo hypervisor)
       - "files/system/usr/bin/atomik-libvirt-provision"
       - "files/system/usr/lib/systemd/system/atomik-libvirt-provision.service"
       - "files/system/usr/share/atomik/libvirt/**"
+      - "files/system/usr/share/atomik/cloud-init/**"
   pull_request:
     branches:
       - main
     paths-ignore:
       - "**.md"
+      - "tools/**"
+      # server (catena separata)
       - "containerfiles/Containerfile.server"
       - "build_files_server/**"
-      - "files/ujust/server-justfile"
+      - "files/ujust/server.just"
       - ".github/workflows/build-server.yml"
       - ".github/workflows/build-server-qcow2.yml"
-      - "tools/**"
+      # hypervisor (catena separata)
       - "containerfiles/Containerfile.hypervisor"
       - "build_files_hypervisor/**"
       - "files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules"
       - "files/fastfetch/hypervisor.jsonc"
+      - ".github/workflows/build-hypervisor.yml"
       - "files/ujust/entrypoint-hypervisor.just"
       - "files/ujust/hypervisor.just"
-      - "files/ujust/entrypoint-server.just"
-      - "files/ujust/server.just"
-      - "files/system/usr/share/atomik/cloud-init/user-data.template"
-      - "files/system/usr/share/atomik/cloud-init/user-data.template"
+      # provisioning + template VM (solo hypervisor)
       - "files/system/usr/bin/atomik-libvirt-provision"
       - "files/system/usr/lib/systemd/system/atomik-libvirt-provision.service"
       - "files/system/usr/share/atomik/libvirt/**"
+      - "files/system/usr/share/atomik/cloud-init/**"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:
