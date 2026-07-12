@@ -1,0 +1,19 @@
+#cloud-config
+# Atomik OS — template cloud-init per VM atomik-server.
+# __USERNAME__ viene sostituito dalla ricetta ujust atomik-server.
+# La password iniziale coincide con lo username e DEVE essere cambiata al primo accesso.
+preserve_hostname: true
+
+users:
+  - name: __USERNAME__
+    groups: wheel
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    shell: /bin/bash
+
+chpasswd:
+  list: |
+    __USERNAME__:__USERNAME__
+  expire: true
+
+ssh_pwauth: true

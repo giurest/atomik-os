@@ -42,11 +42,15 @@ COPY files/system/usr/lib/systemd/system/atomik-libvirt-provision.service /usr/l
 COPY files/system/usr/share/atomik/libvirt/ /usr/share/atomik/libvirt/
 RUN chmod +x /usr/bin/atomik-libvirt-provision && \
     ln -sf /usr/lib/systemd/system/atomik-libvirt-provision.service \
-       /usr/lib/systemd/system/multi-user.target.wants/atomik-libvirt-provision.service           
+       /usr/lib/systemd/system/multi-user.target.wants/atomik-libvirt-provision.service    
 
-# ── ujust: ricette specifiche hypervisor ────────────────────────────────────
-# Caricate via import? dal justfile condiviso (ereditato dalla base desktop).
-# Il file esiste solo qui, quindi le ricette appaiono solo sull'hypervisor.
+# ── Template VM ─────────────────────────
+# File template per la creazione di VM basate su Atomik-Server
+COPY files/system/usr/share/atomik/cloud-init/ /usr/share/atomik/cloud-init/
+              
+# ── ujust: entrypoint e moduli hypervisor ───────────────────────────────────
+# L'entrypoint sovrascrive il justfile ereditato da desktop e importa
+# i moduli comuni (common, environment) piu' quelli specifici (hypervisor).
 COPY files/ujust/entrypoint-hypervisor.just /usr/share/atomik/justfile
 COPY files/ujust/hypervisor.just /usr/share/atomik/hypervisor.just
 COPY files/ujust/common.just /usr/share/atomik/common.just
