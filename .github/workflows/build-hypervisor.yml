@@ -15,7 +15,7 @@ on:
       - "files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules"
       - "files/fastfetch/hypervisor.jsonc"
       - ".github/workflows/build-hypervisor.yml"
-        # ujust: entrypoint + TUTTI i moduli importati
+      # ujust: entrypoint + TUTTI i moduli importati
       - "files/ujust/entrypoint-hypervisor.just"
       - "files/ujust/hypervisor.just"
       - "files/ujust/common.just"
