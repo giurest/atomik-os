@@ -6,7 +6,7 @@ on:
     paths:
       - "containerfiles/Containerfile.server"
       - "build_files_server/**"
-      - "files/ujust/server-justfile"
+      - "files/ujust/server.just"
       - ".github/workflows/build-server.yml"
   pull_request:
     branches:
@@ -14,7 +14,7 @@ on:
     paths:
       - "containerfiles/Containerfile.server"
       - "build_files_server/**"
-      - "files/ujust/server-justfile"
+      - "files/ujust/server.just"
   workflow_dispatch:
 env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
