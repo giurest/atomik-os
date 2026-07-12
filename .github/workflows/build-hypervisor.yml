@@ -15,7 +15,17 @@ on:
       - "files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules"
       - "files/fastfetch/hypervisor.jsonc"
       - ".github/workflows/build-hypervisor.yml"
+        # ujust: entrypoint + TUTTI i moduli importati
+      - "files/ujust/entrypoint-hypervisor.just"
       - "files/ujust/hypervisor.just"
+      - "files/ujust/common.just"
+      - "files/ujust/environment.just"
+      # provisioning libvirt
+      - "files/system/usr/bin/atomik-libvirt-provision"
+      - "files/system/usr/lib/systemd/system/atomik-libvirt-provision.service"
+      - "files/system/usr/share/atomik/libvirt/**"
+      # template cloud-init VM
+      - "files/system/usr/share/atomik/cloud-init/**"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:
