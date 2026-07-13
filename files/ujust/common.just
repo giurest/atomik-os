@@ -438,55 +438,91 @@ smb-connect:
     #!/usr/bin/env bash
     set -euo pipefail
     USER_HOME="$(realpath "$HOME")"
-    USERNAME="$(whoami)"
     USER_UID=$(id -u)
+    CRED_DIR="/etc/atomik-smb"
+
     echo "┌──────────────────────────────────────┐"
     echo "│  Connessione SMB / Condivisione rete │"
     echo "└──────────────────────────────────────┘"
     echo ""
     read -rp "Nome cartella contenitore (es. nas, shares): " CONTAINER
-    if [[ -z "$CONTAINER" ]]; then
-        echo "✗ Nome contenitore vuoto."; exit 1
-    fi
+    [[ -z "$CONTAINER" ]] && { echo "✗ Nome contenitore vuoto."; exit 1; }
     mkdir -p "$USER_HOME/$CONTAINER"
+
     read -rp "Nome connessione (es. server1, backup, media): " CONNECTION
-    if [[ -z "$CONNECTION" ]]; then
-        echo "✗ Nome connessione vuoto."; exit 1
-    fi
+    [[ -z "$CONNECTION" ]] && { echo "✗ Nome connessione vuoto."; exit 1; }
+
     MOUNT_PATH="$USER_HOME/$CONTAINER/$CONNECTION"
     if mountpoint -q "$MOUNT_PATH" 2>/dev/null; then
         echo "✗ '$MOUNT_PATH' è già un mount attivo."
         exit 1
     fi
     mkdir -p "$MOUNT_PATH"
+
     read -rp "Descrizione (es. NAS Ufficio): " DESCRIPTION
     read -rp "Percorso remoto (es. //192.168.178.100/dati): " REMOTE_PATH
     read -rp "Utente SMB: " SMB_USER
     read -srp "Password SMB: " SMB_PASS
     echo ""
+
     UNIT_NAME=$(systemd-escape --path "$MOUNT_PATH")
+    CRED_FILE="${CRED_DIR}/${UNIT_NAME}.cred"
+
     echo ""
     echo "→ Configurazione:"
     echo "  Mount:  $MOUNT_PATH"
     echo "  Remote: $REMOTE_PATH"
     echo "  Utente: $SMB_USER"
     echo "  Unit:   $UNIT_NAME"
+    echo "  Cred:   $CRED_FILE (permessi 0600)"
     echo ""
     read -rp "Confermi? [s/N]: " CONFIRM
-    if [[ ! "$CONFIRM" =~ ^[sS]$ ]]; then
-        echo "Operazione annullata."
-        exit 0
-    fi
-    MOUNT_CONTENT="[Unit]\nDescription=$DESCRIPTION\n\n[Mount]\nWhat=$REMOTE_PATH\nWhere=$MOUNT_PATH\nType=cifs\nOptions=rw,file_mode=0700,dir_mode=0700,uid=$USER_UID,user=$SMB_USER,password=$SMB_PASS\nDirectoryMode=0700\n\n[Install]\nWantedBy=multi-user.target"
-    printf "$MOUNT_CONTENT\n" | sudo tee /etc/systemd/system/${UNIT_NAME}.mount > /dev/null
-    AUTOMOUNT_CONTENT="[Unit]\nDescription=$DESCRIPTION (automount)\n\n[Automount]\nWhere=$MOUNT_PATH\nTimeoutIdleSec=60\n\n[Install]\nWantedBy=multi-user.target"
-    printf "$AUTOMOUNT_CONTENT\n" | sudo tee /etc/systemd/system/${UNIT_NAME}.automount > /dev/null
+    [[ ! "$CONFIRM" =~ ^[sS]$ ]] && { echo "Operazione annullata."; exit 0; }
+
+    # ── File credenziali (0600, mai in chiaro nella unit) ────────────────────
+    sudo mkdir -p "$CRED_DIR"
+    sudo chmod 700 "$CRED_DIR"
+    printf 'username=%s\npassword=%s\n' "$SMB_USER" "$SMB_PASS" \
+        | sudo tee "$CRED_FILE" > /dev/null
+    sudo chmod 600 "$CRED_FILE"
+
+    # ── Unit .mount (nessuna credenziale in chiaro) ──────────────────────────
+    printf '%s\n' \
+        "[Unit]" \
+        "Description=${DESCRIPTION}" \
+        "" \
+        "[Mount]" \
+        "What=${REMOTE_PATH}" \
+        "Where=${MOUNT_PATH}" \
+        "Type=cifs" \
+        "Options=rw,credentials=${CRED_FILE},uid=${USER_UID},file_mode=0700,dir_mode=0700" \
+        "DirectoryMode=0700" \
+        "" \
+        "[Install]" \
+        "WantedBy=multi-user.target" \
+        | sudo tee "/etc/systemd/system/${UNIT_NAME}.mount" > /dev/null
+
+    # ── Unit .automount ──────────────────────────────────────────────────────
+    printf '%s\n' \
+        "[Unit]" \
+        "Description=${DESCRIPTION} (automount)" \
+        "" \
+        "[Automount]" \
+        "Where=${MOUNT_PATH}" \
+        "TimeoutIdleSec=60" \
+        "" \
+        "[Install]" \
+        "WantedBy=multi-user.target" \
+        | sudo tee "/etc/systemd/system/${UNIT_NAME}.automount" > /dev/null
+
     sudo systemctl daemon-reload
-    sudo systemctl enable --now ${UNIT_NAME}.automount
+    sudo systemctl enable --now "${UNIT_NAME}.automount"
+
     echo ""
     echo "✓ Connessione '$CONNECTION' creata e attiva."
     echo "  Accedi a: $MOUNT_PATH"
     echo "  Si monta automaticamente al primo accesso."
+
  
 
 # [Rete] Rimuovi una connessione SMB
