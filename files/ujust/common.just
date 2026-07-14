@@ -467,6 +467,8 @@ smb-connect:
 
     UNIT_NAME=$(systemd-escape --path "$MOUNT_PATH")
     CRED_FILE="${CRED_DIR}/${UNIT_NAME}.cred"
+    UNIT_MOUNT="/etc/systemd/system/${UNIT_NAME}.mount"
+    UNIT_AUTO="/etc/systemd/system/${UNIT_NAME}.automount"
 
     echo ""
     echo "→ Configurazione:"
@@ -474,19 +476,27 @@ smb-connect:
     echo "  Remote: $REMOTE_PATH"
     echo "  Utente: $SMB_USER"
     echo "  Unit:   $UNIT_NAME"
-    echo "  Cred:   $CRED_FILE (permessi 0600)"
+    echo "  Cred:   $CRED_FILE (0600)"
     echo ""
     read -rp "Confermi? [s/N]: " CONFIRM
     [[ ! "$CONFIRM" =~ ^[sS]$ ]] && { echo "Operazione annullata."; exit 0; }
 
-    # ── File credenziali (0600, mai in chiaro nella unit) ────────────────────
+    # Pulizia in caso di errore: niente unit o credenziali orfane
+    cleanup_on_error() {
+        echo ""
+        echo "✗ Errore durante la creazione: rimuovo i file parziali."
+        sudo rm -f "$UNIT_MOUNT" "$UNIT_AUTO" "$CRED_FILE"
+        sudo systemctl daemon-reload || true
+    }
+    trap cleanup_on_error ERR
+
+    # Credenziali in file separato (0600): mai in chiaro nella unit
     sudo mkdir -p "$CRED_DIR"
     sudo chmod 700 "$CRED_DIR"
     printf 'username=%s\npassword=%s\n' "$SMB_USER" "$SMB_PASS" \
         | sudo tee "$CRED_FILE" > /dev/null
     sudo chmod 600 "$CRED_FILE"
 
-    # ── Unit .mount (nessuna credenziale in chiaro) ──────────────────────────
     printf '%s\n' \
         "[Unit]" \
         "Description=${DESCRIPTION}" \
@@ -500,9 +510,8 @@ smb-connect:
         "" \
         "[Install]" \
         "WantedBy=multi-user.target" \
-        | sudo tee "/etc/systemd/system/${UNIT_NAME}.mount" > /dev/null
+        | sudo tee "$UNIT_MOUNT" > /dev/null
 
-    # ── Unit .automount ──────────────────────────────────────────────────────
     printf '%s\n' \
         "[Unit]" \
         "Description=${DESCRIPTION} (automount)" \
@@ -513,17 +522,16 @@ smb-connect:
         "" \
         "[Install]" \
         "WantedBy=multi-user.target" \
-        | sudo tee "/etc/systemd/system/${UNIT_NAME}.automount" > /dev/null
+        | sudo tee "$UNIT_AUTO" > /dev/null
 
     sudo systemctl daemon-reload
     sudo systemctl enable --now "${UNIT_NAME}.automount"
+    trap - ERR
 
     echo ""
     echo "✓ Connessione '$CONNECTION' creata e attiva."
     echo "  Accedi a: $MOUNT_PATH"
     echo "  Si monta automaticamente al primo accesso."
-
- 
 
 # [Rete] Rimuovi una connessione SMB
 smb-disconnect:
@@ -552,11 +560,16 @@ smb-disconnect:
         echo "Operazione annullata."
         exit 0
     fi
-    sudo systemctl disable --now ${UNIT_NAME}.automount 2>/dev/null || true
-    sudo systemctl disable --now ${UNIT_NAME}.mount 2>/dev/null || true
-    sudo rm -f /etc/systemd/system/${UNIT_NAME}.mount
-    sudo rm -f /etc/systemd/system/${UNIT_NAME}.automount
+    CRED_FILE="/etc/atomik-smb/${UNIT_NAME}.cred"
+    sudo systemctl disable --now "${UNIT_NAME}.automount" 2>/dev/null || true
+    sudo systemctl stop "${UNIT_NAME}.mount" 2>/dev/null || true
+    sudo rm -f "/etc/systemd/system/${UNIT_NAME}.mount"
+    sudo rm -f "/etc/systemd/system/${UNIT_NAME}.automount"
+    sudo rm -f "$CRED_FILE"                    # rimuove anche le credenziali, evita file orfani
     sudo systemctl daemon-reload
+    #rmdir "$MOUNT_PATH" 2>/dev/null || true
+
+    #echo "✓ Connessione rimossa."
     read -rp "Eliminare anche la cartella '$MOUNT_PATH'? [s/N]: " DELFOLDER
     if [[ "$DELFOLDER" =~ ^[sS]$ ]]; then
         rm -rf "$MOUNT_PATH"
@@ -585,8 +598,173 @@ smb-list:
     if [ "$FOUND" -eq 0 ]; then
         echo "  Nessuna connessione SMB configurata."
     fi
- 
 
+
+# [Rete] Crea un mount SMB di sistema accessibile ai container (servizi)
+smb-system:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    CRED_DIR="/etc/atomik-smb"
+
+    echo "┌────────────────────────────────────────────────┐"
+    echo "│  Mount SMB di sistema (per servizi/container)   │"
+    echo "└────────────────────────────────────────────────┘"
+    echo ""
+    echo "  A differenza di 'smb-connect' (mount personale nella home),"
+    echo "  questo crea un mount in /mnt accessibile ai container."
+    echo ""
+
+    read -rp "Nome del mount (es. media) → /mnt/<nome>: " NAME
+    [[ -z "$NAME" ]] && { echo "✗ Nome vuoto."; exit 1; }
+
+    MOUNT_PATH="/mnt/${NAME}"
+    if mountpoint -q "$MOUNT_PATH" 2>/dev/null; then
+        echo "✗ '$MOUNT_PATH' è già un mount attivo."
+        exit 1
+    fi
+
+    read -rp "Descrizione (es. Media NAS): " DESCRIPTION
+    read -rp "Percorso remoto (es. //192.168.178.251/media): " REMOTE_PATH
+    read -rp "Utente SMB: " SMB_USER
+    read -srp "Password SMB: " SMB_PASS
+    echo ""
+    read -rp "Sola lettura? [s/N]: " READONLY
+
+    if [[ "$READONLY" =~ ^[sS]$ ]]; then
+        ACCESS="ro"
+        FILE_MODE="0444"
+        DIR_MODE="0555"
+    else
+        ACCESS="rw"
+        FILE_MODE="0666"
+        DIR_MODE="0777"
+    fi
+
+    UNIT_NAME=$(systemd-escape --path "$MOUNT_PATH")
+    CRED_FILE="${CRED_DIR}/${UNIT_NAME}.cred"
+    UNIT_MOUNT="/etc/systemd/system/${UNIT_NAME}.mount"
+
+    echo ""
+    echo "→ Configurazione:"
+    echo "  Mount:   $MOUNT_PATH"
+    echo "  Remote:  $REMOTE_PATH"
+    echo "  Utente:  $SMB_USER"
+    echo "  Accesso: $ACCESS (file $FILE_MODE, dir $DIR_MODE)"
+    echo "  Unit:    ${UNIT_NAME}.mount"
+    echo "  Cred:    $CRED_FILE (0600)"
+    echo ""
+    echo "  Verrà inoltre abilitato il booleano SELinux 'virt_use_samba',"
+    echo "  necessario ai container per accedere a una condivisione CIFS."
+    echo ""
+    read -rp "Confermi? [s/N]: " CONFIRM
+    [[ ! "$CONFIRM" =~ ^[sS]$ ]] && { echo "Operazione annullata."; exit 0; }
+
+    cleanup_on_error() {
+        echo ""
+        echo "✗ Errore durante la creazione: rimuovo i file parziali."
+        sudo rm -f "$UNIT_MOUNT" "$CRED_FILE"
+        sudo systemctl daemon-reload || true
+    }
+    trap cleanup_on_error ERR
+
+    # SELinux: senza questo booleano i container non accedono a CIFS
+    if [[ "$(getsebool virt_use_samba | awk '{print $3}')" != "on" ]]; then
+        echo "→ Abilito il booleano SELinux virt_use_samba..."
+        sudo setsebool -P virt_use_samba on
+    fi
+
+    sudo mkdir -p "$MOUNT_PATH"
+    sudo mkdir -p "$CRED_DIR"
+    sudo chmod 700 "$CRED_DIR"
+    printf 'username=%s\npassword=%s\n' "$SMB_USER" "$SMB_PASS" \
+        | sudo tee "$CRED_FILE" > /dev/null
+    sudo chmod 600 "$CRED_FILE"
+
+    # Mount statico (non automount): i servizi devono poterne dipendere.
+    # nofail: se il NAS non risponde, il boot non si blocca.
+    printf '%s\n' \
+        "[Unit]" \
+        "Description=${DESCRIPTION}" \
+        "After=network-online.target" \
+        "Wants=network-online.target" \
+        "" \
+        "[Mount]" \
+        "What=${REMOTE_PATH}" \
+        "Where=${MOUNT_PATH}" \
+        "Type=cifs" \
+        "Options=${ACCESS},credentials=${CRED_FILE},uid=1000,gid=1000,file_mode=${FILE_MODE},dir_mode=${DIR_MODE},nofail,x-systemd.device-timeout=10" \
+        "" \
+        "[Install]" \
+        "WantedBy=multi-user.target" \
+        | sudo tee "$UNIT_MOUNT" > /dev/null
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now "${UNIT_NAME}.mount"
+    trap - ERR
+
+    echo ""
+    echo "✓ Mount di sistema '$NAME' creato e attivo."
+    echo "  Percorso: $MOUNT_PATH"
+    echo "  Unit:     ${UNIT_NAME}.mount"
+    echo ""
+    echo "  Nei container montalo con:  -v ${MOUNT_PATH}:/media"
+    echo "  Nei quadlet aggiungi:       After=${UNIT_NAME}.mount"
+
+# [Rete] Elenca i mount SMB di sistema
+smb-system-list:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Mount SMB di sistema (/mnt):"
+    echo ""
+    FOUND=0
+    for unit in /etc/systemd/system/mnt-*.mount; do
+        [[ -e "$unit" ]] || continue
+        FOUND=1
+        NAME=$(basename "$unit" .mount)
+        WHERE=$(grep '^Where=' "$unit" | cut -d= -f2-)
+        WHAT=$(grep '^What=' "$unit" | cut -d= -f2-)
+        STATE=$(systemctl is-active "$NAME.mount" 2>/dev/null || echo "inattivo")
+        printf '  %-28s %s\n' "$WHERE" "$STATE"
+        printf '  %-28s %s\n' "" "$WHAT"
+        echo ""
+    done
+    [[ "$FOUND" -eq 0 ]] && echo "  Nessun mount di sistema configurato."
+
+# [Rete] Rimuove un mount SMB di sistema
+smb-system-remove:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just --justfile {{justfile()}} smb-system-list
+    read -rp "Nome del mount da rimuovere (es. media): " NAME
+    [[ -z "$NAME" ]] && { echo "Nessun nome fornito."; exit 1; }
+
+    MOUNT_PATH="/mnt/${NAME}"
+    UNIT_NAME=$(systemd-escape --path "$MOUNT_PATH")
+    UNIT_MOUNT="/etc/systemd/system/${UNIT_NAME}.mount"
+    CRED_FILE="/etc/atomik-smb/${UNIT_NAME}.cred"
+
+    if [[ ! -f "$UNIT_MOUNT" ]]; then
+        echo "✗ Nessun mount di sistema trovato per '$NAME'."
+        exit 1
+    fi
+
+    echo ""
+    echo "Verranno rimossi:"
+    echo "  Mount: $MOUNT_PATH"
+    echo "  Unit:  $UNIT_MOUNT"
+    echo "  Cred:  $CRED_FILE"
+    echo ""
+    echo "ATTENZIONE: i servizi che dipendono da questo mount smetteranno di"
+    echo "vedere i dati. I file sul server remoto non vengono toccati."
+    read -rp "Confermi? [s/N]: " CONFIRM
+    [[ ! "$CONFIRM" =~ ^[sS]$ ]] && { echo "Operazione annullata."; exit 0; }
+
+    sudo systemctl disable --now "${UNIT_NAME}.mount" 2>/dev/null || true
+    sudo rm -f "$UNIT_MOUNT" "$CRED_FILE"
+    sudo systemctl daemon-reload
+    sudo rmdir "$MOUNT_PATH" 2>/dev/null || true
+    echo "✓ Mount '$NAME' rimosso."
+ 
 # ─────────────────────────────────────────────────────────────────────────────
 # Manutenzione
 # ─────────────────────────────────────────────────────────────────────────────
