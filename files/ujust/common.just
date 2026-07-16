@@ -617,7 +617,10 @@ smb-system:
     read -rp "Nome del mount (es. media) → /mnt/<nome>: " NAME
     [[ -z "$NAME" ]] && { echo "✗ Nome vuoto."; exit 1; }
 
-    MOUNT_PATH="/mnt/${NAME}"
+    # bootc/ostree: /mnt è un symlink verso /var/mnt.
+    # systemd rifiuta i mount su path non canonici → risolviamo il path reale.
+    sudo mkdir -p "/mnt/${NAME}"
+    MOUNT_PATH="$(readlink -f "/mnt/${NAME}")"
     if mountpoint -q "$MOUNT_PATH" 2>/dev/null; then
         echo "✗ '$MOUNT_PATH' è già un mount attivo."
         exit 1
@@ -717,7 +720,7 @@ smb-system-list:
     echo "Mount SMB di sistema (/mnt):"
     echo ""
     FOUND=0
-    for unit in /etc/systemd/system/mnt-*.mount; do
+    for unit in /etc/systemd/system/var-mnt-*.mount; do
         [[ -e "$unit" ]] || continue
         FOUND=1
         NAME=$(basename "$unit" .mount)
