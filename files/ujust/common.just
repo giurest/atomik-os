@@ -607,7 +607,7 @@ smb-system:
     CRED_DIR="/etc/atomik-smb"
 
     echo "┌────────────────────────────────────────────────┐"
-    echo "│  Mount SMB di sistema (per servizi/container)   │"
+    echo "  Mount SMB di sistema (per servizi/container)   "
     echo "└────────────────────────────────────────────────┘"
     echo ""
     echo "  A differenza di 'smb-connect' (mount personale nella home),"
@@ -717,7 +717,7 @@ smb-system:
 smb-system-list:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Mount SMB di sistema (/mnt):"
+    echo "Mount SMB di sistema (/var/mnt):"
     echo ""
     FOUND=0
     for unit in /etc/systemd/system/var-mnt-*.mount; do
@@ -731,7 +731,9 @@ smb-system-list:
         printf '  %-28s %s\n' "" "$WHAT"
         echo ""
     done
-    [[ "$FOUND" -eq 0 ]] && echo "  Nessun mount di sistema configurato."
+    if [[ "$FOUND" -eq 0 ]]; then
+        echo "  Nessun mount di sistema configurato."
+    fi
 
 # [Rete] Rimuove un mount SMB di sistema
 smb-system-remove:
