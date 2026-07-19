@@ -21,7 +21,8 @@ dnf install -y --skip-unavailable \
     edk2-ovmf \
     spice-server \
     guestfs-tools \
-    bridge-utils
+    bridge-utils \
+    socat
 
 ## ── Pacchetti aggiuntivi da lista (opzionale) ─────────────────────────────────
 PKGS="$( { grep -v '^#' /ctx/hypervisor.list 2>/dev/null || true; } | { grep -v '^$' || true; } | tr '\n' ' ')"
