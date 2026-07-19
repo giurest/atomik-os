@@ -48,7 +48,7 @@ vm-list:
 
         STATE=$(LC_ALL=C sudo virsh domstate "$VM" 2>/dev/null || echo "unknown")
 
-        if [[ -e "/etc/libvirt/qemu/autostart/${VM}.xml" ]]; then
+        if sudo test -e "/etc/libvirt/qemu/autostart/${VM}.xml"; then
             AUTO="yes"
         else
             AUTO="no"
