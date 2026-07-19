@@ -8,9 +8,56 @@
 # Gestione Macchine virtuali
 # ─────────────────────────────────────────────────────────────────────────────
 
-# [VM Manager] Elenca tutte le VM definite (attive e spente)
+# [VM Manager] List VMs with IP and state (inventory)
 vm-list:
-    @sudo virsh list --all
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    NET="default"
+
+    # MAC -> IP from two sources: static reservations (XML) + dynamic leases.
+    declare -A IP_BY_MAC
+
+    # 1) Reservations (fixed IPs) from the network XML
+    while read -r mac ip; do
+        [[ -n "$mac" ]] && IP_BY_MAC["$mac"]="$ip"
+    done < <(LC_ALL=C sudo virsh net-dumpxml "$NET" 2>/dev/null \
+        | grep -oP "host mac='\K[^']+' ip='[^']+" \
+        | sed "s/' ip='/ /")
+
+    # 2) Dynamic leases (only for MACs not already covered by a reservation)
+    while read -r line; do
+        mac=$(echo "$line" | grep -oiP '([0-9a-f]{2}:){5}[0-9a-f]{2}' | head -1)
+        ip=$(echo "$line"  | grep -oP '\d+\.\d+\.\d+\.\d+' | head -1)
+        if [[ -n "$mac" && -n "$ip" && -z "${IP_BY_MAC[$mac]:-}" ]]; then
+            IP_BY_MAC["$mac"]="$ip"
+        fi
+    done < <(LC_ALL=C sudo virsh net-dhcp-leases "$NET" 2>/dev/null | tail -n +3)
+
+    # Header
+    printf '%-24s %-17s %-10s %s\n' "NAME" "IP" "STATE" "AUTOSTART"
+    printf '%-24s %-17s %-10s %s\n' "------------------------" "-----------------" "----------" "---------"
+
+    # For each VM: name -> MAC -> IP, state (native), autostart (via symlink)
+    while read -r VM; do
+        [[ -z "$VM" ]] && continue
+
+        MAC=$(LC_ALL=C sudo virsh domiflist "$VM" 2>/dev/null \
+            | grep -oiP '([0-9a-f]{2}:){5}[0-9a-f]{2}' | head -1)
+
+        IP="${IP_BY_MAC[${MAC:-none}]:-—}"
+
+        STATE=$(LC_ALL=C sudo virsh domstate "$VM" 2>/dev/null || echo "unknown")
+
+        # Autostart: check the symlink (locale-independent, reliable)
+        if [[ -e "/etc/libvirt/qemu/autostart/${VM}.xml" ]]; then
+            AUTO="yes"
+        else
+            AUTO="no"
+        fi
+
+        printf '%-24s %-17s %-10s %s\n' "$VM" "$IP" "$STATE" "$AUTO"
+    done < <(LC_ALL=C sudo virsh list --all --name 2>/dev/null)
     
 # [VM Manager] Crea una nuova VM Atomik Server
 atomik-server:
