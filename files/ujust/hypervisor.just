@@ -152,3 +152,161 @@ vm-delete:
     sudo virsh undefine "$VM_NAME" --remove-all-storage
     sudo rm -f "/var/lib/libvirt/boot/${VM_NAME}-seed.iso"
     echo "✓ VM '$VM_NAME' rimossa"    
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gestione Forward macchine virtuali
+# ─────────────────────────────────────────────────────────────────────────────
+
+# [VM Manager] Expose a VM service port on the LAN (persistent socat forward)
+vm-forward NAME PORTA_VM PORTA_HOST="" VERBOSE="":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    sudo -v
+
+    NAME="{{NAME}}"
+    PORTA_VM="{{PORTA_VM}}"
+    PORTA_HOST="{{PORTA_HOST}}"
+    [[ -z "$PORTA_HOST" ]] && PORTA_HOST="$PORTA_VM"
+
+    VFLAG=""
+    [[ "{{VERBOSE}}" == "verbose" ]] && VFLAG="--verbose"
+
+    # Resolve VM IP via the shared helper (single source of truth)
+    IP=$(/usr/libexec/atomik/vm-resolve-ip "$NAME" $VFLAG)
+    if [[ -z "$IP" ]]; then
+        echo "✗ Could not resolve an IP for VM '$NAME'."
+        echo "  Check the name with 'ujust vm-list'."
+        exit 1
+    fi
+
+    # Reject privileged ports (protect ssh and system services)
+    if (( PORTA_HOST < 1024 )); then
+        echo "✗ Host port $PORTA_HOST is privileged (<1024)."
+        echo "  Choose a host port >= 1024."
+        exit 1
+    fi
+
+    SERVICE="vm-forward-${NAME}-${PORTA_HOST}.service"
+    UNIT_PATH="/etc/systemd/system/${SERVICE}"
+
+    # Is the host port already in use? If so, suggest the next free one and exit.
+    if sudo ss -tlnH "( sport = :${PORTA_HOST} )" 2>/dev/null | grep -q .; then
+        # find the next free port (bounded search)
+        SUGGESTED=""
+        for (( p=PORTA_HOST+1; p<=PORTA_HOST+20; p++ )); do
+            if ! sudo ss -tlnH "( sport = :${p} )" 2>/dev/null | grep -q .; then
+                SUGGESTED="$p"; break
+            fi
+        done
+
+        echo "⚠ Host port ${PORTA_HOST} is already in use."
+        # try to name the conflicting forward, if it is one of ours
+        CONFLICT=$(ls /etc/systemd/system/ 2>/dev/null \
+            | grep -E "^vm-forward-.*-${PORTA_HOST}\.service$" | head -1 || true)
+        [[ -n "$CONFLICT" ]] && echo "  In use by forward: ${CONFLICT}"
+
+        if [[ -n "$SUGGESTED" ]]; then
+            echo "  Suggested free port: ${SUGGESTED}"
+            echo ""
+            echo "  To create the forward on that port, run:"
+            echo ""
+            echo "      ujust vm-forward ${NAME} ${PORTA_VM} ${SUGGESTED}"
+            echo ""
+        else
+            echo "  No free port found near ${PORTA_HOST}. Pick another host port."
+        fi
+        echo "Operation cancelled."
+        exit 1
+    fi
+
+    # Warn (non-blocking) if the VM service isn't answering yet
+    if ! timeout 3 bash -c "echo > /dev/tcp/${IP}/${PORTA_VM}" 2>/dev/null; then
+        echo "⚠ ${IP}:${PORTA_VM} is not answering right now."
+        echo "  The forward will still be created (socat retries; the VM service may start later)."
+    fi
+
+    echo ""
+    echo "→ Forward:"
+    echo "  LAN :${PORTA_HOST}  ->  ${NAME} (${IP}:${PORTA_VM})"
+    echo "  Service: ${SERVICE}"
+    echo ""
+
+    # Write the hardened systemd service (validated by hand)
+    printf '%s\n' \
+        "[Unit]" \
+        "Description=Port forward LAN:${PORTA_HOST} -> ${NAME} (${IP}:${PORTA_VM})" \
+        "After=network-online.target" \
+        "Wants=network-online.target" \
+        "" \
+        "[Service]" \
+        "ExecStart=/usr/bin/socat TCP-LISTEN:${PORTA_HOST},fork,reuseaddr TCP:${IP}:${PORTA_VM},retry=3,interval=2" \
+        "DynamicUser=yes" \
+        "NoNewPrivileges=yes" \
+        "ProtectSystem=strict" \
+        "ProtectHome=yes" \
+        "PrivateTmp=yes" \
+        "RestrictAddressFamilies=AF_INET AF_INET6" \
+        "Restart=on-failure" \
+        "RestartSec=5" \
+        "" \
+        "[Install]" \
+        "WantedBy=multi-user.target" \
+        | sudo tee "$UNIT_PATH" > /dev/null
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now "$SERVICE"
+
+    # Open the host port permanently on the LAN zone
+    sudo firewall-cmd --permanent --add-port=${PORTA_HOST}/tcp > /dev/null
+    sudo firewall-cmd --reload > /dev/null
+
+    echo "✓ Forward active and persistent."
+    echo "  Reach it at: http://<hypervisor-ip>:${PORTA_HOST}"
+    echo "  Remove with: ujust vm-forward-remove ${NAME} ${PORTA_HOST}"
+
+# [VM Manager] List active VM port forwards
+vm-forward-list:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    sudo -v
+    printf '%-40s %-12s %s\n' "SERVICE" "STATE" "FORWARD"
+    printf '%-40s %-12s %s\n' "----------------------------------------" "------------" "-------"
+    FOUND=0
+    for unit in /etc/systemd/system/vm-forward-*.service; do
+        [[ -e "$unit" ]] || continue
+        FOUND=1
+        SVC=$(basename "$unit")
+        STATE=$(systemctl is-active "$SVC" 2>/dev/null || echo "inactive")
+        DESC=$(grep -oP '^Description=\K.*' "$unit" 2>/dev/null || true)
+        printf '%-40s %-12s %s\n' "$SVC" "$STATE" "$DESC"
+    done
+    if [[ "$FOUND" -eq 0 ]]; then
+        echo "  No forwards configured."
+    fi
+
+# [VM Manager] Remove a VM port forward (service + firewall port)
+vm-forward-remove NAME PORTA_HOST:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    sudo -v
+
+    SERVICE="vm-forward-{{NAME}}-{{PORTA_HOST}}.service"
+    UNIT_PATH="/etc/systemd/system/${SERVICE}"
+
+    if [[ ! -f "$UNIT_PATH" ]]; then
+        echo "✗ No forward found: ${SERVICE}"
+        echo "  See active forwards with 'ujust vm-forward-list'."
+        exit 1
+    fi
+
+    echo "Removing forward ${SERVICE} and closing host port {{PORTA_HOST}}/tcp."
+    read -rp "Confirm? [y/N]: " CONFIRM
+    [[ ! "$CONFIRM" =~ ^[yYsS]$ ]] && { echo "Cancelled."; exit 0; }
+
+    sudo systemctl disable --now "$SERVICE" 2>/dev/null || true
+    sudo rm -f "$UNIT_PATH"
+    sudo systemctl daemon-reload
+    sudo firewall-cmd --permanent --remove-port={{PORTA_HOST}}/tcp > /dev/null 2>&1 || true
+    sudo firewall-cmd --reload > /dev/null
+
+    echo "✓ Forward removed."
