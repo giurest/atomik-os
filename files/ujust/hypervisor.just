@@ -12,11 +12,15 @@
 vm-list VERBOSE="":
     #!/usr/bin/env bash
     set -uo pipefail
+    
+    # sudo prima di produrre output
+    sudo -v   
+
     VFLAG=""
     [[ "{{VERBOSE}}" == "verbose" ]] && VFLAG="--verbose"
 
     printf '%-24s %-17s %-10s %s\n' "NAME" "IP" "STATE" "AUTOSTART"
-    printf '%-24s %-17s %-10s %s\n' "------..." ...
+    printf '%-24s %-17s %-10s %s\n' "------..." ...printf '%-24s %-17s %-10s %s\n' "------------------------" "-----------------" "----------" "---------"
 
     while read -r VM; do
         [[ -z "$VM" ]] && continue
