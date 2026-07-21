@@ -20,7 +20,7 @@ vm-list VERBOSE="":
     [[ "{{VERBOSE}}" == "verbose" ]] && VFLAG="--verbose"
 
     printf '%-24s %-17s %-10s %s\n' "NAME" "IP" "STATE" "AUTOSTART"
-    printf '%-24s %-17s %-10s %s\n' "------..." ...printf '%-24s %-17s %-10s %s\n' "------------------------" "-----------------" "----------" "---------"
+    printf '%-24s %-17s %-10s %s\n' "------------------------" "-----------------" "----------" "---------"
 
     while read -r VM; do
         [[ -z "$VM" ]] && continue
