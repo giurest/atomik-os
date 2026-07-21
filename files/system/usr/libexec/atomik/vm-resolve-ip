@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# vm-resolve-ip — Resolve the IP address of a libvirt VM.
+#
+# Logic: VM name -> MAC (virsh domiflist) -> IP.
+#        The IP is looked up first among the network's static DHCP
+#        reservations (net-dumpxml), then among the active DHCP leases.
+#
+# Usage:
+#   vm-resolve-ip <vm-name>            print the IP, or nothing if not found
+#   vm-resolve-ip <vm-name> --verbose  also print each resolution step to stderr
+#   vm-resolve-ip --help               show this help
+#
+# Exit: 0 always (empty output means "not resolvable"); callers check for empty.
+#
+# Shared helper used by the 'vm-list' and 'vm-forward' ujust recipes, so the
+# name->IP logic lives in exactly one place.
+
+set -uo pipefail
+
+NET="default"
+
+if [[ "${1:-}" == "--help" || -z "${1:-}" ]]; then
+    sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+VM="$1"
+VERBOSE=0
+[[ "${2:-}" == "--verbose" ]] && VERBOSE=1
+
+log() { [[ "$VERBOSE" -eq 1 ]] && echo "vm-resolve-ip: $*" >&2 || true; }
+
+# name -> MAC
+MAC=$(LC_ALL=C sudo virsh domiflist "$VM" 2>/dev/null \
+    | grep -oiP '([0-9a-f]{2}:){5}[0-9a-f]{2}' | head -1 || true)
+if [[ -z "$MAC" ]]; then
+    log "no MAC found for VM '$VM' (does it exist?)"
+    exit 0
+fi
+log "VM '$VM' -> MAC $MAC"
+
+# MAC -> IP via static reservation
+IP=$(LC_ALL=C sudo virsh net-dumpxml "$NET" 2>/dev/null \
+    | grep -oP "host mac='${MAC}' ip='\K[^']+" | head -1 || true)
+if [[ -n "$IP" ]]; then
+    log "MAC $MAC -> IP $IP (static reservation)"
+    printf '%s' "$IP"
+    exit 0
+fi
+
+# fallback: MAC -> IP via active DHCP lease
+IP=$(LC_ALL=C sudo virsh net-dhcp-leases "$NET" 2>/dev/null \
+    | grep -i "$MAC" | grep -oP '\d+\.\d+\.\d+\.\d+' | head -1 || true)
+if [[ -n "$IP" ]]; then
+    log "MAC $MAC -> IP $IP (dynamic lease)"
+    printf '%s' "$IP"
+    exit 0
+fi
+
+log "MAC $MAC -> no IP (no reservation, no lease)"
+exit 0

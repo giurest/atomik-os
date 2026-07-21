@@ -26,6 +26,7 @@ on:
       - "files/system/usr/lib/systemd/system/atomik-libvirt-provision.service"
       - "files/system/usr/share/atomik/libvirt/**"
       - "files/system/usr/share/atomik/cloud-init/**"
+      - "files/system/usr/libexec/atomik/**"
   pull_request:
     branches:
       - main
@@ -51,6 +52,7 @@ on:
       - "files/system/usr/lib/systemd/system/atomik-libvirt-provision.service"
       - "files/system/usr/share/atomik/libvirt/**"
       - "files/system/usr/share/atomik/cloud-init/**"
+      - "files/system/usr/libexec/atomik/**"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:

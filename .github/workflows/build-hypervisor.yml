@@ -26,6 +26,8 @@ on:
       - "files/system/usr/share/atomik/libvirt/**"
       # template cloud-init VM
       - "files/system/usr/share/atomik/cloud-init/**"
+      # script vm helper
+      - "files/system/usr/libexec/atomik/**"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:

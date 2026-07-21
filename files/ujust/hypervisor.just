@@ -9,53 +9,26 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # [VM Manager] List VMs with IP and state (inventory)
-vm-list:
+vm-list VERBOSE="":
     #!/usr/bin/env bash
     set -uo pipefail
+    VFLAG=""
+    [[ "{{VERBOSE}}" == "verbose" ]] && VFLAG="--verbose"
 
-    NET="default"
-    declare -A IP_BY_MAC
-
-    # 1) Reservations (fixed IPs) from the network XML
-    while read -r mac ip; do
-        [[ -n "$mac" ]] && IP_BY_MAC["$mac"]="$ip"
-    done < <(LC_ALL=C sudo virsh net-dumpxml "$NET" 2>/dev/null \
-        | grep -oP "host mac='\K[^']+' ip='[^']+" 2>/dev/null \
-        | sed "s/' ip='/ /" || true)
-
-    # 2) Dynamic leases (only for MACs without a reservation)
-    while read -r line; do
-        [[ -z "$line" ]] && continue
-        mac=$(echo "$line" | grep -oiP '([0-9a-f]{2}:){5}[0-9a-f]{2}' 2>/dev/null | head -1 || true)
-        ip=$(echo "$line"  | grep -oP '\d+\.\d+\.\d+\.\d+' 2>/dev/null | head -1 || true)
-        if [[ -n "$mac" && -n "$ip" && -z "${IP_BY_MAC[$mac]:-}" ]]; then
-            IP_BY_MAC["$mac"]="$ip"
-        fi
-    done < <(LC_ALL=C sudo virsh net-dhcp-leases "$NET" 2>/dev/null | tail -n +3 || true)
-
-    # Header
     printf '%-24s %-17s %-10s %s\n' "NAME" "IP" "STATE" "AUTOSTART"
-    printf '%-24s %-17s %-10s %s\n' "------------------------" "-----------------" "----------" "---------"
+    printf '%-24s %-17s %-10s %s\n' "------..." ...
 
-    # For each VM
     while read -r VM; do
         [[ -z "$VM" ]] && continue
-
-        MAC=$(LC_ALL=C sudo virsh domiflist "$VM" 2>/dev/null \
-            | grep -oiP '([0-9a-f]{2}:){5}[0-9a-f]{2}' 2>/dev/null | head -1 || true)
-
-        IP="${IP_BY_MAC[${MAC:-none}]:-—}"
-
+        IP=$(/usr/libexec/atomik/vm-resolve-ip "$VM" $VFLAG)
+        [[ -z "$IP" ]] && IP="—"
         STATE=$(LC_ALL=C sudo virsh domstate "$VM" 2>/dev/null || echo "unknown")
-
-        if sudo test -e "/etc/libvirt/qemu/autostart/${VM}.xml"; then
-            AUTO="yes"
-        else
-            AUTO="no"
-        fi
-
+        if sudo test -e "/etc/libvirt/qemu/autostart/${VM}.xml"; then AUTO="yes"; else AUTO="no"; fi
         printf '%-24s %-17s %-10s %s\n' "$VM" "$IP" "$STATE" "$AUTO"
     done < <(LC_ALL=C sudo virsh list --all --name 2>/dev/null || true)
+
+    echo ""
+    echo "(IP resolved via /usr/libexec/atomik/vm-resolve-ip — run 'ujust vm-list verbose' for details)"
     
 # [VM Manager] Crea una nuova VM Atomik Server
 atomik-server:
