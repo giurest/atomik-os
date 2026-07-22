@@ -38,6 +38,7 @@ vm-list VERBOSE="":
 atomik-server:
     #!/usr/bin/env bash
     set -euo pipefail
+    export LC_ALL=C
 
     BASE_DIR="/var/lib/libvirt/images/base"
     BASE_IMG="${BASE_DIR}/atomik-server.qcow2"
@@ -49,7 +50,7 @@ atomik-server:
     echo "═══ Crea VM Atomik Server ═══"
     echo ""
 
-    # ── Parametri interattivi ────────────────────────────────────────────────
+    # ── Parametri interattivi (NIENTE IP: assegnato automaticamente) ─────────
     read -rp "Nome della VM [atomik-vm]: " VM_NAME
     VM_NAME="${VM_NAME:-atomik-vm}"
 
@@ -68,6 +69,21 @@ atomik-server:
         exit 1
     fi
 
+    # ── Alloca IP+MAC e scrivi la reservation permanente ─────────────────────
+    # vm-alloc-ip propone la prima coppia libera (scansiona reservation, lease,
+    # ping). NON scrive: la reservation la scriviamo qui, PRIMA di virt-install,
+    # cosi' la VM al boot riceve esattamente quell'IP via DHCP.
+    read -r VM_MAC VM_IP < <(/usr/libexec/atomik/vm-alloc-ip)
+    if [[ -z "$VM_MAC" || -z "$VM_IP" ]]; then
+        echo "✗ Allocazione IP/MAC fallita. Impossibile procedere."
+        exit 1
+    fi
+
+    echo "→ IP assegnato automaticamente: ${VM_IP}  (MAC ${VM_MAC})"
+    sudo virsh net-update default add ip-dhcp-host \
+        "<host mac='${VM_MAC}' ip='${VM_IP}'/>" --live --config
+    echo "✓ Reservation permanente registrata"
+
     # ── Immagine base: scarica se manca ──────────────────────────────────────
     sudo mkdir -p "$BASE_DIR"
     if [[ ! -f "$BASE_IMG" ]]; then
@@ -85,7 +101,7 @@ atomik-server:
     sed "s/__USERNAME__/${VM_USER}/g" "$TEMPLATE" > "${WORKDIR}/user-data"
     printf 'instance-id: %s-%s\n' "$VM_NAME" "$(date +%s)" > "${WORKDIR}/meta-data"
 
-    # ── Seed cloud-init (NoCloud: label CIDATA, nomi user-data/meta-data) ─────
+    # ── Seed cloud-init (NoCloud: label CIDATA) ──────────────────────────────
     echo "→ Genero il seed cloud-init..."
     (cd "$WORKDIR" && xorriso -as mkisofs -o seed.iso -V CIDATA -J -r user-data meta-data 2>/dev/null)
     sudo cp "${WORKDIR}/seed.iso" "${BOOT_DIR}/${VM_NAME}-seed.iso"
@@ -96,44 +112,33 @@ atomik-server:
     sudo cp "$BASE_IMG" "${IMAGES_DIR}/${VM_NAME}.qcow2"
     sudo restorecon "${IMAGES_DIR}/${VM_NAME}.qcow2"
 
-    # ── Creazione della VM ───────────────────────────────────────────────────
+    # ── Creazione della VM con il MAC riservato ──────────────────────────────
     echo "→ Creo la VM..."
     sudo virt-install --name "$VM_NAME" \
         --memory "$VM_RAM" --vcpus "$VM_CPU" \
         --disk "${IMAGES_DIR}/${VM_NAME}.qcow2,format=qcow2" \
         --disk "${BOOT_DIR}/${VM_NAME}-seed.iso,device=cdrom" \
         --import --os-variant fedora-unknown \
-        --network network=default \
+        --network network=default,mac="${VM_MAC}" \
         --graphics none --noautoconsole
 
-    # ── Attesa indirizzo IP ──────────────────────────────────────────────────
-    echo "→ Attendo l'avvio della VM..."
-    VM_IP=""
-    for _ in $(seq 1 30); do
-        sleep 3
-        VM_IP="$(sudo virsh domifaddr "$VM_NAME" 2>/dev/null | awk '/ipv4/ {print $4}' | cut -d/ -f1)"
-        [[ -n "$VM_IP" ]] && break
-    done
-
+    # ── IP gia' noto: nessun polling domifaddr ───────────────────────────────
     echo ""
-    if [[ -n "$VM_IP" ]]; then
-        echo "✓ VM '$VM_NAME' creata e avviata"
-        echo ""
-        echo "  Accesso:  ssh ${VM_USER}@${VM_IP}"
-        echo "  Password: ${VM_USER}  (dovrai cambiarla al primo accesso)"
-    else
-        echo "✓ VM '$VM_NAME' creata"
-        echo "  L'indirizzo IP non e' ancora disponibile. Riprova tra poco con:"
-        echo "    sudo virsh domifaddr $VM_NAME"
-    fi
+    echo "✓ VM '$VM_NAME' creata e avviata"
+    echo ""
+    echo "  IP (permanente):  ${VM_IP}"
+    echo "  Accesso:          ssh ${VM_USER}@${VM_IP}"
+    echo "  Password:         ${VM_USER}  (da cambiare al primo accesso)"
     echo ""
     echo "  Console:  sudo virsh console $VM_NAME   (Ctrl+] per uscire)"
     echo "  Rimuovi:  ujust vm-delete"
 
-# [VM Manager] Rimuove una VM e il suo storage
+# [VM Manager] Rimuove una VM, il suo storage e la sua DHCP reservation
 vm-delete:
     #!/usr/bin/env bash
-    set -euo pipefail
+    set -uo pipefail
+    export LC_ALL=C
+
     echo "VM definite:"
     sudo virsh list --all
     echo ""
@@ -144,14 +149,55 @@ vm-delete:
         echo "✗ La VM '$VM_NAME' non esiste."
         exit 1
     fi
-    echo "ATTENZIONE: Questa procedura è irreversibile se si procede non ci sarà più modo di recuperare i dati al suo interno." 	
+
+    # ── Leggi MAC PRIMA di distruggere la VM (dopo undefine sparisce) ─────────
+    # Il MAC è il ponte verso la reservation: senza, non sappiamo quale
+    # <host> rimuovere dalla network XML.
+    VM_MAC="$(sudo virsh domiflist "$VM_NAME" 2>/dev/null \
+        | awk '$3 == "default" {print $5}' | head -1 || true)"
+
+    # Ricava l'IP della reservation associata a quel MAC (dalla XML, non dai lease)
+    VM_IP=""
+    if [[ -n "$VM_MAC" ]]; then
+        VM_IP="$(sudo virsh net-dumpxml default 2>/dev/null \
+            | grep -oE "<host mac='${VM_MAC}' ip='[0-9.]+'" \
+            | grep -oE "ip='[0-9.]+'" | sed "s/ip='//; s/'//" | head -1 || true)"
+    fi
+
+    echo ""
+    echo "ATTENZIONE: procedura irreversibile. I dati nella VM non saranno recuperabili."
+    [[ -n "$VM_IP" ]] && echo "  Reservation associata: ${VM_MAC} → ${VM_IP} (verrà rimossa)"
     read -rp "Rimuovere '$VM_NAME' e TUTTI i suoi dischi? [s/N]: " CONFIRM
     [[ "${CONFIRM,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
 
+    # ── 1. Distruggi e rimuovi la VM + storage ───────────────────────────────
     sudo virsh destroy "$VM_NAME" 2>/dev/null || true
-    sudo virsh undefine "$VM_NAME" --remove-all-storage
+    if ! sudo virsh undefine "$VM_NAME" --remove-all-storage; then
+        echo "✗ undefine fallito. La VM potrebbe essere ancora definita."
+        echo "  Stato sporco: verifica con 'sudo virsh list --all'."
+        exit 1
+    fi
+    echo "✓ VM '$VM_NAME' e dischi rimossi"
+
+    # ── 2. Rimuovi il seed cloud-init ────────────────────────────────────────
     sudo rm -f "/var/lib/libvirt/boot/${VM_NAME}-seed.iso"
-    echo "✓ VM '$VM_NAME' rimossa"    
+
+    # ── 3. Rimuovi la reservation (libera l'IP per la prossima VM) ────────────
+    if [[ -n "$VM_MAC" && -n "$VM_IP" ]]; then
+        if sudo virsh net-update default delete ip-dhcp-host \
+            "<host mac='${VM_MAC}' ip='${VM_IP}'/>" --live --config 2>/dev/null; then
+            echo "✓ Reservation ${VM_IP} liberata"
+        else
+            echo "⚠ VM rimossa, ma la reservation ${VM_MAC} → ${VM_IP} non è stata"
+            echo "  rimossa (forse già assente). Verifica con:"
+            echo "    sudo virsh net-dumpxml default"
+        fi
+    else
+        echo "⚠ Nessuna reservation trovata per '$VM_NAME' (VM creata fuori dalle recipe?)."
+        echo "  Niente da liberare sulla rete."
+    fi
+
+    echo "✓ Rimozione completata"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Gestione Forward macchine virtuali

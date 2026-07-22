@@ -44,9 +44,9 @@ RUN chmod +x /usr/bin/atomik-libvirt-provision && \
     ln -sf /usr/lib/systemd/system/atomik-libvirt-provision.service \
        /usr/lib/systemd/system/multi-user.target.wants/atomik-libvirt-provision.service
 
-# Helper condiviso: risoluzione nome VM -> IP (usato da vm-list e vm-forward)
+# Helper condiviso: cartella con helpers delle vm creazione , forward
 COPY files/system/usr/libexec/atomik/ /usr/libexec/atomik/
-RUN chmod +x /usr/libexec/atomik/vm-resolve-ip       
+RUN chmod +x /usr/libexec/atomik/*
        
 # ── Template VM ─────────────────────────
 # File template per la creazione di VM basate su Atomik-Server
