@@ -31,7 +31,7 @@ IP_MAX=254
 
 log() { printf '%s\n' "$@" >&2; }
 
-# ── (a) Reservation dalla network XML (fonte di verità permanente) ───────────
+# ── (a) Reservation dalla network XML (UNICA fonte di verità) ────────────────
 XML="$(sudo virsh net-dumpxml "$NET" 2>/dev/null || true)"
 if [[ -z "$XML" ]]; then
     log "✗ Impossibile leggere la rete libvirt '$NET'."
@@ -39,7 +39,7 @@ if [[ -z "$XML" ]]; then
     exit 1
 fi
 
-RES_IPS="$(printf '%s\n' "$XML" \
+USED_IPS="$(printf '%s\n' "$XML" \
     | grep -oE "ip='${SUBNET}\.[0-9]+'" \
     | grep -oE '[0-9]+$' || true)"
 
@@ -48,14 +48,9 @@ USED_MACS="$(printf '%s\n' "$XML" \
     | sed "s/mac='//; s/'//" \
     | tr 'A-F' 'a-f' || true)"
 
-# ── (b) Lease dinamici attivi (net-dhcp-leases LI mostra, XML no) ────────────
-LEASE_IPS="$(sudo virsh net-dhcp-leases "$NET" 2>/dev/null \
-    | grep -oE "${SUBNET}\.[0-9]+" \
-    | grep -oE '[0-9]+$' || true)"
-
-# ── Unione reservation + lease = set occupato di partenza ────────────────────
-USED_IPS="$(printf '%s\n%s\n' "$RES_IPS" "$LEASE_IPS" \
-    | grep -E '^[0-9]+$' | sort -un || true)"
+# ── NIENTE lease: i lease residui di VM cancellate restano in cache dnsmasq
+#    fino a scadenza e falsano l'allocazione (bloccano IP in realtà liberi).
+#    La XML è la sola verità: reservation presente = IP occupato.
 
 # ── Trova il primo IP libero, con ping come difesa finale (c) ────────────────
 CHOSEN_IP=""
