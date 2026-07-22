@@ -140,10 +140,20 @@ vm-delete:
     export LC_ALL=C
 
     echo "VM definite:"
-    sudo virsh list --all
+    sudo virsh list --all --name        # solo i nomi: niente colonna Id fuorviante
     echo ""
     read -rp "Nome della VM da rimuovere: " VM_NAME
     [[ -z "$VM_NAME" ]] && { echo "Nessun nome fornito."; exit 1; }
+
+    # ── Rifiuta ID numerici ──────────────────────────────────────────────────
+    # virsh accetta un Id numerico per 'destroy', ma l'Id sparisce dopo che la
+    # VM è spenta -> 'undefine' fallisce a metà procedura (stato sporco).
+    # Il nome è l'unico identificatore stabile: lo imponiamo.
+    if [[ "$VM_NAME" =~ ^[0-9]+$ ]]; then
+        echo "✗ Inserisci il NOME della VM, non l'Id numerico."
+        echo "  Gli Id cambiano e spariscono dopo lo spegnimento; il nome è stabile."
+        exit 1
+    fi
 
     if ! sudo virsh dominfo "$VM_NAME" &>/dev/null; then
         echo "✗ La VM '$VM_NAME' non esiste."
@@ -151,12 +161,10 @@ vm-delete:
     fi
 
     # ── Leggi MAC PRIMA di distruggere la VM (dopo undefine sparisce) ─────────
-    # Il MAC è il ponte verso la reservation: senza, non sappiamo quale
-    # <host> rimuovere dalla network XML.
     VM_MAC="$(sudo virsh domiflist "$VM_NAME" 2>/dev/null \
         | awk '$3 == "default" {print $5}' | head -1 || true)"
 
-    # Ricava l'IP della reservation associata a quel MAC (dalla XML, non dai lease)
+    # ── Ricava l'IP della reservation associata (dalla XML, non dai lease) ────
     VM_IP=""
     if [[ -n "$VM_MAC" ]]; then
         VM_IP="$(sudo virsh net-dumpxml default 2>/dev/null \
@@ -175,9 +183,11 @@ vm-delete:
     if ! sudo virsh undefine "$VM_NAME" --remove-all-storage; then
         echo "✗ undefine fallito. La VM potrebbe essere ancora definita."
         echo "  Stato sporco: verifica con 'sudo virsh list --all'."
-        exit 1
+        # Non usciamo: proviamo comunque a liberare la reservation piu' sotto,
+        # cosi' non lasciamo un IP bloccato oltre alla VM sporca.
+    else
+        echo "✓ VM '$VM_NAME' e dischi rimossi"
     fi
-    echo "✓ VM '$VM_NAME' e dischi rimossi"
 
     # ── 2. Rimuovi il seed cloud-init ────────────────────────────────────────
     sudo rm -f "/var/lib/libvirt/boot/${VM_NAME}-seed.iso"
@@ -188,13 +198,11 @@ vm-delete:
             "<host mac='${VM_MAC}' ip='${VM_IP}'/>" --live --config 2>/dev/null; then
             echo "✓ Reservation ${VM_IP} liberata"
         else
-            echo "⚠ VM rimossa, ma la reservation ${VM_MAC} → ${VM_IP} non è stata"
-            echo "  rimossa (forse già assente). Verifica con:"
-            echo "    sudo virsh net-dumpxml default"
+            echo "⚠ Reservation ${VM_MAC} → ${VM_IP} non rimossa (forse già assente)."
+            echo "  Verifica con: sudo virsh net-dumpxml default"
         fi
     else
         echo "⚠ Nessuna reservation trovata per '$VM_NAME' (VM creata fuori dalle recipe?)."
-        echo "  Niente da liberare sulla rete."
     fi
 
     echo "✓ Rimozione completata"
