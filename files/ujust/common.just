@@ -601,7 +601,7 @@ smb-list:
 
 
 # [Rete] Crea un mount SMB di sistema accessibile ai container (servizi)
-smb-system:
+smb-system NAME="":
     #!/usr/bin/env bash
     set -euo pipefail
     CRED_DIR="/etc/atomik-smb"
@@ -611,10 +611,14 @@ smb-system:
     echo "└────────────────────────────────────────────────┘"
     echo ""
     echo "  A differenza di 'smb-connect' (mount personale nella home),"
-    echo "  questo crea un mount in /mnt accessibile ai container."
+    echo "  questo crea un mount in /var/mnt accessibile ai container."
     echo ""
 
-    read -rp "Nome del mount (es. media) → /mnt/<nome>: " NAME
+    # Nome: da parametro se fornito, altrimenti interattivo (retrocompatibile)
+    NAME="{{NAME}}"
+    if [[ -z "$NAME" ]]; then
+        read -rp "Nome del mount (es. storage) → /var/mnt/<nome>: " NAME
+    fi
     [[ -z "$NAME" ]] && { echo "✗ Nome vuoto."; exit 1; }
 
     # bootc/ostree: /mnt è un symlink verso /var/mnt.
@@ -626,8 +630,8 @@ smb-system:
         exit 1
     fi
 
-    read -rp "Descrizione (es. Media NAS): " DESCRIPTION
-    read -rp "Percorso remoto (es. //192.168.178.251/media): " REMOTE_PATH
+    read -rp "Descrizione (es. Storage NAS): " DESCRIPTION
+    read -rp "Percorso remoto (es. //192.168.178.251/storage): " REMOTE_PATH
     read -rp "Utente SMB: " SMB_USER
     read -srp "Password SMB: " SMB_PASS
     echo ""
@@ -670,7 +674,6 @@ smb-system:
     }
     trap cleanup_on_error ERR
 
-    # SELinux: senza questo booleano i container non accedono a CIFS
     if [[ "$(getsebool virt_use_samba | awk '{print $3}')" != "on" ]]; then
         echo "→ Abilito il booleano SELinux virt_use_samba..."
         sudo setsebool -P virt_use_samba on
@@ -683,8 +686,6 @@ smb-system:
         | sudo tee "$CRED_FILE" > /dev/null
     sudo chmod 600 "$CRED_FILE"
 
-    # Mount statico (non automount): i servizi devono poterne dipendere.
-    # nofail: se il NAS non risponde, il boot non si blocca.
     printf '%s\n' \
         "[Unit]" \
         "Description=${DESCRIPTION}" \
