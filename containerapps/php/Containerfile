@@ -11,6 +11,7 @@ LABEL org.opencontainers.image.description="Apache + PHP 8.4 con estensioni e Co
 # ── Dipendenze di sistema per le estensioni PHP ───────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libicu-dev \
+        libonig-dev \
         libzip-dev \
         libpng-dev \
         libjpeg-dev \
