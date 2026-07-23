@@ -1,0 +1,74 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Atomik PHP — immagine applicativa (NON bootc, non genera qcow2)
+#  Apache + PHP 8.4 + estensioni per Laravel / CodeIgniter / WordPress
+#  DocumentRoot fisso su /var/www/html/public (convenzione Atomik)
+# ═══════════════════════════════════════════════════════════════════════════════
+FROM docker.io/php:8.4-apache
+
+LABEL org.opencontainers.image.title="Atomik PHP"
+LABEL org.opencontainers.image.description="Apache + PHP 8.4 con estensioni e Composer per app PHP"
+
+# ── Dipendenze di sistema per le estensioni PHP ───────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libicu-dev \
+        libzip-dev \
+        libpng-dev \
+        libjpeg-dev \
+        libfreetype-dev \
+        libxml2-dev \
+        libcurl4-openssl-dev \
+        unzip \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Estensioni PHP (Laravel + CodeIgniter + WordPress) ────────────────────────
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" \
+        intl \
+        mbstring \
+        pdo_mysql \
+        mysqli \
+        dom \
+        simplexml \
+        xml \
+        curl \
+        zip \
+        bcmath \
+        gd \
+        opcache
+
+# ── opcache: configurazione per ambiente di esecuzione ────────────────────────
+RUN { \
+        echo 'opcache.enable=1'; \
+        echo 'opcache.memory_consumption=128'; \
+        echo 'opcache.max_accelerated_files=10000'; \
+        echo 'opcache.revalidate_freq=2'; \
+    } > /usr/local/etc/php/conf.d/opcache.ini
+
+# ── Apache: mod_rewrite + DocumentRoot su public/ ─────────────────────────────
+RUN a2enmod rewrite headers
+RUN sed -ri 's!/var/www/html!/var/www/html/public!g' \
+        /etc/apache2/sites-available/000-default.conf
+
+# AllowOverride All: necessario per gli .htaccess di Laravel/CI4/WordPress
+RUN printf '%s\n' \
+        '<Directory /var/www/html/public>' \
+        '    Options -Indexes +FollowSymLinks' \
+        '    AllowOverride All' \
+        '    Require all granted' \
+        '</Directory>' \
+        > /etc/apache2/conf-available/atomik-public.conf \
+    && a2enconf atomik-public
+
+# ── Composer ──────────────────────────────────────────────────────────────────
+COPY --from=docker.io/composer:latest /usr/bin/composer /usr/bin/composer
+
+# ── php.ini: valori sensati per app reali ─────────────────────────────────────
+RUN { \
+        echo 'upload_max_filesize=64M'; \
+        echo 'post_max_size=64M'; \
+        echo 'memory_limit=256M'; \
+        echo 'max_execution_time=120'; \
+    } > /usr/local/etc/php/conf.d/atomik.ini
+
+WORKDIR /var/www/html

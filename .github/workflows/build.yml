@@ -27,6 +27,9 @@ on:
       - "files/system/usr/share/atomik/libvirt/**"
       - "files/system/usr/share/atomik/cloud-init/**"
       - "files/system/usr/libexec/atomik/**"
+      # container applicativi (catena separata)
+      - "containerapps/**"
+      - ".github/workflows/build-php.yml"
   pull_request:
     branches:
       - main
@@ -53,6 +56,9 @@ on:
       - "files/system/usr/share/atomik/libvirt/**"
       - "files/system/usr/share/atomik/cloud-init/**"
       - "files/system/usr/libexec/atomik/**"
+      # container applicativi (catena separata)
+      - "containerapps/**"
+      - ".github/workflows/build-php.yml"
   schedule:
     - cron: "0 6 1 * *"
   workflow_dispatch:
