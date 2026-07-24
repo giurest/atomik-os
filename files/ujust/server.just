@@ -10,6 +10,19 @@ jellyfin-setup:
     #!/usr/bin/env bash
     set -euo pipefail
 
+    # ── Hostname: identifica questa VM nella rete ────────────────────────────
+    read -rp "Hostname di questa VM [atomik-jellyfin]: " NEW_HOSTNAME
+    NEW_HOSTNAME="${NEW_HOSTNAME:-atomik-jellyfin}"
+    if [[ "$(hostname)" != "$NEW_HOSTNAME" ]]; then
+        # neutralizza il tmpfiles dell'immagine che forza 'atomik-server'
+        sudo mkdir -p /etc/tmpfiles.d
+        sudo ln -sf /dev/null /etc/tmpfiles.d/atomik-hostname.conf
+        sudo rm -f /etc/hostname
+        sudo hostnamectl set-hostname "$NEW_HOSTNAME"
+        echo "✓ Hostname impostato: ${NEW_HOSTNAME}"
+        echo "  (il prompt si aggiorna alla prossima sessione SSH)"
+    fi
+
     QUADLET="/etc/containers/systemd/jellyfin.container"
     MOUNT_PATH="/var/mnt/storage"
 
@@ -92,6 +105,19 @@ jellyfin-setup:
 db-setup:
     #!/usr/bin/env bash
     set -euo pipefail
+
+    # ── Hostname: identifica questa VM nella rete ────────────────────────────
+    read -rp "Hostname di questa VM [atomik-database]: " NEW_HOSTNAME
+    NEW_HOSTNAME="${NEW_HOSTNAME:-atomik-database}"
+    if [[ "$(hostname)" != "$NEW_HOSTNAME" ]]; then
+        # neutralizza il tmpfiles dell'immagine che forza 'atomik-server'
+        sudo mkdir -p /etc/tmpfiles.d
+        sudo ln -sf /dev/null /etc/tmpfiles.d/atomik-hostname.conf
+        sudo rm -f /etc/hostname
+        sudo hostnamectl set-hostname "$NEW_HOSTNAME"
+        echo "✓ Hostname impostato: ${NEW_HOSTNAME}"
+        echo "  (il prompt si aggiorna alla prossima sessione SSH)"
+    fi
 
     QUADLET="/etc/containers/systemd/mariadb.container"
     ENV_DIR="/etc/atomik-db"
@@ -221,6 +247,19 @@ db-setup:
 webserver-setup:
     #!/usr/bin/env bash
     set -euo pipefail
+
+    # ── Hostname: identifica questa VM nella rete ────────────────────────────
+    read -rp "Hostname di questa VM [atomik-webserver]: " NEW_HOSTNAME
+    NEW_HOSTNAME="${NEW_HOSTNAME:-atomik-webserver}"
+    if [[ "$(hostname)" != "$NEW_HOSTNAME" ]]; then
+        # neutralizza il tmpfiles dell'immagine che forza 'atomik-server'
+        sudo mkdir -p /etc/tmpfiles.d
+        sudo ln -sf /dev/null /etc/tmpfiles.d/atomik-hostname.conf
+        sudo rm -f /etc/hostname
+        sudo hostnamectl set-hostname "$NEW_HOSTNAME"
+        echo "✓ Hostname impostato: ${NEW_HOSTNAME}"
+        echo "  (il prompt si aggiorna alla prossima sessione SSH)"
+    fi
 
     QUADLET_WEB="/etc/containers/systemd/webserver.container"
     QUADLET_PMA="/etc/containers/systemd/phpmyadmin.container"
