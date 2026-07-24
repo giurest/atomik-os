@@ -41,7 +41,7 @@ fi
 
 USED_IPS="$(printf '%s\n' "$XML" \
     | grep -oE "ip='${SUBNET}\.[0-9]+'" \
-    | grep -oE '[0-9]+$' || true)"
+    | sed "s/.*\.//; s/'//" || true)"
 
 USED_MACS="$(printf '%s\n' "$XML" \
     | grep -oE "mac='[0-9a-fA-F:]+'" \

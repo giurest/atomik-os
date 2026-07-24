@@ -33,6 +33,64 @@ vm-list VERBOSE="":
 
     echo ""
     echo "(IP resolved via /usr/libexec/atomik/vm-resolve-ip — run 'ujust vm-list verbose' for details)"
+
+# [VM Manager] Aggiorna l'immagine base atomik-server.qcow2 (solo se cambiata)
+vm-base-update FORCE="":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    export LC_ALL=C
+
+    BASE_DIR="/var/lib/libvirt/images/base"
+    BASE_IMG="${BASE_DIR}/atomik-server.qcow2"
+    STAMP="${BASE_IMG}.stamp"
+    BASE_URL="https://github.com/giurest/atomik-os/releases/download/server-latest/atomik-server.qcow2"
+
+    sudo mkdir -p "$BASE_DIR"
+
+    # ── Firma remota: ETag (stabile, deterministico sul contenuto) ───────────
+    REMOTE_SIG="$(curl -sIL "$BASE_URL" 2>/dev/null \
+        | grep -i '^etag:' | tail -1 | tr -d '\r' || true)"
+
+    LOCAL_SIG=""
+    [[ -f "$STAMP" ]] && LOCAL_SIG="$(cat "$STAMP" 2>/dev/null || true)"
+
+    # ── Serve scaricare? ─────────────────────────────────────────────────────
+    NEED_DOWNLOAD=0
+    if [[ ! -f "$BASE_IMG" ]]; then
+        echo "→ Immagine base assente."
+        NEED_DOWNLOAD=1
+    elif [[ "{{FORCE}}" == "force" ]]; then
+        echo "→ Download forzato richiesto."
+        NEED_DOWNLOAD=1
+    elif [[ -z "$REMOTE_SIG" ]]; then
+        echo "⚠ Impossibile verificare la versione remota (rete?)."
+        echo "  Uso l'immagine locale esistente."
+    elif [[ "$REMOTE_SIG" != "$LOCAL_SIG" ]]; then
+        echo "→ È disponibile una versione più recente dell'immagine base."
+        NEED_DOWNLOAD=1
+    else
+        echo "✓ Immagine base già aggiornata."
+    fi
+
+    # ── Download su file temporaneo, poi sostituzione atomica ────────────────
+    if [[ "$NEED_DOWNLOAD" -eq 1 ]]; then
+        echo "→ Scarico atomik-server.qcow2 (~1.4 GB)..."
+        TMP_IMG="${BASE_IMG}.tmp"
+        if sudo curl -fL --progress-bar "$BASE_URL" -o "$TMP_IMG"; then
+            sudo mv "$TMP_IMG" "$BASE_IMG"
+            sudo restorecon "$BASE_IMG" 2>/dev/null || true
+            printf '%s\n' "$REMOTE_SIG" | sudo tee "$STAMP" > /dev/null
+            echo "✓ Immagine base aggiornata."
+        else
+            sudo rm -f "$TMP_IMG"
+            echo "✗ Download fallito."
+            if [[ -f "$BASE_IMG" ]]; then
+                echo "  L'immagine precedente resta utilizzabile."
+            else
+                exit 1
+            fi
+        fi
+    fi
     
 # [VM Manager] Crea una nuova VM Atomik Server
 atomik-server:
@@ -63,9 +121,13 @@ atomik-server:
     read -rp "vCPU [2]: " VM_CPU
     VM_CPU="${VM_CPU:-2}"
 
-    # ── Verifica che la VM non esista gia' ───────────────────────────────────
-    if sudo virsh dominfo "$VM_NAME" &>/dev/null; then
-        echo "✗ Una VM chiamata '$VM_NAME' esiste gia'. Scegli un altro nome."
+    read -rp "Avviare automaticamente al boot dell'hypervisor? [S/n]: " VM_AUTOSTART
+    VM_AUTOSTART="${VM_AUTOSTART:-s}"
+
+    # ── Immagine base: aggiorna se necessario (check ETag, leggero) ──────────
+    ujust vm-base-update
+    if [[ ! -f "$BASE_IMG" ]]; then
+        echo "✗ Immagine base non disponibile. Impossibile procedere."
         exit 1
     fi
 
@@ -122,11 +184,20 @@ atomik-server:
         --network network=default,mac="${VM_MAC}" \
         --graphics none --noautoconsole
 
+    # ── Autostart al boot dell'hypervisor ────────────────────────────────────
+    if [[ "$VM_AUTOSTART" =~ ^[sS]$ ]]; then
+        sudo virsh autostart "$VM_NAME" > /dev/null
+        AUTOSTART_MSG="sì"
+    else
+        AUTOSTART_MSG="no"
+    fi    
+
     # ── IP gia' noto: nessun polling domifaddr ───────────────────────────────
     echo ""
     echo "✓ VM '$VM_NAME' creata e avviata"
     echo ""
     echo "  IP (permanente):  ${VM_IP}"
+    echo "  Autostart:        ${AUTOSTART_MSG}"
     echo "  Accesso:          ssh ${VM_USER}@${VM_IP}"
     echo "  Password:         ${VM_USER}  (da cambiare al primo accesso)"
     echo ""
