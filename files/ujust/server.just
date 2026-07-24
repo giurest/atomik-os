@@ -216,3 +216,153 @@ db-setup:
     echo "  Annota l'IP ${VM_IP}: servirà alle altre VM per consentire le connessioni ."
     echo ""
     echo "  Al primo avvio MariaDB inizializza il database: attendere circa ~30s."
+
+# [Servizi] Configura Apache+PHP e phpMyAdmin in questa VM
+webserver-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    QUADLET_WEB="/etc/containers/systemd/webserver.container"
+    QUADLET_PMA="/etc/containers/systemd/phpmyadmin.container"
+    NET_QUADLET="/etc/containers/systemd/webserver.network"
+    WWW_DIR="/var/lib/webserver/www"
+
+    echo "┌────────────────────────────────────────────────┐"
+    echo "  Atomik Webserver — Apache + PHP + phpMyAdmin           "
+    echo "└────────────────────────────────────────────────┘"
+    echo ""
+    echo "  Questa ricetta:"
+    echo "   1. crea la cartella del progetto (${WWW_DIR})"
+    echo "   2. crea i quadlet Podman (Apache+PHP, phpMyAdmin)"
+    echo "   3. avvia i servizi"
+    echo ""
+    echo "  Il codice va caricato via SFTP in ${WWW_DIR}"
+    echo "  DocumentRoot: ${WWW_DIR}/public (convenzione Atomik)"
+    echo ""
+
+    # ── Verifica che non sia già configurato ─────────────────────────────────
+    if [[ -f "$QUADLET_WEB" ]]; then
+        echo "✗ Webserver risulta già configurato ($QUADLET_WEB)."
+        echo "  Rimuovi i quadlet prima di rieseguire il setup."
+        exit 1
+    fi
+
+    # ── Parametri ────────────────────────────────────────────────────────────
+    read -rp "IP del database server (es. 192.168.122.3): " DB_HOST
+    [[ -z "$DB_HOST" ]] && { echo "✗ IP database vuoto."; exit 1; }
+
+    read -rp "Porta web (Apache) [8080]: " WEB_PORT
+    WEB_PORT="${WEB_PORT:-8080}"
+
+    read -rp "Porta phpMyAdmin [8081]: " PMA_PORT
+    PMA_PORT="${PMA_PORT:-8081}"
+
+    VM_IP="$(hostname -I | awk '{print $1}')"
+
+    echo ""
+    echo "→ Configurazione:"
+    echo "  Progetto:    ${WWW_DIR}"
+    echo "  DocumentRoot:${WWW_DIR}/public"
+    echo "  Database:    ${DB_HOST}:3306"
+    echo "  Web:         ${VM_IP}:${WEB_PORT}"
+    echo "  phpMyAdmin:  ${VM_IP}:${PMA_PORT}"
+    echo ""
+    read -rp "Confermi? [s/N]: " CONFIRM
+    [[ ! "$CONFIRM" =~ ^[sS]$ ]] && { echo "Operazione annullata."; exit 0; }
+
+    cleanup_on_error() {
+        echo ""
+        echo "✗ Errore durante la creazione: rimuovo i file parziali."
+        sudo rm -f "$QUADLET_WEB" "$QUADLET_PMA" "$NET_QUADLET"
+        sudo systemctl daemon-reload || true
+    }
+    trap cleanup_on_error ERR
+
+    # ── 1. Cartella progetto (owner utente, per upload SFTP) ─────────────────
+    sudo mkdir -p "${WWW_DIR}/public"
+    sudo chown -R "$(id -u):$(id -g)" /var/lib/webserver
+    sudo chmod -R 775 /var/lib/webserver
+
+    # Pagina di benvenuto se la public e' vuota
+    if [[ -z "$(ls -A "${WWW_DIR}/public" 2>/dev/null)" ]]; then
+        printf '%s\n' \
+            "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" \
+            "<title>Atomik Webserver</title></head><body>" \
+            "<h1>Atomik Webserver attivo</h1>" \
+            "<p>Carica il progetto via SFTP in ${WWW_DIR}</p>" \
+            "<p><?php echo 'PHP ' . phpversion(); ?></p>" \
+            "</body></html>" \
+            > "${WWW_DIR}/public/index.php"
+    fi
+
+    # ── 2. Rete interna per i container ──────────────────────────────────────
+    printf '%s\n' \
+        "[Network]" \
+        "NetworkName=webserver" \
+        | sudo tee "$NET_QUADLET" > /dev/null
+
+    # ── 3. Quadlet Apache + PHP ──────────────────────────────────────────────
+    echo "→ Creo il quadlet Apache+PHP..."
+    printf '%s\n' \
+        "[Unit]" \
+        "Description=Atomik Webserver - Apache + PHP" \
+        "After=network-online.target" \
+        "Wants=network-online.target" \
+        "" \
+        "[Container]" \
+        "Image=ghcr.io/giurest/atomik-php:latest" \
+        "Network=webserver.network" \
+        "PublishPort=${WEB_PORT}:80" \
+        "Volume=${WWW_DIR}:/var/www/html:Z" \
+        "" \
+        "[Service]" \
+        "Restart=always" \
+        "TimeoutStartSec=300" \
+        "" \
+        "[Install]" \
+        "WantedBy=multi-user.target" \
+        | sudo tee "$QUADLET_WEB" > /dev/null
+
+    # ── 4. Quadlet phpMyAdmin ────────────────────────────────────────────────
+    echo "→ Creo il quadlet phpMyAdmin..."
+    printf '%s\n' \
+        "[Unit]" \
+        "Description=phpMyAdmin" \
+        "After=network-online.target" \
+        "Wants=network-online.target" \
+        "" \
+        "[Container]" \
+        "Image=docker.io/phpmyadmin:latest" \
+        "Network=webserver.network" \
+        "PublishPort=${PMA_PORT}:80" \
+        "Environment=PMA_HOST=${DB_HOST}" \
+        "Environment=PMA_PORT=3306" \
+        "Environment=UPLOAD_LIMIT=64M" \
+        "" \
+        "[Service]" \
+        "Restart=always" \
+        "TimeoutStartSec=300" \
+        "" \
+        "[Install]" \
+        "WantedBy=multi-user.target" \
+        | sudo tee "$QUADLET_PMA" > /dev/null
+
+    # ── 5. Avvio ─────────────────────────────────────────────────────────────
+    echo "→ Avvio i servizi..."
+    sudo systemctl daemon-reload
+    sudo systemctl start webserver.service
+    sudo systemctl start phpmyadmin.service
+    trap - ERR
+
+    echo ""
+    echo "✓ Webserver configurato e avviato."
+    echo ""
+    echo "  Web:         http://${VM_IP}:${WEB_PORT}"
+    echo "  phpMyAdmin:  http://${VM_IP}:${PMA_PORT}"
+    echo ""
+    echo "  Codice:      carica via SFTP in ${WWW_DIR}"
+    echo "  Composer:    sudo podman exec -it systemd-webserver composer install"
+    echo ""
+    echo "  Per esporli sulla LAN, dall'HYPERVISOR:"
+    echo "    ujust vm-forward $(hostname) ${WEB_PORT} <porta-host>"
+    echo "    ujust vm-forward $(hostname) ${PMA_PORT} <porta-host>"
