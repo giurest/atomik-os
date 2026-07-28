@@ -317,12 +317,14 @@ webserver-setup:
     }
     trap cleanup_on_error ERR
 
-    # ── 1. Cartella progetto (owner utente, per upload SFTP) ─────────────────
+    # ── 1. Cartella progetto: owner www-data (Apache), scrivibile via SFTP ────
+    # Apache serve le pagine come www-data (UID 33). Perché possa scrivere
+    # (wp-config, upload, cache) la cartella dev'essere sua. L'utente entra nel
+    # gruppo 33 per caricare via SFTP. 'www-data' non esiste sull'host (solo nel
+    # container) → UID/GID numerico 33 (Podman rootful: 33 host = 33 container).
     sudo mkdir -p "${WWW_DIR}/public"
-    sudo chown -R "$(id -u):$(id -g)" /var/lib/webserver
-    sudo chmod -R 775 /var/lib/webserver
 
-    # Pagina di benvenuto se la public e' vuota
+    # Pagina di benvenuto se la public è vuota (scritta PRIMA del chown)
     if [[ -z "$(ls -A "${WWW_DIR}/public" 2>/dev/null)" ]]; then
         printf '%s\n' \
             "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" \
@@ -331,8 +333,13 @@ webserver-setup:
             "<p>Carica il progetto via SFTP in ${WWW_DIR}</p>" \
             "<p><?php echo 'PHP ' . phpversion(); ?></p>" \
             "</body></html>" \
-            > "${WWW_DIR}/public/index.php"
+            | sudo tee "${WWW_DIR}/public/index.php" > /dev/null
     fi
+
+    # Permessi: tutto a www-data, setgid perché i nuovi file ereditino il gruppo
+    sudo chown -R 33:33 /var/lib/webserver
+    sudo chmod -R 2775 /var/lib/webserver
+    sudo usermod -aG 33 "$(id -un)"
 
     # ── 2. Rete interna per i container ──────────────────────────────────────
     printf '%s\n' \
@@ -400,6 +407,7 @@ webserver-setup:
     echo "  phpMyAdmin:  http://${VM_IP}:${PMA_PORT}"
     echo ""
     echo "  Codice:      carica via SFTP in ${WWW_DIR}"
+    echo "               (riconnettiti via SSH: il gruppo www-data serve per l'upload)"
     echo "  Composer:    sudo podman exec -it systemd-webserver composer install"
     echo ""
     echo "  Per esporli sulla LAN, dall'HYPERVISOR:"
