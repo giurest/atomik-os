@@ -204,38 +204,30 @@ atomik-server:
     echo "  Console:  sudo virsh console $VM_NAME   (Ctrl+] per uscire)"
     echo "  Rimuovi:  ujust vm-delete"
 
-# [VM Manager] Rimuove una VM, il suo storage e la sua DHCP reservation
+# [VM Manager] Rimuove una VM, il suo storage, la reservation e i port forward
 vm-delete:
     #!/usr/bin/env bash
     set -uo pipefail
     export LC_ALL=C
-
     echo "VM definite:"
-    sudo virsh list --all --name        # solo i nomi: niente colonna Id fuorviante
+    sudo virsh list --all --name
     echo ""
     read -rp "Nome della VM da rimuovere: " VM_NAME
     [[ -z "$VM_NAME" ]] && { echo "Nessun nome fornito."; exit 1; }
 
-    # ── Rifiuta ID numerici ──────────────────────────────────────────────────
-    # virsh accetta un Id numerico per 'destroy', ma l'Id sparisce dopo che la
-    # VM è spenta -> 'undefine' fallisce a metà procedura (stato sporco).
-    # Il nome è l'unico identificatore stabile: lo imponiamo.
     if [[ "$VM_NAME" =~ ^[0-9]+$ ]]; then
         echo "✗ Inserisci il NOME della VM, non l'Id numerico."
         echo "  Gli Id cambiano e spariscono dopo lo spegnimento; il nome è stabile."
         exit 1
     fi
-
     if ! sudo virsh dominfo "$VM_NAME" &>/dev/null; then
         echo "✗ La VM '$VM_NAME' non esiste."
         exit 1
     fi
 
-    # ── Leggi MAC PRIMA di distruggere la VM (dopo undefine sparisce) ─────────
     VM_MAC="$(sudo virsh domiflist "$VM_NAME" 2>/dev/null \
         | awk '$3 == "default" {print $5}' | head -1 || true)"
 
-    # ── Ricava l'IP della reservation associata (dalla XML, non dai lease) ────
     VM_IP=""
     if [[ -n "$VM_MAC" ]]; then
         VM_IP="$(sudo virsh net-dumpxml default 2>/dev/null \
@@ -243,9 +235,19 @@ vm-delete:
             | grep -oE "ip='[0-9.]+'" | sed "s/ip='//; s/'//" | head -1 || true)"
     fi
 
+    # ── Forward associati: rilevali PRIMA della conferma per mostrarli ────────
+    FORWARDS="$(ls /etc/systemd/system/ 2>/dev/null \
+        | grep -E "^vm-forward-${VM_NAME}-[0-9]+\.service$" || true)"
+
     echo ""
     echo "ATTENZIONE: procedura irreversibile. I dati nella VM non saranno recuperabili."
     [[ -n "$VM_IP" ]] && echo "  Reservation associata: ${VM_MAC} → ${VM_IP} (verrà rimossa)"
+    if [[ -n "$FORWARDS" ]]; then
+        echo "  Port forward che verranno rimossi:"
+        while IFS= read -r svc; do
+            [[ -n "$svc" ]] && echo "    - ${svc}"
+        done <<< "$FORWARDS"
+    fi
     read -rp "Rimuovere '$VM_NAME' e TUTTI i suoi dischi? [s/N]: " CONFIRM
     [[ "${CONFIRM,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
 
@@ -254,8 +256,6 @@ vm-delete:
     if ! sudo virsh undefine "$VM_NAME" --remove-all-storage; then
         echo "✗ undefine fallito. La VM potrebbe essere ancora definita."
         echo "  Stato sporco: verifica con 'sudo virsh list --all'."
-        # Non usciamo: proviamo comunque a liberare la reservation piu' sotto,
-        # cosi' non lasciamo un IP bloccato oltre alla VM sporca.
     else
         echo "✓ VM '$VM_NAME' e dischi rimossi"
     fi
@@ -276,8 +276,25 @@ vm-delete:
         echo "⚠ Nessuna reservation trovata per '$VM_NAME' (VM creata fuori dalle recipe?)."
     fi
 
-    echo "✓ Rimozione completata"
+    # ── 4. Rimuovi i port forward associati ──────────────────────────────────
+    # I forward sono servizi socat sull'hypervisor, indipendenti dalla VM:
+    # senza questa pulizia restano orfani (socat attivi, porte firewall aperte).
+    if [[ -n "$FORWARDS" ]]; then
+        echo "→ Rimuovo i port forward associati..."
+        while IFS= read -r svc; do
+            [[ -z "$svc" ]] && continue
+            HOST_PORT="$(echo "$svc" | grep -oE '[0-9]+\.service$' | grep -oE '^[0-9]+')"
+            sudo systemctl disable --now "$svc" 2>/dev/null || true
+            sudo rm -f "/etc/systemd/system/${svc}"
+            [[ -n "$HOST_PORT" ]] && sudo firewall-cmd --permanent --remove-port="${HOST_PORT}/tcp" >/dev/null 2>&1 || true
+            echo "  ✓ rimosso ${svc}"
+        done <<< "$FORWARDS"
+        sudo systemctl daemon-reload
+        sudo firewall-cmd --reload >/dev/null 2>&1 || true
+    fi
 
+    echo "✓ Rimozione completata"
+    
 # ─────────────────────────────────────────────────────────────────────────────
 # Gestione Forward macchine virtuali
 # ─────────────────────────────────────────────────────────────────────────────
