@@ -16,10 +16,13 @@ Distribuzione Linux immutabile basata su **Fedora Silverblue**, con compositor *
 
 | Variante | Base | Uso | Stato |
 |---|---|---|---|
-| `desktop` | F43 | Workstation minimalista + sviluppo | ✅ Disponibile |
+| `desktop` | F44 | Workstation minimalista + sviluppo | ✅ Disponibile |
 | `puregaming` | `atomik-desktop` | Gaming puro su base desktop | ✅ Disponibile |
-| `desktop-nvidia` | F43 + driver NVIDIA | Workstation con GPU NVIDIA | ✅ Disponibile - BETA |
-| `puregaming-nvidia` | `desktop-nvidia` + driver NVIDIA | Gaming con GPU NVIDIA | ✅ Disponibile - BETA |
+| `desktop-nvidia` | F44 + driver NVIDIA | Workstation con GPU NVIDIA | ✅ Disponibile |
+| `puregaming-nvidia` | `desktop-nvidia` + driver NVIDIA | Gaming con GPU NVIDIA | ✅ Disponibile |
+| `hypervisor` | `atomik-desktop` | Server di virtualizzazione | ✅ Disponibile |
+
+Per la variante hypervisor, vedi [docs/hypervisor.md](docs/hypervisor.md)
 
 `puregaming` eredita interamente da `desktop`: tutto ciò che è nella base (Niri, DMS, greetd, ujust, Brave, Bazaar) è presente anche in gaming.
 
@@ -46,7 +49,7 @@ Confronto su stesso hardware (AMD Ryzen 5 7530U, 14 GB RAM) tra **Atomik OS Desk
 | Pacchetti installati | 1537 | 1669 | — |
 
 > I benchmark sono stati eseguiti con [atomik-bench](tools/atomik-bench), lo strumento di benchmark universale incluso nel repo.
-> Il vantaggio GPU di Silverblue è atteso: usa F44 con driver più recenti. Sarà colmato con la migrazione ad F44.
+> Il vantaggio GPU di Silverblue è atteso: usato F44 con driver più recenti.
 
 ## Installazione
 
@@ -97,6 +100,14 @@ ujust status           # stato dell'immagine bootc
 ujust rollback         # torna all'immagine precedente
 ujust set-wallpaper    # imposta lo sfondo Atomik
 ```
+Il sistema è configurato nel seguente modo:
+- File Entrypoint per ogni variante (entrypoint-desktop.just, entrypoint-hypervisor.just, entrypoint-puregaming)
+- Common.just (Set di ricette comuni a tutte le varianti)
+- Desktop-tools.just (Set di ricette specifiche per la variante desktop e desktop-nvidia)
+- gaming.just (Set di ricette specifiche per la variante puregaming e puregaming-nvidia)
+- hypervisor.just (Set di ricette specifiche per la variante hypervisor)
+- server.just (Set di ricette specifiche per la variante server)
+- environment.just (Set di ricette specifiche per le varianti con server grafico)
 
 ## Software incluso
 
@@ -147,31 +158,35 @@ curl -fsSL https://raw.githubusercontent.com/giurest/atomik-os/main/tools/atomik
 ```
 atomik-os/
 ├── .github/workflows/
-│   ├── build.yml          # Build immagini OCI → ghcr.io (desktop + derivate)
-│   └── iso-manual.yml     # Genera ISO per variante (workflow_dispatch)
+│   ├── build.yml                         # Build immagini OCI → ghcr.io (desktop + derivate)
+│   ├── build-hypervisor.yml              # Build immagini OCI → ghcr.io (Hypervisor)
+│   ├── build-server-qcow2.yml            # Build immagini OCI → ghcr.io (Generazione manuale immagine server)
+│   ├── build-server.yml                  # Build immagini OCI → ghcr.io (Server)
+│   └── iso-manual.yml                    # Genera ISO per variante (workflow_dispatch)
 ├── containerfiles/
-│   ├── Containerfile.desktop          # base (FROM F43 Silverblue)
-│   ├── Containerfile.puregaming       # FROM atomik-desktop
-│   ├── Containerfile.desktop-nvidia   # base (FROM F43 Silverblue + driver NVIDIA)
-│   └── Containerfile.puregaming-nvidia # FROM atomik-desktop-nvidia
+│   ├── Containerfile.desktop             # base (FROM F44 Silverblue)
+│   ├── Containerfile.puregaming          # FROM atomik-desktop
+│   ├── Containerfile.desktop-nvidia      # base (FROM F44 Silverblue + driver NVIDIA)
+│   └── Containerfile.puregaming-nvidia   # FROM atomik-desktop-nvidia
+│   └── Containerfile.hypervisor          # FROM atomik-desktop-nvidia
 ├── installer/
 │   ├── atomik-desktop.toml
 │   ├── atomik-puregaming.toml
 │   ├── atomik-desktop-nvidia.toml
 │   └── atomik-puregaming-nvidia.toml
 ├── files/
-│   ├── branding/          # Logo SVG e PNG (dark/light, icone, wallpaper)
-│   ├── niri/              # config Niri di sistema
-│   ├── plymouth/atomik/   # tema Plymouth
-│   ├── fastfetch/         # config fastfetch per variante
-│   ├── ujust/             # justfile con i comandi di sistema
-│   ├── skel/              # skel utenti (autostart wallpaper)
-│   ├── backgrounds/       # wallpaper di sistema
-│   ├── dms/               # file DMS personalizzati (SystemLogo.qml)
-│   └── system/            # file copiati nel sistema
+│   ├── branding/                         # Logo SVG e PNG (dark/light, icone, wallpaper)
+│   ├── niri/                             # config Niri di sistema
+│   ├── plymouth/atomik/                  # tema Plymouth
+│   ├── fastfetch/                        # config fastfetch per variante
+│   ├── ujust/                            # justfile con i comandi di sistema
+│   ├── skel/                             # skel utenti (autostart wallpaper)
+│   ├── backgrounds/                      # wallpaper di sistema
+│   ├── dms/                              # file DMS personalizzati (SystemLogo.qml)
+│   └── system/                           # file copiati nel sistema
 └── tools/
-    ├── atomik-bench        # suite benchmark universale
-    └── atomik-bench-compare # confronto risultati benchmark
+    ├── atomik-bench                      # suite benchmark universale
+    └── atomik-bench-compare              # confronto risultati benchmark
 ```
 
 ## Build locale (opzionale)
