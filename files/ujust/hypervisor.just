@@ -837,3 +837,72 @@ vm-restore NOME="" TIMESTAMP="":
     echo "✓ VM '${VM}' ripristinata dal backup ${TS}"
     [[ -n "$RES_IP" ]] && echo "  IP: ${RES_IP}"
     echo "  Verifica con: ujust vm-list"
+
+# [VM Manager] Elenca i backup disponibili sul NAS (VM, data, stato, dimensione)
+vm-backup-list NOME="":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    export LC_ALL=C
+
+    BACKUP_ROOT="/var/mnt/backup"
+
+    # ── Mount attivo? ────────────────────────────────────────────────────────
+    if ! mountpoint -q "$BACKUP_ROOT" 2>/dev/null; then
+        echo "✗ Il NAS di backup non è montato in ${BACKUP_ROOT}."
+        echo "  Montalo con: ujust smb-system backup"
+        exit 1
+    fi
+
+    # ── Determina le VM da elencare ──────────────────────────────────────────
+    if [[ -n "{{NOME}}" ]]; then
+        VM_DIRS="${BACKUP_ROOT}/{{NOME}}"
+        [[ ! -d "$VM_DIRS" ]] && { echo "✗ Nessun backup per '{{NOME}}'."; exit 1; }
+    else
+        VM_DIRS="$(find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d \
+            ! -name log ! -name log_errori 2>/dev/null | sort || true)"
+    fi
+
+    if [[ -z "$VM_DIRS" ]]; then
+        echo "Nessun backup presente in ${BACKUP_ROOT}."
+        exit 0
+    fi
+
+    printf '%-22s %-20s %-10s %s\n' "VM" "TIMESTAMP" "STATO" "DIMENSIONE"
+    printf '%-22s %-20s %-10s %s\n' "----------------------" "--------------------" "----------" "----------"
+
+    FOUND=0
+    while IFS= read -r vmdir; do
+        [[ -z "$vmdir" ]] && continue
+        VM="$(basename "$vmdir")"
+
+        # ogni sottocartella timestamp, dalla più recente
+        BACKUPS="$(find "$vmdir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -r || true)"
+        [[ -z "$BACKUPS" ]] && continue
+
+        while IFS= read -r bdir; do
+            [[ -z "$bdir" ]] && continue
+            FOUND=1
+            TS="$(basename "$bdir")"
+            MANIFEST="${bdir}/MANIFEST"
+
+            if [[ -f "$MANIFEST" ]]; then
+                STATUS="$(grep '^status:' "$MANIFEST" 2>/dev/null | awk '{print $2}')"
+                [[ -z "$STATUS" ]] && STATUS="?"
+            else
+                STATUS="no-manifest"
+            fi
+
+            # dimensione totale del backup (leggibile)
+            SIZE="$(du -sh "$bdir" 2>/dev/null | awk '{print $1}' || echo '?')"
+
+            # marca visiva per stato non verificato
+            MARK=""
+            [[ "$STATUS" != "verified" ]] && MARK=" ⚠"
+
+            printf '%-22s %-20s %-10s %s%s\n' "$VM" "$TS" "$STATUS" "$SIZE" "$MARK"
+        done <<< "$BACKUPS"
+    done <<< "$VM_DIRS"
+
+    if [[ "$FOUND" -eq 0 ]]; then
+        echo "Nessun backup presente."
+    fi
