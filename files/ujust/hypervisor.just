@@ -452,3 +452,204 @@ vm-forward-remove NAME PORTA_HOST:
     sudo firewall-cmd --reload > /dev/null
 
     echo "✓ Forward removed."
+
+# [VM Manager] Backup completo delle VM sul NAS (disco + definizione + reservation)
+vm-backup NOME="" VERSIONI="2":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    export LC_ALL=C
+
+    BACKUP_ROOT="/var/mnt/backup"
+    IMAGES_DIR="/var/lib/libvirt/images"
+    BOOT_DIR="/var/lib/libvirt/boot"
+    LOG_DIR="${BACKUP_ROOT}/log"
+    ERR_DIR="${BACKUP_ROOT}/log_errori"
+    KEEP="{{VERSIONI}}"
+    RUN_TS="$(date +%Y-%m-%d_%H%M%S)"
+    LOG_FILE="${LOG_DIR}/${RUN_TS}.log"
+    ERR_FILE="${ERR_DIR}/${RUN_TS}.log"
+
+    # ── Verifica che il mount di backup sia attivo ───────────────────────────
+    if ! mountpoint -q "$BACKUP_ROOT" 2>/dev/null; then
+        echo "✗ Il NAS di backup non è montato in ${BACKUP_ROOT}."
+        echo "  Montalo con: ujust smb-system backup"
+        exit 1
+    fi
+
+    sudo mkdir -p "$LOG_DIR" "$ERR_DIR"
+
+    # Logging: log() sempre; err() anche su file errori (creato solo se serve)
+    log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*" | sudo tee -a "$LOG_FILE" >/dev/null; }
+    err() {
+        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*" | sudo tee -a "$LOG_FILE" "$ERR_FILE" >/dev/null
+    }
+
+    # ── Determina la lista delle VM da salvare ───────────────────────────────
+    if [[ -n "{{NOME}}" ]]; then
+        if ! sudo virsh dominfo "{{NOME}}" &>/dev/null; then
+            echo "✗ La VM '{{NOME}}' non esiste."
+            exit 1
+        fi
+        VMS="{{NOME}}"
+    else
+        VMS="$(sudo virsh list --all --name | grep -v '^$' || true)"
+    fi
+
+    if [[ -z "$VMS" ]]; then
+        echo "✗ Nessuna VM da salvare."
+        exit 1
+    fi
+
+    TOTAL=0; OK=0; SKIP=0; FAIL=0
+    log "[START] backup — versioni da mantenere: ${KEEP}"
+    echo "═══ Backup VM → ${BACKUP_ROOT} ═══"
+    echo ""
+
+    # ── Ciclo sulle VM ───────────────────────────────────────────────────────
+    while IFS= read -r VM; do
+        [[ -z "$VM" ]] && continue
+        TOTAL=$((TOTAL+1))
+        echo "→ ${VM}"
+
+        QCOW="${IMAGES_DIR}/${VM}.qcow2"
+        SEED="${BOOT_DIR}/${VM}-seed.iso"
+        DEST="${BACKUP_ROOT}/${VM}/${RUN_TS}"
+
+        if [[ ! -f "$QCOW" ]]; then
+            err "[${VM}] ERRORE: disco non trovato (${QCOW}) — VM SALTATA"
+            echo "  ✗ disco non trovato, salto"
+            SKIP=$((SKIP+1))
+            continue
+        fi
+
+        # ── Stato iniziale, per riavviare solo se era accesa ─────────────────
+        WAS_RUNNING=0
+        if sudo virsh domstate "$VM" 2>/dev/null | grep -q running; then
+            WAS_RUNNING=1
+        fi
+
+        # ── Shutdown graceful (timeout 120s, NO forzatura) ───────────────────
+        if [[ "$WAS_RUNNING" -eq 1 ]]; then
+            log "[${VM}] shutdown avviato"
+            echo "  shutdown..."
+            sudo virsh shutdown "$VM" >/dev/null 2>&1 || true
+            WAITED=0
+            while (( WAITED < 120 )); do
+                sudo virsh domstate "$VM" 2>/dev/null | grep -q "shut off" && break
+                sleep 3; WAITED=$((WAITED+3))
+            done
+            if ! sudo virsh domstate "$VM" 2>/dev/null | grep -q "shut off"; then
+                err "[${VM}] ERRORE: shutdown non completato entro 120s — VM SALTATA (resta accesa)"
+                echo "  ✗ shutdown fallito, salto (VM resta accesa)"
+                SKIP=$((SKIP+1))
+                continue
+            fi
+            log "[${VM}] shutdown completato (${WAITED}s)"
+        else
+            log "[${VM}] già spenta, copio direttamente"
+        fi
+
+        # ── Copia dei file ───────────────────────────────────────────────────
+        sudo mkdir -p "$DEST"
+        COPY_OK=1
+        echo "  copia disco..."
+        log "[${VM}] copia qcow2"
+        sudo cp "$QCOW" "${DEST}/${VM}.qcow2" || COPY_OK=0
+        sudo virsh dumpxml "$VM" | sudo tee "${DEST}/${VM}.xml" >/dev/null || COPY_OK=0
+        [[ -f "$SEED" ]] && { sudo cp "$SEED" "${DEST}/${VM}-seed.iso" || COPY_OK=0; }
+
+        # reservation: estrai la riga <host> dal MAC della VM
+        VM_MAC="$(sudo virsh domiflist "$VM" 2>/dev/null | awk '$3=="default"{print $5}' | head -1 || true)"
+        if [[ -n "$VM_MAC" ]]; then
+            sudo virsh net-dumpxml default 2>/dev/null \
+                | grep -oE "<host mac='${VM_MAC}'[^>]*/>" \
+                | sudo tee "${DEST}/${VM}.reservation" >/dev/null || true
+        fi
+
+        # ── Riavvia SUBITO dopo la copia (minimizza il downtime) ─────────────
+        if [[ "$WAS_RUNNING" -eq 1 ]]; then
+            sudo virsh start "$VM" >/dev/null 2>&1 || err "[${VM}] AVVISO: riavvio fallito"
+            log "[${VM}] riavvio VM"
+            echo "  riavviata"
+        fi
+
+        if [[ "$COPY_OK" -ne 1 ]]; then
+            err "[${VM}] ERRORE: copia incompleta — backup NON valido"
+            echo "  ✗ copia incompleta"
+            FAIL=$((FAIL+1))
+            continue
+        fi
+
+        # ── Verifica L1 (checksum) + L2 (qemu-img check) → MANIFEST ──────────
+        echo "  verifica..."
+        MANIFEST="${DEST}/MANIFEST"
+        STATUS="verified"
+
+        # L2: integrità del qcow2
+        if sudo qemu-img check "${DEST}/${VM}.qcow2" >/dev/null 2>&1; then
+            QCHECK="passed"
+        else
+            QCHECK="FAILED"
+            STATUS="FAILED"
+            err "[${VM}] ERRORE: qemu-img check fallito sul backup"
+        fi
+
+        # L1: checksum di tutti i file (nel MANIFEST)
+        {
+            echo "vm: ${VM}"
+            echo "timestamp: ${RUN_TS}"
+            echo "created: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "hypervisor: $(hostname)"
+            echo "qcow2_check: ${QCHECK}"
+            echo "files:"
+            for f in "${DEST}/${VM}.qcow2" "${DEST}/${VM}.xml" \
+                     "${DEST}/${VM}-seed.iso" "${DEST}/${VM}.reservation"; do
+                [[ -f "$f" ]] || continue
+                H="$(sudo sha256sum "$f" | awk '{print $1}')"
+                S="$(sudo stat -c%s "$f")"
+                echo "  $(basename "$f")  sha256:${H}  size:${S}"
+            done
+            echo "status: ${STATUS}"
+        } | sudo tee "$MANIFEST" >/dev/null
+
+        if [[ "$STATUS" == "verified" ]]; then
+            log "[${VM}] MANIFEST scritto, status: verified"
+            echo "  ✓ verificato"
+            OK=$((OK+1))
+        else
+            log "[${VM}] MANIFEST scritto, status: FAILED"
+            echo "  ✗ verifica fallita (vedi log_errori)"
+            FAIL=$((FAIL+1))
+        fi
+
+        # ── Rotazione: mantieni solo le ultime ${KEEP} versioni ──────────────
+        MAPFILE=$(ls -1dr "${BACKUP_ROOT}/${VM}"/*/ 2>/dev/null || true)
+        if [[ -n "$MAPFILE" ]]; then
+            COUNT=0
+            while IFS= read -r d; do
+                [[ -z "$d" ]] && continue
+                COUNT=$((COUNT+1))
+                if (( COUNT > KEEP )); then
+                    sudo rm -rf "$d"
+                    log "[${VM}] rotazione: rimossa versione $(basename "$d")"
+                fi
+            done <<< "$MAPFILE"
+        fi
+
+        echo ""
+    done <<< "$VMS"
+
+    # ── Riepilogo ────────────────────────────────────────────────────────────
+    log "[END] completato: ${OK} OK, ${SKIP} saltate, ${FAIL} errori (su ${TOTAL})"
+    echo "═══ Riepilogo ═══"
+    echo "  Totale:  ${TOTAL}"
+    echo "  OK:      ${OK}"
+    echo "  Saltate: ${SKIP}"
+    echo "  Errori:  ${FAIL}"
+    echo ""
+    echo "  Log:     ${LOG_FILE}"
+    if [[ "$SKIP" -gt 0 || "$FAIL" -gt 0 ]]; then
+        echo "  ⚠ Errori/salti registrati in: ${ERR_FILE}"
+    else
+        echo "  ✓ Nessun errore."
+    fi
