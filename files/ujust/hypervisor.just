@@ -566,16 +566,16 @@ vm-backup NOME="" VERSIONI="2":
                 | sudo tee "${DEST}/${VM}.reservation" >/dev/null || true
         fi
 
-	# ── Forward associati alla VM ────────────────────────────────────────────
-	FWD_FILES="$(ls /etc/systemd/system/vm-forward-${VM}-*.service 2>/dev/null || true)"
-	if [[ -n "$FWD_FILES" ]]; then
-		sudo mkdir -p "${DEST}/forwards"
-		while IFS= read -r f; do
-			[[ -z "$f" ]] && continue
-			sudo cp "$f" "${DEST}/forwards/"
-		done <<< "$FWD_FILES"
-		log "[${VM}] salvati $(echo "$FWD_FILES" | wc -l) forward"
-	fi
+    # ── Forward associati alla VM ────────────────────────────────────────────
+    FWD_FILES="$(ls /etc/systemd/system/vm-forward-${VM}-*.service 2>/dev/null || true)"
+    if [[ -n "$FWD_FILES" ]]; then
+        sudo mkdir -p "${DEST}/forwards"
+        while IFS= read -r f; do
+            [[ -z "$f" ]] && continue
+            sudo cp "$f" "${DEST}/forwards/"
+        done <<< "$FWD_FILES"
+        log "[${VM}] salvati $(echo "$FWD_FILES" | wc -l) forward"
+    fi
 
         # ── Riavvia SUBITO dopo la copia (minimizza il downtime) ─────────────
         if [[ "$WAS_RUNNING" -eq 1 ]]; then
@@ -615,7 +615,7 @@ vm-backup NOME="" VERSIONI="2":
             echo "files:"
             for f in "${DEST}/${VM}.qcow2" "${DEST}/${VM}.xml" \
                      "${DEST}/${VM}-seed.iso" "${DEST}/${VM}.reservation" \
-		     "${DEST}"/forwards/*.service; do
+             "${DEST}"/forwards/*.service; do
                 [[ -f "$f" ]] || continue
                 H="$(sudo sha256sum "$f" | awk '{print $1}')"
                 S="$(sudo stat -c%s "$f")"
