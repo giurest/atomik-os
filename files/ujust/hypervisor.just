@@ -665,3 +665,175 @@ vm-backup NOME="" VERSIONI="2":
     else
         echo "  ✓ Nessun errore."
     fi
+
+# [VM Manager] Ripristina una VM da backup (disco + definizione + reservation + forward)
+vm-restore NOME="" TIMESTAMP="":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    export LC_ALL=C
+
+    BACKUP_ROOT="/var/mnt/backup"
+    IMAGES_DIR="/var/lib/libvirt/images"
+    BOOT_DIR="/var/lib/libvirt/boot"
+
+    VM="{{NOME}}"
+    TS="{{TIMESTAMP}}"
+
+    if [[ -z "$VM" ]]; then
+        echo "✗ Specifica la VM da ripristinare: ujust vm-restore <nome> [timestamp]"
+        echo ""
+        echo "  Backup disponibili:"
+        ls -1 "$BACKUP_ROOT" 2>/dev/null | grep -vE '^(log|log_errori)$' | sed 's/^/    /'
+        exit 1
+    fi
+
+    # ── Mount attivo? ────────────────────────────────────────────────────────
+    if ! mountpoint -q "$BACKUP_ROOT" 2>/dev/null; then
+        echo "✗ Il NAS di backup non è montato in ${BACKUP_ROOT}."
+        echo "  Montalo con: ujust smb-system backup"
+        exit 1
+    fi
+
+    VM_BACKUP_DIR="${BACKUP_ROOT}/${VM}"
+    if [[ ! -d "$VM_BACKUP_DIR" ]]; then
+        echo "✗ Nessun backup trovato per '${VM}'."
+        exit 1
+    fi
+
+    # ── Determina il timestamp: specificato o il più recente ─────────────────
+    if [[ -z "$TS" ]]; then
+        TS="$(ls -1r "$VM_BACKUP_DIR" 2>/dev/null | head -1 || true)"
+        [[ -z "$TS" ]] && { echo "✗ Nessuna versione di backup per '${VM}'."; exit 1; }
+        echo "→ Uso il backup più recente: ${TS}"
+    fi
+
+    SRC="${VM_BACKUP_DIR}/${TS}"
+    MANIFEST="${SRC}/MANIFEST"
+    if [[ ! -f "$MANIFEST" ]]; then
+        echo "✗ Backup non valido: MANIFEST assente in ${SRC}"
+        exit 1
+    fi
+
+    # ── Verifica status del MANIFEST ─────────────────────────────────────────
+    STATUS="$(grep '^status:' "$MANIFEST" | awk '{print $2}')"
+    if [[ "$STATUS" != "verified" ]]; then
+        echo "✗ Il backup ha status '${STATUS}', non 'verified'. Ripristino rifiutato."
+        exit 1
+    fi
+
+    # ── Verifica checksum (il backup potrebbe essersi corrotto sul NAS) ──────
+    echo "→ Verifico l'integrità del backup..."
+    CHECK_FAIL=0
+    while IFS= read -r line; do
+        FNAME="$(echo "$line" | awk '{print $1}')"
+        EXPECTED="$(echo "$line" | grep -oE 'sha256:[a-f0-9]+' | cut -d: -f2)"
+        [[ -z "$FNAME" || -z "$EXPECTED" ]] && continue
+        # il file può stare nella root del backup o in forwards/
+        FPATH="${SRC}/${FNAME}"
+        [[ -f "$FPATH" ]] || FPATH="${SRC}/forwards/${FNAME}"
+        if [[ ! -f "$FPATH" ]]; then
+            echo "  ✗ file mancante: ${FNAME}"
+            CHECK_FAIL=1
+            continue
+        fi
+        ACTUAL="$(sudo sha256sum "$FPATH" | awk '{print $1}')"
+        if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "  ✗ checksum non corrisponde: ${FNAME}"
+            CHECK_FAIL=1
+        fi
+    done < <(sed -n '/^files:/,/^status:/p' "$MANIFEST" | grep -E 'sha256:')
+
+    if [[ "$CHECK_FAIL" -ne 0 ]]; then
+        echo "✗ Verifica integrità FALLITA. Il backup è corrotto, ripristino annullato."
+        exit 1
+    fi
+    echo "  ✓ integrità confermata"
+
+    # ── La VM non deve già esistere ──────────────────────────────────────────
+    if sudo virsh dominfo "$VM" &>/dev/null; then
+        echo "✗ La VM '${VM}' esiste già."
+        echo "  Eliminala prima con 'ujust vm-delete', poi riprova il ripristino."
+        exit 1
+    fi
+
+    # ── Estrai MAC e IP dalla reservation salvata ────────────────────────────
+    RES_LINE="$(cat "${SRC}/${VM}.reservation" 2>/dev/null || true)"
+    RES_MAC="$(echo "$RES_LINE" | grep -oE "mac='[^']+'" | sed "s/mac='//; s/'//")"
+    RES_IP="$(echo "$RES_LINE" | grep -oE "ip='[^']+'" | sed "s/ip='//; s/'//")"
+
+    # ── IP e MAC devono essere liberi (non presi da altre VM nel frattempo) ──
+    if [[ -n "$RES_IP" ]]; then
+        CUR_XML="$(sudo virsh net-dumpxml default 2>/dev/null || true)"
+        if echo "$CUR_XML" | grep -q "ip='${RES_IP}'" && ! echo "$CUR_XML" | grep -q "$RES_LINE"; then
+            echo "✗ L'IP ${RES_IP} è già assegnato a un'altra VM."
+            echo "  Il ripristino creerebbe un conflitto. Libera l'IP prima di procedere."
+            exit 1
+        fi
+    fi
+
+    # ── Riepilogo e conferma ─────────────────────────────────────────────────
+    echo ""
+    echo "→ Ripristino:"
+    echo "  VM:         ${VM}"
+    echo "  Backup:     ${TS}"
+    [[ -n "$RES_IP" ]] && echo "  IP:         ${RES_IP} (MAC ${RES_MAC})"
+    if [[ -d "${SRC}/forwards" ]]; then
+        echo "  Forward:    $(ls -1 "${SRC}/forwards" 2>/dev/null | wc -l) da ripristinare"
+    fi
+    echo ""
+    read -rp "Procedere con il ripristino? [s/N]: " CONFIRM
+    [[ "${CONFIRM,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
+
+    # ── 1. Ripristina disco e seed nelle posizioni originali ─────────────────
+    echo "→ Ripristino disco..."
+    sudo cp "${SRC}/${VM}.qcow2" "${IMAGES_DIR}/${VM}.qcow2"
+    sudo restorecon "${IMAGES_DIR}/${VM}.qcow2" 2>/dev/null || true
+    if [[ -f "${SRC}/${VM}-seed.iso" ]]; then
+        sudo cp "${SRC}/${VM}-seed.iso" "${BOOT_DIR}/${VM}-seed.iso"
+        sudo restorecon "${BOOT_DIR}/${VM}-seed.iso" 2>/dev/null || true
+    fi
+
+    # ── 2. Reservation nella network XML ─────────────────────────────────────
+    if [[ -n "$RES_MAC" && -n "$RES_IP" ]]; then
+        if ! echo "$CUR_XML" | grep -q "$RES_LINE"; then
+            sudo virsh net-update default add ip-dhcp-host \
+                "$RES_LINE" --live --config >/dev/null 2>&1 \
+                && echo "✓ Reservation ${RES_IP} ripristinata" \
+                || echo "⚠ Reservation non aggiunta (forse già presente)"
+        else
+            echo "✓ Reservation ${RES_IP} già presente"
+        fi
+    fi
+
+    # ── 3. Definisci la VM dalla XML salvata (fedele all'originale) ──────────
+    echo "→ Definisco la VM..."
+    sudo virsh define "${SRC}/${VM}.xml" >/dev/null
+
+    # ── 4. Ripristina i forward ──────────────────────────────────────────────
+    if [[ -d "${SRC}/forwards" ]]; then
+        echo "→ Ripristino i port forward..."
+        for f in "${SRC}"/forwards/*.service; do
+            [[ -f "$f" ]] || continue
+            SVC="$(basename "$f")"
+            HOST_PORT="$(echo "$SVC" | grep -oE '[0-9]+\.service$' | grep -oE '^[0-9]+')"
+            sudo cp "$f" "/etc/systemd/system/${SVC}"
+            [[ -n "$HOST_PORT" ]] && sudo firewall-cmd --permanent --add-port="${HOST_PORT}/tcp" >/dev/null 2>&1 || true
+        done
+        sudo systemctl daemon-reload
+        sudo firewall-cmd --reload >/dev/null 2>&1 || true
+        for f in "${SRC}"/forwards/*.service; do
+            [[ -f "$f" ]] || continue
+            sudo systemctl enable --now "$(basename "$f")" >/dev/null 2>&1 || true
+        done
+        echo "✓ Forward ripristinati"
+    fi
+
+    # ── 5. Avvia la VM ───────────────────────────────────────────────────────
+    echo "→ Avvio la VM..."
+    sudo virsh start "$VM" >/dev/null 2>&1 || true
+    sudo virsh autostart "$VM" >/dev/null 2>&1 || true
+
+    echo ""
+    echo "✓ VM '${VM}' ripristinata dal backup ${TS}"
+    [[ -n "$RES_IP" ]] && echo "  IP: ${RES_IP}"
+    echo "  Verifica con: ujust vm-list"
