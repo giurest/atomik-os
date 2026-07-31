@@ -23,7 +23,10 @@ dnf install -y --skip-unavailable \
     guestfs-tools \
     bridge-utils \
     socat \
-    cockpit
+    cockpit \
+    cockpit-machines \
+    cockpit-storaged \
+    cockpit-selinux 
 
 ## ── Pacchetti aggiuntivi da lista (opzionale) ─────────────────────────────────
 PKGS="$( { grep -v '^#' /ctx/hypervisor.list 2>/dev/null || true; } | { grep -v '^$' || true; } | tr '\n' ' ')"
@@ -38,10 +41,11 @@ systemctl enable virtqemud.socket    2>/dev/null || true
 systemctl enable virtnetworkd.socket 2>/dev/null || true
 systemctl enable virtstoraged.socket 2>/dev/null || true
 
-## ── Servizi da caricare per cockpit
-#systemctl enable --now cockpit.socket
-#firewall-cmd --add-service=cockpit
-#firewall-cmd --add-service=cockpit --permanent
+## ── Cockpit: socket attivo, MA non esposto in LAN ────────────────────────────
+## Il pacchetto cockpit aggiunge il servizio alla zona firewall di default:
+## lo rimuoviamo. L'accesso avviene solo via SSH tunnel (vedi docs/hypervisor.md).
+systemctl enable cockpit.socket
+firewall-offline-cmd --remove-service=cockpit 2>/dev/null || true
 
 ## ── Rete NAT default (virbr0) in autostart ────────────────────────────────────
 ## libvirt-daemon-config-network fornisce la rete 'default'. La rendiamo
