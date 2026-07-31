@@ -1018,3 +1018,116 @@ vm-backup-verify NOME="" TIMESTAMP="":
     echo "→ Rimuovo la VM di prova..."
     # la pulizia avviene comunque via trap EXIT
     exit $RESULT
+
+# [VM Manager] Programma il backup automatico notturno delle VM
+vm-backup-schedule ORARIO="" VERSIONI="2":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    export LC_ALL=C
+
+    BACKUP_ROOT="/var/mnt/backup"
+    SERVICE="/etc/systemd/system/atomik-vm-backup.service"
+    TIMER="/etc/systemd/system/atomik-vm-backup.timer"
+
+    ORARIO="{{ORARIO}}"
+    VERSIONI="{{VERSIONI}}"
+
+    echo "┌────────────────────────────────────────────────┐"
+    echo "  Backup automatico VM — programmazione          "
+    echo "└────────────────────────────────────────────────┘"
+    echo ""
+
+    # ── Orario: da parametro o chiesto (default 03:00) ───────────────────────
+    if [[ -z "$ORARIO" ]]; then
+        read -rp "Orario del backup giornaliero [03:00]: " ORARIO
+        ORARIO="${ORARIO:-03:00}"
+    fi
+
+    # Valida il formato HH:MM
+    if ! [[ "$ORARIO" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]]; then
+        echo "✗ Orario non valido: '${ORARIO}'. Usa il formato HH:MM (es. 03:00)."
+        exit 1
+    fi
+
+    # ── Verifica che il mount di backup esista come unit systemd ─────────────
+    # Il backup scrive su /var/mnt/backup: il service deve dipendere da quel
+    # mount, così non parte (e non fallisce) se il NAS non è disponibile.
+    MOUNT_UNIT="$(systemd-escape --path --suffix=mount "$BACKUP_ROOT")"
+    if ! systemctl list-unit-files "$MOUNT_UNIT" &>/dev/null \
+        && [[ ! -f "/etc/systemd/system/${MOUNT_UNIT}" ]]; then
+        echo "⚠ Il mount di backup (${MOUNT_UNIT}) non risulta configurato."
+        echo "  Configura prima lo share NAS con:  ujust smb-system backup"
+        echo "  Il backup automatico ha bisogno di ${BACKUP_ROOT} per scrivere."
+        echo ""
+        read -rp "Procedo comunque? [s/N]: " GOAHEAD
+        [[ "${GOAHEAD,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
+    fi
+
+    echo ""
+    echo "→ Configurazione:"
+    echo "  Orario:    ${ORARIO} (ogni giorno)"
+    echo "  Versioni:  ${VERSIONI} per VM"
+    echo "  Comando:   ujust vm-backup \"\" ${VERSIONI}"
+    echo "  Dipende da: ${MOUNT_UNIT}"
+    echo ""
+    read -rp "Confermi? [s/N]: " CONFIRM
+    [[ "${CONFIRM,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
+
+    # ── Service: esegue vm-backup su tutte le VM ─────────────────────────────
+    # Requires+After sul mount: se il NAS non è montato, il service non parte.
+    printf '%s\n' \
+        "[Unit]" \
+        "Description=Atomik — backup automatico delle VM" \
+        "Requires=${MOUNT_UNIT}" \
+        "After=${MOUNT_UNIT}" \
+        "" \
+        "[Service]" \
+        "Type=oneshot" \
+        "ExecStart=/usr/bin/ujust vm-backup \"\" ${VERSIONI}" \
+        | sudo tee "$SERVICE" > /dev/null
+
+    # ── Timer: ogni giorno all'orario scelto ─────────────────────────────────
+    # Persistent=true: se l'hypervisor era spento all'ora prevista, il backup
+    # parte al successivo avvio (non salta il giorno).
+    printf '%s\n' \
+        "[Unit]" \
+        "Description=Atomik — timer backup automatico VM" \
+        "" \
+        "[Timer]" \
+        "OnCalendar=*-*-* ${ORARIO}:00" \
+        "Persistent=true" \
+        "" \
+        "[Install]" \
+        "WantedBy=timers.target" \
+        | sudo tee "$TIMER" > /dev/null
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now atomik-vm-backup.timer
+
+    echo ""
+    echo "✓ Backup automatico programmato ogni giorno alle ${ORARIO}."
+    echo ""
+    echo "  Prossima esecuzione:  systemctl list-timers atomik-vm-backup.timer"
+    echo "  Esecuzione manuale:   sudo systemctl start atomik-vm-backup.service"
+    echo "  Log dell'ultimo run:  /var/mnt/backup/log/ (e log_errori/ se problemi)"
+    echo "  Disattiva con:        ujust vm-backup-unschedule"
+
+# [VM Manager] Disattiva il backup automatico notturno delle VM
+vm-backup-unschedule:
+    #!/usr/bin/env bash
+    set -uo pipefail
+
+    SERVICE="/etc/systemd/system/atomik-vm-backup.service"
+    TIMER="/etc/systemd/system/atomik-vm-backup.timer"
+
+    if [[ ! -f "$TIMER" ]]; then
+        echo "Il backup automatico non è configurato."
+        exit 0
+    fi
+
+    sudo systemctl disable --now atomik-vm-backup.timer 2>/dev/null || true
+    sudo rm -f "$TIMER" "$SERVICE"
+    sudo systemctl daemon-reload
+
+    echo "✓ Backup automatico disattivato e rimosso."
+    echo "  (i backup già presenti sul NAS restano intatti)"
