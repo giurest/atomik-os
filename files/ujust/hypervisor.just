@@ -1091,15 +1091,15 @@ vm-backup-schedule ORARIO="" VERSIONI="2":
     # parte al successivo avvio (non salta il giorno).
     printf '%s\n' \
         "[Unit]" \
-        "Description=Atomik — timer backup automatico VM" \
+        "Description=Atomik — backup automatico delle VM" \
+        "Requires=${MOUNT_UNIT}" \
+        "After=${MOUNT_UNIT}" \
         "" \
-        "[Timer]" \
-        "OnCalendar=*-*-* ${ORARIO}:00" \
-        "Persistent=true" \
-        "" \
-        "[Install]" \
-        "WantedBy=timers.target" \
-        | sudo tee "$TIMER" > /dev/null
+        "[Service]" \
+        "Type=oneshot" \
+        "Environment=HOME=/root" \
+        "ExecStart=/usr/bin/ujust vm-backup '' ${VERSIONI}" \
+        | sudo tee "$SERVICE" > /dev/null
 
     sudo systemctl daemon-reload
     sudo systemctl enable --now atomik-vm-backup.timer
