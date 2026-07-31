@@ -906,3 +906,115 @@ vm-backup-list NOME="":
     if [[ "$FOUND" -eq 0 ]]; then
         echo "Nessun backup presente."
     fi
+
+# [VM Manager] Verifica L3: boot di prova di un backup in una VM temporanea isolata
+vm-backup-verify NOME="" TIMESTAMP="":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    export LC_ALL=C
+
+    BACKUP_ROOT="/var/mnt/backup"
+    IMAGES_DIR="/var/lib/libvirt/images"
+
+    VM="{{NOME}}"
+    TS="{{TIMESTAMP}}"
+
+    [[ -z "$VM" ]] && { echo "✗ Uso: ujust vm-backup-verify <nome> [timestamp]"; exit 1; }
+
+    if ! mountpoint -q "$BACKUP_ROOT" 2>/dev/null; then
+        echo "✗ Il NAS di backup non è montato in ${BACKUP_ROOT}."
+        exit 1
+    fi
+
+    VM_BACKUP_DIR="${BACKUP_ROOT}/${VM}"
+    [[ ! -d "$VM_BACKUP_DIR" ]] && { echo "✗ Nessun backup per '${VM}'."; exit 1; }
+
+    if [[ -z "$TS" ]]; then
+        TS="$(ls -1r "$VM_BACKUP_DIR" 2>/dev/null | head -1 || true)"
+        [[ -z "$TS" ]] && { echo "✗ Nessuna versione di backup."; exit 1; }
+        echo "→ Verifico il backup più recente: ${TS}"
+    fi
+
+    SRC="${VM_BACKUP_DIR}/${TS}"
+    MANIFEST="${SRC}/MANIFEST"
+    QCOW_SRC="${SRC}/${VM}.qcow2"
+    [[ ! -f "$MANIFEST" ]] && { echo "✗ MANIFEST assente in ${SRC}"; exit 1; }
+    [[ ! -f "$QCOW_SRC" ]] && { echo "✗ Disco di backup assente."; exit 1; }
+
+    # ── Nome, disco e MAC temporanei (isolati: NON collidono con l'originale) ─
+    VTMP="verify-${VM}"
+    # tronca il nome se troppo lungo per libvirt
+    VTMP="${VTMP:0:40}"
+    TMP_QCOW="${IMAGES_DIR}/${VTMP}.qcow2"
+    # MAC casuale nuovo: la VM di prova prende un IP dal POOL, non la reservation
+    TMP_MAC="$(printf '52:54:00:%02x:%02x:%02x' $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)))"
+
+    echo ""
+    echo "→ Verifica di boot (L3) — VM temporanea isolata"
+    echo "  Backup:   ${VM} @ ${TS}"
+    echo "  VM prova: ${VTMP} (MAC ${TMP_MAC}, IP dal pool)"
+    echo ""
+
+    # Funzione di pulizia: rimuove SEMPRE la VM temporanea, anche su errore
+    cleanup() {
+        sudo virsh destroy "$VTMP" >/dev/null 2>&1 || true
+        sudo virsh undefine "$VTMP" >/dev/null 2>&1 || true
+        sudo rm -f "$TMP_QCOW"
+    }
+    trap cleanup EXIT
+
+    # ── Se per caso esiste già una VM verify- precedente, ripulisci ──────────
+    if sudo virsh dominfo "$VTMP" &>/dev/null; then
+        echo "→ Rimuovo una VM di verifica precedente..."
+        sudo virsh destroy "$VTMP" >/dev/null 2>&1 || true
+        sudo virsh undefine "$VTMP" >/dev/null 2>&1 || true
+    fi
+
+    # ── Copia il disco del backup in una posizione temporanea ────────────────
+    echo "→ Copio il disco del backup..."
+    sudo cp "$QCOW_SRC" "$TMP_QCOW"
+    sudo restorecon "$TMP_QCOW" 2>/dev/null || true
+
+    # ── Crea e avvia la VM temporanea (MAC nuovo, IP dal pool) ───────────────
+    # Niente seed cloud-init, niente reservation: ci interessa solo che BOOTI
+    # e prenda un IP. RAM/CPU minime per non pesare sull'hypervisor.
+    echo "→ Avvio la VM di prova..."
+    if ! sudo virt-install --name "$VTMP" \
+        --memory 1024 --vcpus 1 \
+        --disk "${TMP_QCOW},format=qcow2" \
+        --import --os-variant fedora-unknown \
+        --network network=default,mac="${TMP_MAC}" \
+        --graphics none --noautoconsole >/dev/null 2>&1; then
+        echo "✗ VERIFICA FALLITA: la VM di prova non si è avviata (virt-install)."
+        exit 1
+    fi
+
+    # ── Attendi che prenda un IP (fino a 120s) ───────────────────────────────
+    echo "→ Attendo che la VM prenda un IP dal DHCP..."
+    GOT_IP=""
+    WAITED=0
+    while (( WAITED < 120 )); do
+        sleep 5; WAITED=$((WAITED+5))
+        GOT_IP="$(sudo virsh domifaddr "$VTMP" 2>/dev/null \
+            | awk '/ipv4/ {print $4}' | cut -d/ -f1 | head -1 || true)"
+        [[ -n "$GOT_IP" ]] && break
+        echo "  ...attesa (${WAITED}s)"
+    done
+
+    echo ""
+    if [[ -n "$GOT_IP" ]]; then
+        echo "✓ VERIFICA SUPERATA"
+        echo "  Il backup '${VM} @ ${TS}' è avviabile."
+        echo "  La VM di prova ha bootato e ottenuto IP ${GOT_IP} in ${WAITED}s."
+        RESULT=0
+    else
+        echo "✗ VERIFICA FALLITA"
+        echo "  La VM di prova si è definita ma non ha preso un IP entro 120s."
+        echo "  Il backup potrebbe avere un problema di boot o di rete."
+        RESULT=1
+    fi
+
+    echo ""
+    echo "→ Rimuovo la VM di prova..."
+    # la pulizia avviene comunque via trap EXIT
+    exit $RESULT
