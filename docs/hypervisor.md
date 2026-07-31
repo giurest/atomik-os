@@ -163,6 +163,127 @@ ujust vm-forward <nome-vm> 81 8081 # phpMyAdmin
 `http://<ip-hypervisor>:8080` e completa l'installazione guidata (host DB =
 IP della VM database).
 
+
+## Backup e ripristino
+
+Il sistema di backup salva le VM come **copie complete** sul NAS: disco,
+definizione, seed cloud-init, reservation DHCP e port forward. Un backup così
+strutturato permette un ripristino fedele — la VM torna identica, stesso IP e
+stessa esposizione LAN.
+
+I backup girano sull'hypervisor e scrivono su uno share SMB dedicato, montato
+in `/var/mnt/backup`:
+
+ujust smb-system backup # share //<nas>/hypervisor → /var/mnt/backup
+
+
+### Struttura sul NAS
+
+/var/mnt/backup/
+├── log/ # un file di log per ogni run (storico)
+│ └── <timestamp>.log
+├── log_errori/ # creato SOLO se un run ha errori
+│ └── <timestamp>.log
+└── <nome-vm>/
+└── <timestamp>/
+├── <vm>.qcow2 # il disco
+├── <vm>.xml # definizione libvirt (virsh dumpxml)
+├── <vm>-seed.iso # seed cloud-init
+├── <vm>.reservation # riga <host> della reservation DHCP
+├── forwards/ # i port forward della VM (.service)
+└── MANIFEST # checksum, esito verifica, stato
+
+
+La presenza di un file in `log_errori/` segnala che quel run ha avuto problemi:
+una cartella vuota significa che tutti i backup sono andati a buon fine. I log
+non vengono ruotati automaticamente — restano finché non si eliminano a mano,
+così si mantiene lo storico completo.
+
+### Eseguire un backup — `vm-backup`
+
+
+ujust vm-backup [nome-vm] [versioni]
+
+
+- Senza argomenti: esegue il backup di **tutte** le VM.
+- Con un nome: solo quella VM (utile prima di aggiornamenti o interventi).
+- `versioni` (default 2): quante versioni mantenere per VM; le più vecchie
+  vengono rimosse automaticamente.
+
+Per ogni VM: shutdown graceful → copia dei file → riavvio immediato → verifica.
+La VM è offline solo durante shutdown + copia (tipicamente 1–3 minuti secondo la
+dimensione del disco), non durante la verifica.
+
+Se lo shutdown non completa entro 120 secondi, la VM viene **saltata** (non
+forzata) e l'evento registrato in `log_errori/`. Le VM già spente vengono
+copiate senza essere avviate.
+
+### Verifica automatica (livelli 1 e 2)
+
+Ogni backup viene verificato subito dopo la copia:
+
+- **Livello 1 — checksum**: l'hash SHA256 di ogni file è salvato nel MANIFEST.
+- **Livello 2 — integrità qcow2**: `qemu-img check` conferma che l'immagine
+  disco sia strutturalmente valida.
+
+Il MANIFEST riporta `status: verified` solo se entrambi passano; altrimenti
+`status: FAILED`. Un backup FAILED non verrà ripristinato da `vm-restore`.
+
+### Verifica di boot (livello 3) — `vm-backup-verify`
+
+Verifica periodica a campione, manuale. Ripristina il backup in una VM
+temporanea **isolata** (nome, MAC e IP diversi dall'originale), la avvia e
+conferma che booti fino a ottenere un IP dal DHCP, poi la distrugge senza
+lasciare residui.
+
+ujust vm-backup-verify <nome-vm> [timestamp]
+
+
+Non tocca la VM originale, che può restare in esecuzione. Prova che il backup è
+davvero **avviabile**, non solo integro come file.
+
+> **Attenzione**: la verifica avvia una copia del disco, con la stessa identità
+> dell'originale. Per VM con mount SMB **in scrittura** verso risorse condivise,
+> valuta di eseguire la verifica in un momento di inattività o di spegnere prima
+> l'originale, per evitare che due macchine scrivano sullo stesso share. Per VM
+> con dati locali o SMB in sola lettura non c'è rischio.
+
+### Elencare i backup — `vm-backup-list`
+
+ujust vm-backup-list [nome-vm]
+
+
+Mostra i backup disponibili per VM, con timestamp, stato (dal MANIFEST) e
+dimensione. Un `⚠` segnala i backup non `verified`. Utile prima di un ripristino
+per scegliere la versione giusta.
+
+### Ripristinare una VM — `vm-restore`
+
+ujust vm-restore <nome-vm> [timestamp]
+
+
+Senza timestamp usa il backup più recente. Prima di ripristinare:
+
+1. verifica lo `status` del MANIFEST (rifiuta se non `verified`)
+2. ricalcola i checksum e li confronta (rifiuta se il backup si è corrotto sul NAS)
+3. controlla che la VM **non esista già** — va eliminata prima con `vm-delete`
+4. controlla che l'IP della reservation sia libero (no conflitti con altre VM)
+
+Poi ripristina disco, seed, definizione (`virsh define`, fedele all'originale),
+reservation e port forward, e avvia la VM. L'IP torna identico grazie alla
+reservation salvata.
+
+> Per ripristinare una versione precedente di una VM ancora attiva, eliminarla
+> prima con `vm-delete`. La procedura è esplicita per evitare sovrascritture
+> accidentali.
+
+### Strategia consigliata
+
+- **Backup regolari** di tutte le VM (`vm-backup`), automatizzabili con un timer.
+- **Verifica L3 a campione** ogni tanto (`vm-backup-verify` su una VM diversa),
+  per confermare che i backup siano ripristinabili.
+- Controllo periodico di `log_errori/`: se vuoto, tutti i backup sono validi.
+
 ## Note tecniche e caveat
 
 ### Lease DHCP residui dopo `vm-delete`
