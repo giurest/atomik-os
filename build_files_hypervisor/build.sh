@@ -36,18 +36,24 @@ if [ -n "$PKGS" ]; then
     dnf install -y --skip-unavailable $PKGS
 fi
 
-## ── fail2ban: protezione brute-force su SSH ──────────────────────────────────
-## Legge i log da journald (su bootc non c'è /var/log/auth.log) e banna via
-## firewalld gli IP con troppi login SSH falliti.
+## ── fail2ban: protezione brute-force SSH ─────────────────────────────────────
 mkdir -p /etc/fail2ban/jail.d
 printf '%s\n' \
     "[sshd]" \
     "enabled = true" \
     "backend = systemd" \
+    "journalmatch = _SYSTEMD_UNIT=sshd.service + _COMM=sshd" \
     "maxretry = 5" \
     "bantime = 1h" \
     "findtime = 10m" \
     > /etc/fail2ban/jail.d/sshd.local
+
+printf '%s\n' \
+    "[Definition]" \
+    "logtarget = SYSTEMD-JOURNAL" \
+    "dbfile = :memory:" \
+    > /etc/fail2ban/fail2ban.local
+
 systemctl enable fail2ban
 
 ## ── Servizi libvirt: socket modulari (approccio moderno Fedora 44) ────────────
