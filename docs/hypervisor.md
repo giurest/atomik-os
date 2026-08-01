@@ -284,6 +284,43 @@ reservation salvata.
   per confermare che i backup siano ripristinabili.
 - Controllo periodico di `log_errori/`: se vuoto, tutti i backup sono validi.
 
+## Cockpit — pannello di gestione web
+
+L'hypervisor include **Cockpit** con il modulo `cockpit-machines`, che offre
+una gestione via browser delle VM libvirt (stato, console grafica, avvio/stop,
+monitoraggio risorse) e un terminale dell'host.
+
+### Sicurezza: isolato dalla LAN
+
+Cockpit ascolta sulla porta 9090, ma **non è esposto alla LAN**: il firewall
+non apre né la porta né il servizio `cockpit`. L'immagine rimuove esplicitamente
+il servizio dalla zona firewall (il pacchetto lo aggiungerebbe di default),
+così lo stato "installato ma isolato" è riproducibile e sopravvive ai reboot.
+
+Questo è intenzionale: Cockpit dà accesso amministrativo completo all'host
+(terminale root incluso), quindi non va esposto direttamente sulla rete.
+
+### Accesso via tunnel SSH
+
+Si raggiunge dalla macchina di sviluppo tramite un tunnel SSH, che riusa il
+canale già autenticato senza aprire nuove porte:
+
+ssh -L 9090:localhost:9090 <username>@<ip-hypervisor>
+
+poi si apre `https://localhost:9090` nel browser. Il login usa le credenziali
+di sistema dell'hypervisor.
+
+Per comodità, configurare in `~/.ssh/config` un host con `LocalForward 9090
+localhost:9090`, così `ssh hypervisor` apre già il tunnel.
+
+### Rapporto con le ricette ujust
+
+Cockpit **affianca**, non sostituisce, le ricette `ujust`. L'orchestrazione
+strutturata (creazione VM con IP/reservation/forward, backup, restore) resta
+compito delle ricette. Cockpit è la dashboard per osservazione, console e
+operazioni rapide.
+
+
 ## Note tecniche e caveat
 
 ### Lease DHCP residui dopo `vm-delete`
@@ -349,3 +386,10 @@ logout/login.
   mai nei quadlet o nelle unit systemd.
 - **Isolamento per VM** — ogni servizio nella propria VM; un database non è mai
   esposto sulla LAN (solo le VM interne lo raggiungono via NAT).
+### Esposizioni firewall nascoste nei "services"
+
+Il firewall può esporre servizi in due modi: come **porta** (`ports:`) o come
+**servizio** (`services:`). Alcuni pacchetti (es. cockpit) aggiungono il proprio
+servizio alla zona di default all'installazione. Un controllo di sicurezza deve
+guardare **entrambi** in `firewall-cmd --list-all`: una verifica sulle sole
+porte non rileva un servizio aperto.
