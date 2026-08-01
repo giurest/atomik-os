@@ -26,13 +26,29 @@ dnf install -y --skip-unavailable \
     cockpit \
     cockpit-machines \
     cockpit-storaged \
-    cockpit-selinux 
+    cockpit-selinux \
+    fail2ban \
+    fail2ban-firewalld
 
 ## ── Pacchetti aggiuntivi da lista (opzionale) ─────────────────────────────────
 PKGS="$( { grep -v '^#' /ctx/hypervisor.list 2>/dev/null || true; } | { grep -v '^$' || true; } | tr '\n' ' ')"
 if [ -n "$PKGS" ]; then
     dnf install -y --skip-unavailable $PKGS
 fi
+
+## ── fail2ban: protezione brute-force su SSH ──────────────────────────────────
+## Legge i log da journald (su bootc non c'è /var/log/auth.log) e banna via
+## firewalld gli IP con troppi login SSH falliti.
+mkdir -p /etc/fail2ban/jail.d
+printf '%s\n' \
+    "[sshd]" \
+    "enabled = true" \
+    "backend = systemd" \
+    "maxretry = 5" \
+    "bantime = 1h" \
+    "findtime = 10m" \
+    > /etc/fail2ban/jail.d/sshd.local
+systemctl enable fail2ban
 
 ## ── Servizi libvirt: socket modulari (approccio moderno Fedora 44) ────────────
 ## I demoni modulari si attivano on-demand via socket. Più leggeri e robusti
