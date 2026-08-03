@@ -23,8 +23,8 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 # Justfile server (sorgente in files/ujust, come le altre varianti, autocomplete ujust)
 COPY files/ujust/server.just /usr/share/atomik-server/justfile
 COPY files/ujust/common.just /usr/share/atomik-server/common.just
-COPY files/system/usr/share/fish/vendor_completions.d/ujust.fish \
-     /usr/share/fish/vendor_completions.d/ujust.fish
+COPY files/system/usr/share/bash-completion/completions/ujust \
+     /usr/share/bash-completion/completions/ujust
 
 
 # ── Atomik Changelog ──────────────────────────────────────────────────────────

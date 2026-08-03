@@ -1,0 +1,9 @@
+# /usr/share/bash-completion/completions/ujust
+# Completion per ujust — recipe dal justfile di sistema Atomik (via wrapper)
+_ujust() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local recipes
+    recipes="$(ujust --summary 2>/dev/null)"
+    COMPREPLY=($(compgen -W "$recipes" -- "$cur"))
+}
+complete -F _ujust ujust
