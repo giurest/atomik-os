@@ -413,3 +413,34 @@ webserver-setup:
     echo "  Per esporli sulla LAN, dall'HYPERVISOR:"
     echo "    ujust vm-forward $(hostname) ${WEB_PORT} <porta-host>"
     echo "    ujust vm-forward $(hostname) ${PMA_PORT} <porta-host>"
+
+# [Servizi] Mostra quali container hanno un aggiornamento disponibile (non applica nulla)
+pods-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "→ Controllo aggiornamenti immagini (nessuna modifica applicata)..."
+    echo ""
+    sudo podman auto-update --dry-run
+    echo ""
+    echo "  Per applicare: ujust pods-update"
+
+# [Servizi] Applica gli aggiornamenti disponibili ai container (esplicito, manuale)
+pods-update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "→ Aggiornamento container in corso..."
+    echo ""
+    sudo podman auto-update
+    echo ""
+    echo "✓ Fatto. Verifica esito sopra; stato servizi: systemctl status <servizio>.service"
+
+# [Servizi] Ripristina i container all'immagine precedente (rollback rapido, i dati restano intatti)
+pods-rollback:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "→ Rollback container all'immagine precedente..."
+    echo "  (torna alle immagini prima dell'ultimo pods-update; i volumi/dati non vengono toccati)"
+    echo ""
+    sudo podman auto-update --rollback
+    echo ""
+    echo "✓ Fatto. Verifica esito sopra; stato servizi: systemctl status <servizio>.service"
