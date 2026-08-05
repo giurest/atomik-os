@@ -1,2 +1,0 @@
-# Atomik OS Kickstart
-
