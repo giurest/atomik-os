@@ -40,7 +40,8 @@ dnf install -y --skip-unavailable \
     p7zip \
     p7zip-plugins \
     rsync \
-    wget
+    wget \
+    virt-viewer
 
 ## Pacchetti aggiuntivi da lista (opzionale)
 PKGS="$(grep -v '^#' /ctx/desktop.list 2>/dev/null | grep -v '^$' | tr '\n' ' ')"
