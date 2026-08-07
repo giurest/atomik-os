@@ -831,6 +831,7 @@ cockpit-setup IP="" PORTA="9090":
         "    HostName ${IP}" \
         "    User ${REMOTE_USER}" \
         "    LocalForward ${PORTA} localhost:${PORTA}" \
+        "    LocalForward 5900 localhost:5900" \
         "    ControlMaster auto" \
         "    ControlPath ~/.ssh/control-%r@%h:%p" \
         "    ControlPersist 10m" \
