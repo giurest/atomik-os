@@ -167,7 +167,6 @@ powerwash:
     echo "→ Preparazione reset..."
     sudo /usr/bin/atomik-powerwash-prepare
     echo "→ Switch immagine..."
-    sudo bootc switch --mutate-in-place --transport registry "$IMAGE"
     echo ""
     echo "┌──────────────────────────────────────┐"
     echo "│  ✓ Powerwash preparato               │"
