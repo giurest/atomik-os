@@ -51,7 +51,7 @@ jobs:
           containerfiles: ./containerapps/php/Containerfile
           oci: true
       - name: Push image
-        uses: redhat-actions/push-to-registry@v2
+        uses: redhat-actions/push-to-registry@v3
         id: push
         with:
           tags: ${{ steps.build.outputs.tags }}
