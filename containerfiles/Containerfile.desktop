@@ -135,18 +135,6 @@ RUN mkdir -p /etc/skel/.config/niri/dms \
     cp -r /usr/share/atomik/defaults/niri/* \
           /etc/skel/.config/niri/
 
-# ── Fish greeting (fastfetch + suggerimento ujust) ────────────────────────────
-COPY files/system/usr/share/fish/vendor_functions.d/fish_greeting.fish \
-     /usr/share/fish/vendor_functions.d/fish_greeting.fish
-
-COPY files/system/usr/lib/systemd/system/atomik-fish-setup.service \
-     /usr/lib/systemd/system/atomik-fish-setup.service
-COPY files/system/usr/bin/atomik-fish-setup \
-     /usr/bin/atomik-fish-setup
-RUN chmod +x /usr/bin/atomik-fish-setup && \
-    ln -sf /usr/lib/systemd/system/atomik-fish-setup.service \
-           /usr/lib/systemd/system/multi-user.target.wants/atomik-fish-setup.service
-
 # ── Fish greeting (fastfetch + suggerimento ujust + autocomplete ujust) ────────────────────────────
 COPY files/system/usr/share/fish/vendor_functions.d/fish_greeting.fish \
      /usr/share/fish/vendor_functions.d/fish_greeting.fish
