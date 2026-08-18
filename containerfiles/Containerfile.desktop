@@ -7,35 +7,35 @@ FROM quay.io/fedora/fedora-silverblue:44
 LABEL org.opencontainers.image.title="Atomik OS Desktop"
 LABEL org.opencontainers.image.description="Atomik OS — variante Desktop con Niri + DMS (base Fedora Silverblue)"
 
-## ── Rimozione GNOME e GDM ─────────────────────────────────────────────────────
-#RUN dnf remove -y \
-#    gnome-shell \
-#    gnome-session \
-#    gnome-session-wayland-session \
-#    gdm \
-#    gnome-control-center \
-#    gnome-software \
-#    gnome-terminal \
-#    nautilus \
-#    gnome-text-editor \
-#    gnome-calculator \
-#    gnome-calendar \
-#    gnome-clocks \
-#    gnome-connections \
-#    gnome-contacts \
-#    gnome-logs \
-#    gnome-maps \
-#    gnome-weather \
-#    gnome-tour \
-#    gnome-user-docs \
-#    yelp \
-#    totem \
-#    evince \
-#    loupe \
-#    snapshot \
-#    firefox \
-#    2>/dev/null || true && \
-#    dnf clean all
+# ── Rimozione GNOME e GDM ─────────────────────────────────────────────────────
+RUN dnf remove -y \
+    gnome-shell \
+    gnome-session \
+    gnome-session-wayland-session \
+    gdm \
+    gnome-control-center \
+    gnome-software \
+    gnome-terminal \
+    nautilus \
+    gnome-text-editor \
+    gnome-calculator \
+    gnome-calendar \
+    gnome-clocks \
+    gnome-connections \
+    gnome-contacts \
+    gnome-logs \
+    gnome-maps \
+    gnome-weather \
+    gnome-tour \
+    gnome-user-docs \
+    yelp \
+    totem \
+    evince \
+    loupe \
+    snapshot \
+    firefox \
+    2>/dev/null || true && \
+    dnf clean all
 
 # ── Build: RPMFusion, DMS, pacchetti, Brave (via build.sh) ────────────────────
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
