@@ -118,7 +118,7 @@ jobs:
 
       - name: Build image
         id: build
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@v3
         with:
           image: atomik-${{ matrix.variant }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -196,7 +196,7 @@ jobs:
 
       - name: Build image
         id: build
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@v3
         with:
           image: atomik-${{ matrix.variant }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -273,7 +273,7 @@ jobs:
 
       - name: Build image
         id: build
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@v3
         with:
           image: atomik-${{ matrix.variant }}
           tags: ${{ steps.meta.outputs.tags }}
