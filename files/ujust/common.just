@@ -861,3 +861,37 @@ cockpit-setup IP="" PORTA="9090":
     echo "  Riapri il terminale (o: source ${FISH_CONFIG})"
     echo "  Poi apri Cockpit con:  cockpit"
     echo "  Chiudi il tunnel con:  cockpit-stop"
+
+# [VM] Apre la console grafica di una VM sull'hypervisor (SPICE tunnellato su SSH).
+# Al primo avvio chiede IP e utente dell'hypervisor e li salva in ~/.config/atomik/vm-console.env
+# Per riconfigurare (es. cambio hypervisor): elimina quel file e rilancia la ricetta.
+vm-console vm="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/atomik"
+    CONFIG_FILE="${CONFIG_DIR}/vm-console.env"
+
+    if [ ! -f "${CONFIG_FILE}" ]; then
+        echo "→ Prima configurazione di vm-console"
+        HV_IP=""
+        while [ -z "${HV_IP}" ]; do
+            read -rp "  IP dell'hypervisor: " HV_IP
+            [ -z "${HV_IP}" ] && echo "  ⚠ L'IP non può essere vuoto."
+        done
+        read -rp "  Utente SSH sull'hypervisor [${USER}]: " HV_USER
+        HV_USER="${HV_USER:-$USER}"
+        mkdir -p "${CONFIG_DIR}"
+        printf 'HV_IP=%s\nHV_USER=%s\n' "${HV_IP}" "${HV_USER}" > "${CONFIG_FILE}"
+        chmod 600 "${CONFIG_FILE}"
+        echo "✓ Configurazione salvata in ${CONFIG_FILE}"
+        echo ""
+    fi
+
+    # shellcheck source=/dev/null
+    source "${CONFIG_FILE}"
+
+    if [ -z "{{vm}}" ]; then
+        virt-viewer --connect "qemu+ssh://${HV_USER}@${HV_IP}/system"
+    else
+        virt-viewer --connect "qemu+ssh://${HV_USER}@${HV_IP}/system" --domain-name "{{vm}}"
+    fi    
