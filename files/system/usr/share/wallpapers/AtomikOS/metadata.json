@@ -1,0 +1,13 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "GiuRest Labs"
+            }
+        ],
+        "Id": "AtomikOS",
+        "License": "CC-BY-SA-4.0",
+        "Name": "Atomik OS"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
