@@ -1,47 +1,33 @@
-# ── Atomik OS — pacchetti variante Desktop ───────────────────────────────────
+# ── Atomik OS — pacchetti variante Desktop (base Kinoite / Plasma) ────────────
+# Principio: riutilizzo massimo della base Kinoite. RIMOSSI rispetto a niri/SV:
+#   compositor niri e tool wayland (grim/slurp/wf-recorder/swayidle/wl-clipboard),
+#   dms/dms-greeter/greetd, nautilus (→ Dolphin), papirus (→ Breeze),
+#   pavucontrol (→ audio Plasma), nm-connection-editor/network-manager-applet
+#   (→ widget rete Plasma). Kinoite li fornisce già nativi.
 
 # ── Shell e terminale ─────────────────────────────────────────────────────────
 fish
-starship
-
-# ── Compositor Niri ──────────────────────────────────────────────────────────
-niri
-wl-clipboard
-grim
-slurp
-wf-recorder
-swayidle
-
-# ── DankMaterialShell (shell, greeter, launcher integrati) ───────────────────
-dms
-dms-greeter
-greetd
-
-# ── File manager ──────────────────────────────────────────────────────────────
-nautilus
-
-# ── Tema e aspetto ────────────────────────────────────────────────────────────
-papirus-icon-theme
+# terminale: Konsole (già in Kinoite) — niente alacritty
 
 # ── Sviluppo ─────────────────────────────────────────────────────────────────
 git
 
 # ── Multimedia ───────────────────────────────────────────────────────────────
+# pipewire/wireplumber già in Kinoite; controllo audio nativo Plasma (niente pavucontrol)
 pipewire
 wireplumber
 pipewire-pulseaudio
 pipewire-alsa
-pavucontrol
 
 # ── Utilità sistema ───────────────────────────────────────────────────────────
 distrobox
 podman
+podman-compose
 flatpak
 NetworkManager
 NetworkManager-wifi
 bluez
 bluez-tools
-just
 
 # ── Tool CLI moderni ─────────────────────────────────────────────────────────
 eza
@@ -52,12 +38,11 @@ htop
 fastfetch
 
 # ── VPN e gestione rete ──────────────────────────────────────────────────────
-nm-connection-editor
-network-manager-applet
-NetworkManager-openvpn-gnome
+# gestione rete via widget Plasma nativo; teniamo backend VPN CLI/plugin
+NetworkManager-openvpn
 wireguard-tools
 
-# ── AppImage support ──────────────────────────────────────────────────────
+# ── AppImage / filesystem / SMB ───────────────────────────────────────────────
 fuse
 fuse-libs
 cifs-utils
