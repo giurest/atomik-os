@@ -42,7 +42,7 @@ blacklist nouveau
 options nouveau modeset=0
 EOF
 
-## 2) Abilita modeset nvidia-drm (necessario per Wayland/niri)
+## 2) Abilita modeset nvidia-drm (necessario per Wayland (Plasma/KWin))
 cat > /etc/modprobe.d/nvidia.conf << 'EOF'
 options nvidia-drm modeset=1 fbdev=1
 EOF

@@ -3,8 +3,8 @@ set -ouex pipefail
 
 ## ═══════════════════════════════════════════════════════════════════════════════
 ##  Atomik OS Hypervisor — build.sh
-##  Base: atomik-desktop (Niri + DMS). Qui aggiungiamo SOLO la virtualizzazione.
-##  niri / greetd / ujust / flatpak-base / branding sono ereditati dalla base.
+##  Base: atomik-desktop (KDE Plasma / Kinoite). Qui aggiungiamo SOLO la virtualizzazione.
+##  Plasma / SDDM / ujust / flatpak-base / branding sono ereditati dalla base.
 ## ═══════════════════════════════════════════════════════════════════════════════
 
 ## ── Stack di virtualizzazione ─────────────────────────────────────────────────

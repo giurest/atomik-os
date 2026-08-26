@@ -5,7 +5,7 @@ FROM ghcr.io/giurest/atomik-desktop:latest
 
 # ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Desktop NVIDIA"
-LABEL org.opencontainers.image.description="Atomik OS — variante Desktop con driver NVIDIA proprietari (base Fedora Silverblue)"
+LABEL org.opencontainers.image.description="Atomik OS — variante Desktop con driver NVIDIA proprietari (base Fedora Kinoite / KDE Plasma)"
 
 # ── Driver NVIDIA (via build.sh) ──────────────────────────────────────────────
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
