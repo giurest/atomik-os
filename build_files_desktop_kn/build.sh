@@ -26,6 +26,7 @@ dnf install -y --skip-unavailable \
     fish \
     just \
     fastfetch \
+    plymouth-plugin-script \
     wireguard-tools \
     NetworkManager-openvpn \
     fuse \
@@ -41,8 +42,7 @@ dnf install -y --skip-unavailable \
     p7zip-plugins \
     rsync \
     wget \
-    virt-viewer \
-	plymouth-plugin-script
+    virt-viewer
 
 ## Pacchetti aggiuntivi da lista (opzionale)
 PKGS="$(grep -v '^#' /ctx/desktop.list 2>/dev/null | grep -v '^$' | tr '\n' ' ')"
