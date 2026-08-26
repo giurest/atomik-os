@@ -41,7 +41,8 @@ dnf install -y --skip-unavailable \
     p7zip-plugins \
     rsync \
     wget \
-    virt-viewer
+    virt-viewer \
+	plymouth-plugin-script
 
 ## Pacchetti aggiuntivi da lista (opzionale)
 PKGS="$(grep -v '^#' /ctx/desktop.list 2>/dev/null | grep -v '^$' | tr '\n' ' ')"
