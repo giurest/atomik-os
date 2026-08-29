@@ -32,7 +32,7 @@ RUN mkdir -p /etc/brave/policies/managed
 COPY files/system/usr/share/brave-policies/managed/atomik-policy.json \
      /etc/brave/policies/managed/atomik-policy.json
 
-# ── SDDM display manager (già presente in Kinoite; garantiamo abilitazione) ───
+# ── plasmalogin display manager (Kinoite 44+; SDDM sostituito da plasma-login-manager) ──
 RUN systemctl enable sddm.service 2>/dev/null || true
 
 # ── Keyring: abilita globalmente per tutte le sessioni ────────────────────────
