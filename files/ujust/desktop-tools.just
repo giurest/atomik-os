@@ -35,7 +35,7 @@ install-winboat:
         echo "✓ FreeRDP già presente"
     fi
     echo "→ Scarico l'ultima versione di WinBoat..."
-    URL=$(curl -s https://api.github.com/repos/TibixDev/winboat/releases/latest \
+    URL=$(curl -s https://api.github.com/repos/winboat-org/winboat/releases/latest \
         | grep "browser_download_url.*AppImage" \
         | head -1 \
         | cut -d '"' -f 4)
