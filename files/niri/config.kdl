@@ -1,7 +1,0 @@
-
-include "dms/windowrules.kdl"
-include "dms/binds.kdl"
-include "dms/colors.kdl"
-include "dms/layout.kdl"
-
-include "dms/outputs.kdl"
