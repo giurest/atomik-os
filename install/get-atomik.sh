@@ -91,4 +91,4 @@ ok "Firma GPG verificata"
 echo ""
 
 # ── Esegui il wizard ─────────────────────────────────────
-bash "$TMPDIR/atomik-install.sh"
+bash "$TMPDIR/atomik-install.sh" < /dev/tty
