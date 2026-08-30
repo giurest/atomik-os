@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# ╔══════════════════════════════════════════════════════════╗
+# ║  Atomik OS — First Run / Post-Migration Setup           ║
+# ║  Lanciato automaticamente al primo avvio su Atomik      ║
+# ║  Idempotente: non fa nulla se già eseguito              ║
+# ╚══════════════════════════════════════════════════════════╝
+set -euo pipefail
+
+MARKER="$HOME/.config/atomik-first-run-done"
+SKEL="/etc/skel/.config"
+
+# ── Già eseguito? ────────────────────────────────────────
+[ -f "$MARKER" ] && exit 0
+
+# ── Verifica che siamo su Atomik ─────────────────────────
+if ! grep -q "Atomik OS" /etc/os-release 2>/dev/null; then
+    exit 0
+fi
+
+# ── Rilevazione variante ─────────────────────────────────
+VARIANT=$(grep "^VARIANT_ID=" /etc/os-release 2>/dev/null \
+    | cut -d= -f2 | tr -d '"' || echo "desktop")
+IS_GAMING=false
+echo "$VARIANT" | grep -qiE "puregaming|gaming" && IS_GAMING=true
+
+# ── UI ───────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
+ok()   { echo -e "${GREEN}✓${NC} $*"; }
+info() { echo -e "${YELLOW}→${NC} $*"; }
+warn() { echo -e "${YELLOW}⚠${NC} $*"; }
+
+clear
+echo ""
+echo -e "${BLUE}${BOLD}"
+echo "    ╔══════════════════════════════════════════╗"
+echo "    ║      Atomik OS — Primo Avvio             ║"
+echo "    ╚══════════════════════════════════════════╝"
+echo -e "${NC}"
+echo ""
+echo -e "  Variante rilevata: ${BOLD}$VARIANT${NC}"
+echo ""
+echo "  Configurazione in corso — attendi qualche minuto."
+echo ""
+
+# ── 1. Config Plasma → home utente corrente ──────────────
+info "Applicazione configurazione Plasma..."
+mkdir -p "$HOME/.config/kdedefaults"
+mkdir -p "$HOME/.local/share/konsole"
+
+# File config da skel
+for f in kwinrc kdeglobals; do
+    [ -f "$SKEL/$f" ] && cp "$SKEL/$f" "$HOME/.config/$f"
+done
+
+# kdedefaults
+[ -d "$SKEL/kdedefaults" ] && cp -r "$SKEL/kdedefaults/." "$HOME/.config/kdedefaults/"
+
+# appletsrc (pannello + wallpaper)
+[ -f "$SKEL/plasma-org.kde.plasma.desktop-appletsrc" ] && \
+    cp "$SKEL/plasma-org.kde.plasma.desktop-appletsrc" \
+       "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+
+ok "Configurazione Plasma applicata (Fast, Breeze Dark, wallpaper)"
+
+# ── 2. Config Konsole (semantic integration OFF) ─────────
+info "Configurazione Konsole..."
+if [ -f "$SKEL/../.local/share/konsole/Atomik.profile" ]; then
+    mkdir -p "$HOME/.local/share/konsole"
+    cp "$SKEL/../.local/share/konsole/Atomik.profile" \
+       "$HOME/.local/share/konsole/Atomik.profile"
+fi
+# konsolerc — imposta il profilo di default
+cat > "$HOME/.config/konsolerc" << 'KONSOLERC'
+[Desktop Entry]
+DefaultProfile=Atomik.profile
+
+[KonsoleWindow]
+SaveGeometryOnExit=false
+KONSOLERC
+ok "Konsole configurata (shell integration semantica disabilitata)"
+
+# ── 3. Reset marker Flatpak → forza reinstallazione ──────
+info "Avvio installazione app Flatpak..."
+sudo rm -f /var/lib/atomik-flatpak-base-done 2>/dev/null || true
+sudo systemctl start atomik-flatpak-base 2>/dev/null || true
+
+if $IS_GAMING; then
+    sudo rm -f /var/lib/atomik-flatpak-gaming-done 2>/dev/null || true
+    sudo systemctl start atomik-flatpak-gaming 2>/dev/null || true
+    ok "Flatpak avviati: base + gaming (in background)"
+else
+    ok "Flatpak avviati: base (in background)"
+fi
+
+# ── 4. Marker completamento ───────────────────────────────
+touch "$MARKER"
+
+# ── 5. Messaggio finale ──────────────────────────────────
+echo ""
+echo -e "${GREEN}${BOLD}"
+echo "  ╔══════════════════════════════════════════════════╗"
+echo "  ║  Configurazione completata!                      ║"
+echo "  ╚══════════════════════════════════════════════════╝"
+echo -e "${NC}"
+echo "  Cosa è stato configurato:"
+echo "  • Tema Breeze Dark + profilo Fast (effetti disabilitati)"
+echo "  • Wallpaper Atomik OS"
+echo "  • Konsole senza indicatori colorati"
+echo "  • App Flatpak in installazione (processo in background)"
+echo ""
+warn "Riavvia la sessione per applicare tutte le modifiche."
+echo ""
+echo "  Premi INVIO per chiudere questa finestra..."
+read -r

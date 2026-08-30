@@ -1,0 +1,27 @@
+name: Update installer SHA256
+
+on:
+  push:
+    paths:
+      - 'install/atomik-install.sh'
+  workflow_dispatch:
+
+jobs:
+  update-sha:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Calcola SHA256 di atomik-install.sh
+        run: |
+          sha256sum install/atomik-install.sh > install/atomik-install.sh.sha256
+          echo "SHA256: $(cat install/atomik-install.sh.sha256)"
+
+      - name: Commit SHA256 aggiornato
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "ci: update atomik-install.sh SHA256"
+          file_pattern: install/atomik-install.sh.sha256

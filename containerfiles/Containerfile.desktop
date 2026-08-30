@@ -33,7 +33,7 @@ COPY files/system/usr/share/brave-policies/managed/atomik-policy.json \
      /etc/brave/policies/managed/atomik-policy.json
 
 # ── plasmalogin display manager (Kinoite 44+; SDDM sostituito da plasma-login-manager) ──
-RUN systemctl enable sddm.service 2>/dev/null || true
+RUN systemctl enable plasmalogin.service
 
 # ── Keyring: abilita globalmente per tutte le sessioni ────────────────────────
 RUN systemctl --global enable gnome-keyring-daemon.socket 2>/dev/null || true
@@ -132,6 +132,12 @@ RUN sed -i 's/^NAME=.*/NAME="Atomik OS"/' /etc/os-release && \
     sed -i 's/^ID=.*/ID=fedora/' /usr/lib/os-release && \
     sed -i '/^LOGO=/d' /usr/lib/os-release && \
     echo 'LOGO=atomik-os' >> /usr/lib/os-release
+
+# ── First Run / Post-Migration setup ─────────────────────────────────────────
+COPY files/system/usr/bin/atomik-first-run /usr/bin/atomik-first-run
+COPY files/system/etc/skel/.config/autostart/atomik-first-run.desktop \
+     /etc/skel/.config/autostart/atomik-first-run.desktop
+RUN chmod +x /usr/bin/atomik-first-run
 
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
