@@ -859,16 +859,16 @@ vm-console vm="":
 
     # shellcheck source=/dev/null
     source "${CONFIG_FILE}"
-   if [ -z "{{ vm }}" ]; then
+    if [ -z "{{ vm }}" ]; then
        # tunnel SSH + virt-viewer diretto
        ssh -f -N -L 5900:127.0.0.1:5900 "${HV_USER}@${HV_IP}" 2>/dev/null || true
        sleep 1
        virt-viewer --connect "spice://127.0.0.1:5900"
-   else
+    else
        # ottieni la porta SPICE della VM specifica
        SPICE_URI=$(virsh -c "qemu+ssh://${HV_USER}@${HV_IP}/system" domdisplay "{{ vm }}" 2>/dev/null)
        SPICE_PORT=$(echo "$SPICE_URI" | grep -oP ':\K\d+$')
        ssh -f -N -L "${SPICE_PORT}:127.0.0.1:${SPICE_PORT}" "${HV_USER}@${HV_IP}" 2>/dev/null || true
        sleep 1
        virt-viewer --connect "spice://127.0.0.1:${SPICE_PORT}"
-   fi
+    fi
