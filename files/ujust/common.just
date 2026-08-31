@@ -859,9 +859,8 @@ vm-console vm="":
 
     # shellcheck source=/dev/null
     source "${CONFIG_FILE}"
-
     if [ -z "{{vm}}" ]; then
-        virt-viewer --connect "qemu+ssh://${HV_USER}@${HV_IP}/system"
+        SHELL=/bin/bash virt-viewer --connect "qemu+ssh://${HV_USER}@${HV_IP}/system"
     else
-        virt-viewer --connect "qemu+ssh://${HV_USER}@${HV_IP}/system" --domain-name "{{vm}}"
-    fi    
+        SHELL=/bin/bash virt-viewer --connect "qemu+ssh://${HV_USER}@${HV_IP}/system" --domain-name "{{vm}}"
+    fi
