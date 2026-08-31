@@ -65,11 +65,8 @@ systemctl enable virtstoraged.socket 2>/dev/null || true
 
 ## ── Cockpit: socket attivo, MA non esposto in LAN ────────────────────────────
 ## Il pacchetto cockpit aggiunge il servizio alla zona firewall di default:
-## lo rimuoviamo. L'accesso avviene solo via SSH tunnel (vedi docs/hypervisor.md).
 systemctl enable cockpit.socket
 firewall-offline-cmd --remove-service=cockpit 2>/dev/null || true
-firewall-offline-cmd --add-port=9090/tcp
-firewall-offline-cmd --remove-service=cockpit/a firewall-offline-cmd --add-port=9090/tcp
 firewall-offline-cmd --add-port=9090/tcp
 
 ## ── Rete NAT default (virbr0) in autostart ────────────────────────────────────
