@@ -60,6 +60,9 @@ COPY files/ujust/hypervisor.just /usr/share/atomik/hypervisor.just
 COPY files/ujust/common.just /usr/share/atomik/common.just
 COPY files/ujust/environment.just /usr/share/atomik/environment.just
 
+# ── Cockpit configurazione ────────────────────────────────────────────────────
+COPY files/system/etc/cockpit/cockpit.conf /etc/cockpit/cockpit.conf
+
 # ── Hostname ──────────────────────────────────────────────────────────────────
 RUN printf 'atomik-hypervisor\n' > /usr/lib/hostname
 
