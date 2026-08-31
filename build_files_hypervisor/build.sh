@@ -68,6 +68,9 @@ systemctl enable virtstoraged.socket 2>/dev/null || true
 ## lo rimuoviamo. L'accesso avviene solo via SSH tunnel (vedi docs/hypervisor.md).
 systemctl enable cockpit.socket
 firewall-offline-cmd --remove-service=cockpit 2>/dev/null || true
+firewall-offline-cmd --add-port=9090/tcp
+firewall-offline-cmd --remove-service=cockpit/a firewall-offline-cmd --add-port=9090/tcp
+firewall-offline-cmd --add-port=9090/tcp
 
 ## ── Rete NAT default (virbr0) in autostart ────────────────────────────────────
 ## libvirt-daemon-config-network fornisce la rete 'default'. La rendiamo

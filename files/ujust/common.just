@@ -780,31 +780,24 @@ cleanup:
     sudo bootc image prune 2>/dev/null || sudo podman image prune -f
     @echo "✓ Pulizia completata."
 
-# [Rete] Configura l'accesso a Cockpit di un host: chiave, SSH config, comando fish. Oneshot.
-cockpit-setup IP="" PORTA="9090":
+# [Rete] Configura l'autenticazione SSH verso l'hypervisor. Oneshot.
+sshauth-config IP="":
     #!/usr/bin/env bash
     set -uo pipefail
-
     IP="{{IP}}"
-    PORTA="{{PORTA}}"
     HOST_ALIAS="hypervisor"
     SSH_CONFIG="${HOME}/.ssh/config"
-    FISH_CONFIG="${HOME}/.config/fish/config.fish"
     KEY="${HOME}/.ssh/id_ed25519"
-
     echo "┌────────────────────────────────────────────────┐"
-    echo "  Cockpit — configurazione accesso (oneshot)     "
+    echo "  Atomik OS — Autenticazione SSH hypervisor      "
     echo "└────────────────────────────────────────────────┘"
     echo ""
-
     if [[ -z "$IP" ]]; then
         read -rp "IP dell'hypervisor (es. 192.168.178.250): " IP
     fi
     [[ -z "$IP" ]] && { echo "✗ IP non specificato."; exit 1; }
-
-    read -rp "Utente sull'hypervisor [giurest]: " REMOTE_USER
-    REMOTE_USER="${REMOTE_USER:-giurest}"
-
+    read -rp "Utente sull'hypervisor [${USER}]: " REMOTE_USER
+    REMOTE_USER="${REMOTE_USER:-${USER}}"
     # ── Chiave SSH: genera solo se manca ─────────────────────────────────────
     if [[ ! -f "$KEY" ]]; then
         echo "→ Genero una chiave SSH ed25519..."
@@ -812,55 +805,32 @@ cockpit-setup IP="" PORTA="9090":
     else
         echo "✓ Chiave SSH già presente."
     fi
-
     # ── Trasferisci la chiave (password richiesta una volta) ─────────────────
     echo "→ Trasferisco la chiave su ${REMOTE_USER}@${IP}..."
     if ! ssh-copy-id -i "${KEY}.pub" "${REMOTE_USER}@${IP}"; then
         echo "✗ Trasferimento chiave fallito. Verifica IP/utente/password."
         exit 1
     fi
-
     # ── Blocco in ~/.ssh/config (delimitato, idempotente) ────────────────────
     mkdir -p "${HOME}/.ssh"
     touch "$SSH_CONFIG"; chmod 600 "$SSH_CONFIG"
-    # rimuovi un eventuale blocco atomik-cockpit precedente
-    sed -i '/# >>> atomik cockpit >>>/,/# <<< atomik cockpit <<</d' "$SSH_CONFIG"
+    sed -i '/# >>> atomik sshauth >>>/,/# <<< atomik sshauth <<</d' "$SSH_CONFIG"
     printf '%s\n' \
-        "# >>> atomik cockpit >>>" \
+        "# >>> atomik sshauth >>>" \
         "Host ${HOST_ALIAS}" \
         "    HostName ${IP}" \
         "    User ${REMOTE_USER}" \
-        "    LocalForward ${PORTA} localhost:${PORTA}" \
         "    ControlMaster auto" \
         "    ControlPath ~/.ssh/control-%r@%h:%p" \
         "    ControlPersist 10m" \
-        "# <<< atomik cockpit <<<" \
+        "# <<< atomik sshauth <<<" \
         >> "$SSH_CONFIG"
     echo "✓ Config SSH aggiornata (host '${HOST_ALIAS}')."
-
-    # ── Funzioni fish (delimitate, idempotenti) ──────────────────────────────
-    mkdir -p "$(dirname "$FISH_CONFIG")"
-    touch "$FISH_CONFIG"
-    sed -i '/# >>> atomik cockpit >>>/,/# <<< atomik cockpit <<</d' "$FISH_CONFIG"
-    printf '%s\n' \
-        "# >>> atomik cockpit >>>" \
-        "function cockpit" \
-        "    ssh -f -N ${HOST_ALIAS}" \
-        "    sleep 1" \
-        "    xdg-open https://localhost:${PORTA}" \
-        "end" \
-        "function cockpit-stop" \
-        "    ssh -O exit ${HOST_ALIAS} 2>/dev/null" \
-        "end" \
-        "# <<< atomik cockpit <<<" \
-        >> "$FISH_CONFIG"
-    echo "✓ Comando fish 'cockpit' configurato."
-
     echo ""
     echo "✓ Configurazione completata."
-    echo "  Riapri il terminale (o: source ${FISH_CONFIG})"
-    echo "  Poi apri Cockpit con:  cockpit"
-    echo "  Chiudi il tunnel con:  cockpit-stop"
+    echo "  SSH:       ssh hypervisor"
+    echo "  Cockpit:   https://${IP}:9090"
+    echo "  VM console: ujust vm-console"
 
 # [VM] Apre la console grafica di una VM sull'hypervisor (SPICE tunnellato su SSH).
 # Al primo avvio chiede IP e utente dell'hypervisor e li salva in ~/.config/atomik/vm-console.env
