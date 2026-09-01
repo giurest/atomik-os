@@ -832,15 +832,14 @@ sshauth-config IP="":
     echo "  Cockpit:   https://${IP}:9090"
     echo "  VM console: ujust vm-console"
 
-# [VM] Apre la console grafica di una VM sull'hypervisor (SPICE tunnellato su SSH).
+# [VM] Apre la console grafica di una VM sull'hypervisor (SPICE diretto).
 # Al primo avvio chiede IP e utente dell'hypervisor e li salva in ~/.config/atomik/vm-console.env
-# Per riconfigurare (es. cambio hypervisor): elimina quel file e rilancia la ricetta.
+# Per riconfigurare: elimina quel file e rilancia la ricetta.
 vm-console vm="":
     #!/usr/bin/env bash
     set -euo pipefail
     CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/atomik"
     CONFIG_FILE="${CONFIG_DIR}/vm-console.env"
-
     if [ ! -f "${CONFIG_FILE}" ]; then
         echo "→ Prima configurazione di vm-console"
         HV_IP=""
@@ -856,19 +855,11 @@ vm-console vm="":
         echo "✓ Configurazione salvata in ${CONFIG_FILE}"
         echo ""
     fi
-
-    # shellcheck source=/dev/null
     source "${CONFIG_FILE}"
     if [ -z "{{ vm }}" ]; then
-       # tunnel SSH + virt-viewer diretto
-       ssh -f -N -L 5900:127.0.0.1:5900 "${HV_USER}@${HV_IP}" 2>/dev/null || true
-       sleep 1
-       virt-viewer --connect "spice://127.0.0.1:5900"
+        remote-viewer "spice://${HV_IP}:5900"
     else
-       # ottieni la porta SPICE della VM specifica
-       SPICE_URI=$(virsh -c "qemu+ssh://${HV_USER}@${HV_IP}/system" domdisplay "{{ vm }}" 2>/dev/null)
-       SPICE_PORT=$(echo "$SPICE_URI" | grep -oP ':\K\d+$')
-       ssh -f -N -L "${SPICE_PORT}:127.0.0.1:${SPICE_PORT}" "${HV_USER}@${HV_IP}" 2>/dev/null || true
-       sleep 1
-       virt-viewer --connect "spice://127.0.0.1:${SPICE_PORT}"
+        SPICE_URI=$(ssh "${HV_USER}@${HV_IP}" "virsh -c qemu:///system domdisplay '{{ vm }}'")
+        SPICE_PORT=$(echo "$SPICE_URI" | grep -oP ':\K\d+$')
+        remote-viewer "spice://${HV_IP}:${SPICE_PORT}"
     fi

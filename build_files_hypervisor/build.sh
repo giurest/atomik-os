@@ -68,6 +68,7 @@ systemctl enable virtstoraged.socket 2>/dev/null || true
 systemctl enable cockpit.socket
 firewall-offline-cmd --remove-service=cockpit 2>/dev/null || true
 firewall-offline-cmd --add-port=9090/tcp
+firewall-offline-cmd --add-port=5900-5902/tcp
 
 ## ── Rete NAT default (virbr0) in autostart ────────────────────────────────────
 ## libvirt-daemon-config-network fornisce la rete 'default'. La rendiamo
