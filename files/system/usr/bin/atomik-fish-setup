@@ -36,7 +36,7 @@ for HOME_DIR in /var/home/*; do
     # Imposta fish come shell se non lo è già
     CURRENT_SHELL=$(getent passwd "$USERNAME" | cut -d: -f7)
     if [ "$CURRENT_SHELL" != "/usr/bin/fish" ]; then
-        chsh -s /usr/bin/fish "$USERNAME"
+        sudo usermod -s /usr/bin/fish "$USERNAME"
         echo "✓ Shell fish impostata per $USERNAME"
     fi
 

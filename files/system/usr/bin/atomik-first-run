@@ -80,7 +80,11 @@ SaveGeometryOnExit=false
 KONSOLERC
 ok "Konsole configurata (shell integration semantica disabilitata)"
 
-# ── 3. Reset marker Flatpak → forza reinstallazione ──────
+# ── 3. Reset marker fish-setup + Flatpak → forza reinstallazione ────────────────
+sudo rm -f /var/lib/atomik-fish-setup-done 2>/dev/null || true
+sudo atomik-fish-setup 2>/dev/null || true
+
+# ── 4. Reset marker Flatpak → forza reinstallazione ──────
 info "Avvio installazione app Flatpak..."
 sudo rm -f /var/lib/atomik-flatpak-base-done 2>/dev/null || true
 sudo systemctl start atomik-flatpak-base 2>/dev/null || true
