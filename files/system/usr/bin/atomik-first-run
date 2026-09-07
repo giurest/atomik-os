@@ -65,19 +65,8 @@ ok "Configurazione Plasma applicata (Fast, Breeze Dark, wallpaper)"
 
 # ── 2. Config Konsole (semantic integration OFF) ─────────
 info "Configurazione Konsole..."
-if [ -f "$SKEL/../.local/share/konsole/Atomik.profile" ]; then
-    mkdir -p "$HOME/.local/share/konsole"
-    cp "$SKEL/../.local/share/konsole/Atomik.profile" \
-       "$HOME/.local/share/konsole/Atomik.profile"
-fi
-# konsolerc — imposta il profilo di default
-cat > "$HOME/.config/konsolerc" << 'KONSOLERC'
-[Desktop Entry]
-DefaultProfile=Atomik.profile
-
-[KonsoleWindow]
-SaveGeometryOnExit=false
-KONSOLERC
+printf '[Desktop Entry]\nDefaultProfile=Atomik.profile\n\n[KonsoleWindow]\nSaveGeometryOnExit=false\n' \
+    > "$HOME/.config/konsolerc" || true
 ok "Konsole configurata (shell integration semantica disabilitata)"
 
 # ── 3. Reset marker fish-setup + Flatpak → forza reinstallazione ────────────────
