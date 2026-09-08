@@ -72,6 +72,9 @@ COPY files/plasma/skel/.config/kdedefaults/ksplashrc \
 COPY files/plasma/skel/.config/plasma-org.kde.plasma.desktop-appletsrc \
      /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc
 
+# ── Skel permissions ───────────────────────────────────────────
+RUN chmod 644 /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc
+
 # ── Fastfetch config (DE-agnostico) ───────────────────────────────────────────
 RUN mkdir -p /etc/fastfetch
 COPY files/fastfetch/desktop.jsonc /etc/fastfetch/config.jsonc
