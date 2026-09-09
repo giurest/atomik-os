@@ -86,6 +86,9 @@ else
     ok "Flatpak avviati: base (in background)"
 fi
 
+# ── Rimozione autostart dopo il primo avvio ───────────────────────────────
+rm -f "$HOME/.config/autostart/atomik-first-run.desktop" 2>/dev/null || true
+
 # ── 4. Marker completamento ───────────────────────────────
 touch "$MARKER"
 
