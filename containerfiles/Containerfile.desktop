@@ -71,6 +71,7 @@ COPY files/plasma/skel/.config/kdedefaults/ksplashrc \
      /etc/skel/.config/kdedefaults/ksplashrc
 COPY files/plasma/skel/.config/plasma-org.kde.plasma.desktop-appletsrc \
      /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc
+ARG CACHEBUST=1
 
 # ── Skel permissions ───────────────────────────────────────────
 RUN chmod 644 /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc
