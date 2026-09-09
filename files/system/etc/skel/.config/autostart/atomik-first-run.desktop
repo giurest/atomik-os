@@ -2,7 +2,7 @@
 Type=Application
 Name=Atomik OS First Run
 Comment=Configurazione iniziale Atomik OS
-Exec=konsole --noclose -e /usr/bin/atomik-first-run
+Exec=konsole -e /usr/bin/atomik-first-run
 Icon=atomik
 Hidden=false
 NoDisplay=false
