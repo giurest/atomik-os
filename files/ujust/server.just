@@ -448,3 +448,72 @@ pods-rollback:
     sudo podman auto-update --rollback
     echo ""
     echo "✓ Fatto. Verifica esito sopra; stato servizi: systemctl status <servizio>.service"
+
+# [Sistema] Espande il filesystem alla dimensione massima del disco (dopo vm-expand dall'hypervisor)
+disk-expand:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "→ Rilevamento layout disco..."
+
+    # Trova la partizione root (quella montata su /)
+    ROOT_DEV="$(findmnt -n -o SOURCE / 2>/dev/null || true)"
+    # Su ostree/bootc la root è un overlay — cerca la partizione di /var invece
+    VAR_DEV="$(findmnt -n -o SOURCE /var 2>/dev/null || true)"
+    TARGET_DEV="${VAR_DEV:-$ROOT_DEV}"
+
+    if [[ -z "$TARGET_DEV" ]]; then
+        echo "✗ Impossibile rilevare il dispositivo. Verifica con: lsblk"
+        exit 1
+    fi
+
+    # Estrai disco e numero partizione (es. /dev/vda4 → /dev/vda + 4)
+    DISK="$(echo "$TARGET_DEV" | sed 's/[0-9]*$//')"
+    PART_NUM="$(echo "$TARGET_DEV" | grep -oE '[0-9]+$')"
+
+    echo "  Disco:      ${DISK}"
+    echo "  Partizione: ${TARGET_DEV} (n. ${PART_NUM})"
+
+    # Spazio disco vs partizione
+    DISK_SIZE="$(sudo blockdev --getsize64 "$DISK" 2>/dev/null || echo '?')"
+    PART_SIZE="$(sudo blockdev --getsize64 "$TARGET_DEV" 2>/dev/null || echo '?')"
+
+    if [[ "$DISK_SIZE" == "$PART_SIZE" ]]; then
+        echo "✓ La partizione occupa già tutto il disco — nessuna espansione necessaria."
+    else
+        echo "→ Espansione partizione con growpart..."
+        if sudo growpart "$DISK" "$PART_NUM" 2>/dev/null; then
+            echo "✓ Partizione espansa"
+        else
+            echo "  (growpart: nessuna modifica necessaria)"
+        fi
+    fi
+
+    # Rileva il filesystem
+    FS_TYPE="$(sudo blkid -o value -s TYPE "$TARGET_DEV" 2>/dev/null || true)"
+    echo "  Filesystem: ${FS_TYPE}"
+
+    if [[ "$FS_TYPE" == "ext4" ]]; then
+        echo "→ Espansione filesystem ext4..."
+        sudo resize2fs "$TARGET_DEV"
+        echo "✓ Filesystem ext4 espanso"
+    elif [[ "$FS_TYPE" == "btrfs" ]]; then
+        echo "→ Espansione filesystem btrfs..."
+        MOUNT="$(findmnt -n -o TARGET "$TARGET_DEV" | head -1)"
+        sudo btrfs filesystem resize max "${MOUNT:-/var}"
+        echo "✓ Filesystem btrfs espanso"
+    elif [[ "$FS_TYPE" == "xfs" ]]; then
+        echo "→ Espansione filesystem xfs..."
+        MOUNT="$(findmnt -n -o TARGET "$TARGET_DEV" | head -1)"
+        sudo xfs_growfs "${MOUNT:-/var}"
+        echo "✓ Filesystem xfs espanso"
+    else
+        echo "⚠ Filesystem '${FS_TYPE}' non gestito automaticamente."
+        echo "  Espandi manualmente: man resize2fs / btrfs filesystem resize"
+        exit 1
+    fi
+
+    echo ""
+    df -h "$TARGET_DEV"
+    echo ""
+    echo "✓ Disco finalizzato."    

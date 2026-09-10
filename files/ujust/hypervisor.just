@@ -384,18 +384,15 @@ vm-expand NOME="" EXTRA="":
         echo "✓ VM riavviata"
     fi
 
+    echo "  ⚠ Il filesystem potrebbe espandersi automaticamente al riavvio."
+    echo "  Esiste il comando ujust disk-expand che esegue la finalizzazione del disco."
+    echo "  Se non lo fa, accedi alla VM e verifica con: df -h"
+    echo "  Se serve espansione manuale:"
     echo ""
-    echo "✓ Disco espanso."
-    echo ""
-    echo "  ⚠ Il filesystem interno NON è ancora espanso."
-    echo "  Accedi alla VM e lancia:"
-    echo ""
-    echo "    sudo growpart /dev/vda <N>    # N = numero partizione (es. 4)"
-    echo "    sudo resize2fs /dev/vdaN      # per ext4"
-    echo "    # oppure per btrfs:"
-    echo "    sudo btrfs filesystem resize max /mount/point"
-    echo ""
-    echo "  Per trovare la partizione giusta: lsblk"    
+    echo "    lsblk                          # identifica la partizione"
+    echo "    sudo growpart /dev/vda <N>     # espandi la partizione"
+    echo "    sudo resize2fs /dev/vdaN       # ext4"
+    echo "    sudo btrfs filesystem resize max /mountpoint  # btrfs"
     
 # ─────────────────────────────────────────────────────────────────────────────
 # Gestione Forward macchine virtuali
