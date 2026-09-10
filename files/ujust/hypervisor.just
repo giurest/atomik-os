@@ -294,6 +294,108 @@ vm-delete:
     fi
 
     echo "✓ Rimozione completata"
+
+# [VM Manager] Espande il disco di una VM (qcow2 + filesystem interno via growpart)
+vm-expand NOME="" EXTRA="":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    export LC_ALL=C
+
+    IMAGES_DIR="/var/lib/libvirt/images"
+    VM="{{NOME}}"
+    EXTRA="{{EXTRA}}"
+
+    # ── Parametri interattivi se mancanti ────────────────────────────────────
+    if [[ -z "$VM" ]]; then
+        echo "VM disponibili:"
+        sudo virsh list --all --name | grep -v '^$'
+        echo ""
+        read -rp "Nome della VM da espandere: " VM
+        [[ -z "$VM" ]] && { echo "✗ Nome vuoto."; exit 1; }
+    fi
+
+    if [[ -z "$EXTRA" ]]; then
+        read -rp "Spazio da aggiungere (es. +10G): " EXTRA
+        [[ -z "$EXTRA" ]] && { echo "✗ Dimensione vuota."; exit 1; }
+    fi
+
+    # ── Verifica che la VM esista ────────────────────────────────────────────
+    if ! sudo virsh dominfo "$VM" &>/dev/null; then
+        echo "✗ La VM '$VM' non esiste."
+        exit 1
+    fi
+
+    QCOW="${IMAGES_DIR}/${VM}.qcow2"
+    if [[ ! -f "$QCOW" ]]; then
+        echo "✗ Disco non trovato: ${QCOW}"
+        exit 1
+    fi
+
+    # ── Dimensione attuale ───────────────────────────────────────────────────
+    SIZE_BEFORE="$(sudo qemu-img info "$QCOW" 2>/dev/null \
+        | grep 'virtual size' | awk '{print $3, $4}')"
+
+    echo ""
+    echo "→ Espansione disco:"
+    echo "  VM:       ${VM}"
+    echo "  Disco:    ${QCOW}"
+    echo "  Attuale:  ${SIZE_BEFORE}"
+    echo "  Aggiunta: ${EXTRA}"
+    echo ""
+    echo "  ⚠ La VM verrà spenta per l'operazione."
+    echo ""
+    read -rp "Confermi? [s/N]: " CONFIRM
+    [[ "${CONFIRM,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
+
+    # ── Shutdown graceful ────────────────────────────────────────────────────
+    WAS_RUNNING=0
+    if sudo virsh domstate "$VM" 2>/dev/null | grep -q running; then
+        WAS_RUNNING=1
+        echo "→ Spegnimento VM..."
+        sudo virsh shutdown "$VM" >/dev/null 2>&1 || true
+        WAITED=0
+        while (( WAITED < 120 )); do
+            sudo virsh domstate "$VM" 2>/dev/null | grep -q "shut off" && break
+            sleep 3; WAITED=$((WAITED+3))
+        done
+        if ! sudo virsh domstate "$VM" 2>/dev/null | grep -q "shut off"; then
+            echo "✗ Shutdown non completato entro 120s. Operazione annullata."
+            exit 1
+        fi
+        echo "✓ VM spenta"
+    fi
+
+    # ── Espandi il qcow2 ─────────────────────────────────────────────────────
+    echo "→ Espansione disco qcow2..."
+    if ! sudo qemu-img resize "$QCOW" "$EXTRA"; then
+        echo "✗ qemu-img resize fallito."
+        [[ "$WAS_RUNNING" -eq 1 ]] && sudo virsh start "$VM" >/dev/null 2>&1 || true
+        exit 1
+    fi
+
+    SIZE_AFTER="$(sudo qemu-img info "$QCOW" 2>/dev/null \
+        | grep 'virtual size' | awk '{print $3, $4}')"
+    echo "✓ Disco espanso: ${SIZE_BEFORE} → ${SIZE_AFTER}"
+
+    # ── Riavvia la VM ────────────────────────────────────────────────────────
+    if [[ "$WAS_RUNNING" -eq 1 ]]; then
+        echo "→ Riavvio VM..."
+        sudo virsh start "$VM" >/dev/null 2>&1 || true
+        echo "✓ VM riavviata"
+    fi
+
+    echo ""
+    echo "✓ Disco espanso."
+    echo ""
+    echo "  ⚠ Il filesystem interno NON è ancora espanso."
+    echo "  Accedi alla VM e lancia:"
+    echo ""
+    echo "    sudo growpart /dev/vda <N>    # N = numero partizione (es. 4)"
+    echo "    sudo resize2fs /dev/vdaN      # per ext4"
+    echo "    # oppure per btrfs:"
+    echo "    sudo btrfs filesystem resize max /mount/point"
+    echo ""
+    echo "  Per trovare la partizione giusta: lsblk"    
     
 # ─────────────────────────────────────────────────────────────────────────────
 # Gestione Forward macchine virtuali

@@ -76,7 +76,8 @@ jellyfin-setup:
         "PublishPort=8096:8096" \
         "Volume=/var/lib/jellyfin/config:/config:Z" \
         "Volume=/var/lib/jellyfin/cache:/cache:Z" \
-        "Volume=/var/mnt/storage:/media" \
+        "Volume=/var/mnt/storage:/media
+AutoUpdate=registry" \
         "" \
         "[Service]" \
         "Restart=always" \
@@ -211,6 +212,7 @@ db-setup:
         "" \
         "[Container]" \
         "Image=docker.io/mariadb:11" \
+        "AutoUpdate=registry" \
         "PublishPort=3306:3306" \
         "Volume=${DATA_DIR}:/var/lib/mysql:Z" \
         "EnvironmentFile=${ENV_FILE}" \
@@ -357,6 +359,7 @@ webserver-setup:
         "" \
         "[Container]" \
         "Image=ghcr.io/giurest/atomik-php:latest" \
+        "AutoUpdate=registry" \
         "Network=webserver.network" \
         "PublishPort=${WEB_PORT}:80" \
         "Volume=${WWW_DIR}:/var/www/html:Z" \
@@ -379,6 +382,7 @@ webserver-setup:
         "" \
         "[Container]" \
         "Image=docker.io/phpmyadmin:latest" \
+        "AutoUpdate=registry" \
         "Network=webserver.network" \
         "PublishPort=${PMA_PORT}:80" \
         "Environment=PMA_HOST=${DB_HOST}" \
