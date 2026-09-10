@@ -77,7 +77,7 @@ jellyfin-setup:
         "Volume=/var/lib/jellyfin/config:/config:Z" \
         "Volume=/var/lib/jellyfin/cache:/cache:Z" \
         "Volume=/var/mnt/storage:/media
-AutoUpdate=registry" \
+        "AutoUpdate=registry" \
         "" \
         "[Service]" \
         "Restart=always" \
