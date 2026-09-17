@@ -863,3 +863,87 @@ vm-console vm="":
         SPICE_PORT=$(echo "$SPICE_URI" | grep -oP ':\K\d+$')
         remote-viewer "spice://${HV_IP}:${SPICE_PORT}"
     fi
+
+# [Strumenti] Installa Homebrew per tool CLI aggiuntivi (livello utente, non tocca il sistema)
+brew-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    FISH_CONFIG="$HOME/.config/fish/config.fish"
+    BREW_MARKER="# >>> atomik brew >>>"
+
+    echo "┌────────────────────────────────────────────────┐"
+    echo "  Homebrew — setup tool CLI utente               "
+    echo "└────────────────────────────────────────────────┘"
+    echo ""
+    echo "  Installa Homebrew nella home utente (~/.linuxbrew)."
+    echo "  Non modifica il sistema immutabile."
+    echo "  Usa 'brew install <tool>' per installare tool CLI."
+    echo ""
+
+    # ── Già installato? ──────────────────────────────────────────────────────
+    if command -v brew &>/dev/null; then
+        echo "✓ Homebrew è già installato: $(brew --version | head -1)"
+        echo "  Per aggiornarlo: brew update && brew upgrade"
+        exit 0
+    fi
+
+    # ── Prerequisiti ─────────────────────────────────────────────────────────
+    for cmd in curl git; do
+        command -v "$cmd" &>/dev/null || {
+            echo "✗ Prerequisito mancante: $cmd"
+            exit 1
+        }
+    done
+
+    read -rp "Procedere con l'installazione? [s/N]: " CONFIRM
+    [[ "${CONFIRM,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
+
+    echo ""
+    echo "→ Download e installazione Homebrew (~500MB, potrebbe richiedere qualche minuto)..."
+    NONINTERACTIVE=1 /bin/bash -c \
+        "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    # ── Trova il path di brew (varia tra x86_64 e arm64) ────────────────────
+    BREW_BIN=""
+    for p in /home/linuxbrew/.linuxbrew/bin/brew \
+              "$HOME/.linuxbrew/bin/brew"; do
+        [[ -x "$p" ]] && BREW_BIN="$p" && break
+    done
+
+    if [[ -z "$BREW_BIN" ]]; then
+        echo "✗ Brew installato ma non trovato nel path atteso."
+        echo "  Cerca il binario con: find ~ -name brew 2>/dev/null"
+        exit 1
+    fi
+
+    BREW_PREFIX="$("$BREW_BIN" --prefix)"
+
+    # ── Aggiunge l'init di brew al config.fish (sezione dedicata) ───────────
+    mkdir -p "$HOME/.config/fish"
+    touch "$FISH_CONFIG"
+
+    # Rimuovi eventuale blocco brew precedente
+    sed -i '/# >>> atomik brew >>>/,/# <<< atomik brew <<</d' "$FISH_CONFIG"
+
+    printf '%s\n' \
+        "" \
+        "# >>> atomik brew >>>" \
+        "# Homebrew — gestito da ujust brew-setup" \
+        "eval (\$HOMEBREW_PREFIX/bin/brew shellenv)" \
+        "# <<< atomik brew <<<" \
+        >> "$FISH_CONFIG"
+
+    # Sostituisci HOMEBREW_PREFIX con il path reale
+    sed -i "s|\$HOMEBREW_PREFIX|${BREW_PREFIX}|g" "$FISH_CONFIG"
+
+    echo ""
+    echo "✓ Homebrew installato e configurato."
+    echo "  Riapri il terminale per attivare 'brew'."
+    echo ""
+    echo "  Esempi:"
+    echo "    brew install gh        # GitHub CLI"
+    echo "    brew install fzf       # fuzzy finder"
+    echo "    brew install bat       # cat migliorato"
+    echo "    brew list              # tool installati"
+    echo "    brew update && brew upgrade  # aggiorna tutto"
