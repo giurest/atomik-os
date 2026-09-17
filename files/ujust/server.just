@@ -428,7 +428,7 @@ pods-check:
     echo ""
     echo "  Per applicare: ujust pods-update"
 
-# [Servizi] Applica gli aggiornamenti disponibili ai container (esplicito, manuale)
+# [Servizi] Ripristina i container all'immagine precedente (rollback rapido, i dati restano intatti)
 pods-update:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -436,16 +436,8 @@ pods-update:
     echo ""
     sudo podman auto-update
     echo ""
-    echo "✓ Fatto. Verifica esito sopra; stato servizi: systemctl status <servizio>.service"
-
-# [Servizi] Ripristina i container all'immagine precedente (rollback rapido, i dati restano intatti)
-pods-rollback:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "→ Rollback container all'immagine precedente..."
-    echo "  (torna alle immagini prima dell'ultimo pods-update; i volumi/dati non vengono toccati)"
-    echo ""
-    sudo podman auto-update --rollback
+    echo "→ Pulizia unità systemd stale..."
+    sudo systemctl reset-failed
     echo ""
     echo "✓ Fatto. Verifica esito sopra; stato servizi: systemctl status <servizio>.service"
 
