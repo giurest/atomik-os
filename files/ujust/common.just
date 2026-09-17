@@ -901,7 +901,7 @@ brew-setup:
 
     echo ""
     echo "→ Download e installazione Homebrew (~500MB, potrebbe richiedere qualche minuto)..."
-    NONINTERACTIVE=1 /bin/bash -c \
+    NONINTERACTIVE=1 HOMEBREW_PREFIX="$HOME/.linuxbrew" /bin/bash -c \
         "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
     # ── Trova il path di brew (varia tra x86_64 e arm64) ────────────────────
