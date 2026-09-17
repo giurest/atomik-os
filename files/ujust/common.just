@@ -900,24 +900,17 @@ brew-setup:
     [[ "${CONFIRM,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
 
     echo ""
-    echo "→ Download e installazione Homebrew (~500MB, potrebbe richiedere qualche minuto)..."
-    NONINTERACTIVE=1 HOMEBREW_PREFIX="$HOME/.linuxbrew" /bin/bash -c \
-        "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    echo "→ Installazione Homebrew in ~/.linuxbrew..."
+    mkdir -p "$HOME/.linuxbrew"
+    git clone https://github.com/Homebrew/brew "$HOME/.linuxbrew/Homebrew"
+    mkdir -p "$HOME/.linuxbrew/bin"
+    ln -s "$HOME/.linuxbrew/Homebrew/bin/brew" "$HOME/.linuxbrew/bin/brew"
+    eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"
+    brew update --force --quiet
+    echo "✓ Homebrew installato"
 
-    # ── Trova il path di brew (varia tra x86_64 e arm64) ────────────────────
-    BREW_BIN=""
-    for p in /home/linuxbrew/.linuxbrew/bin/brew \
-              "$HOME/.linuxbrew/bin/brew"; do
-        [[ -x "$p" ]] && BREW_BIN="$p" && break
-    done
-
-    if [[ -z "$BREW_BIN" ]]; then
-        echo "✗ Brew installato ma non trovato nel path atteso."
-        echo "  Cerca il binario con: find ~ -name brew 2>/dev/null"
-        exit 1
-    fi
-
-    BREW_PREFIX="$("$BREW_BIN" --prefix)"
+    BREW_BIN="$HOME/.linuxbrew/bin/brew"
+    BREW_PREFIX="$HOME/.linuxbrew"
 
     # ── Aggiunge l'init di brew al config.fish (sezione dedicata) ───────────
     mkdir -p "$HOME/.config/fish"
