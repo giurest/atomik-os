@@ -1230,3 +1230,65 @@ vm-backup-unschedule:
 
     echo "✓ Backup automatico disattivato e rimosso."
     echo "  (i backup già presenti sul NAS restano intatti)"
+
+# [VM Manager] Configura SPICE su una VM (sostituisce VNC, abilita accesso via vm-console)
+vm-spice NOME="":
+    #!/usr/bin/env bash
+    set -uo pipefail
+    export LC_ALL=C
+
+    VM="{{NOME}}"
+
+    if [[ -z "$VM" ]]; then
+        echo "VM disponibili:"
+        sudo virsh list --all --name | grep -v '^$'
+        echo ""
+        read -rp "Nome della VM da configurare: " VM
+        [[ -z "$VM" ]] && { echo "✗ Nome vuoto."; exit 1; }
+    fi
+
+    if ! sudo virsh dominfo "$VM" &>/dev/null; then
+        echo "✗ La VM '$VM' non esiste."
+        exit 1
+    fi
+
+    # Verifica se SPICE è già configurato con listen 0.0.0.0
+    CURRENT=$(sudo virsh -c qemu:///system dumpxml "$VM" 2>/dev/null \
+        | grep "graphics.*spice.*listen='0.0.0.0'" || true)
+    if [[ -n "$CURRENT" ]]; then
+        echo "✓ SPICE già configurato correttamente su '$VM'."
+        exit 0
+    fi
+
+    echo "→ Configurazione SPICE su '$VM'..."
+    echo "  ⚠ La VM verrà spenta e riavviata."
+    echo ""
+    read -rp "Confermi? [s/N]: " CONFIRM
+    [[ "${CONFIRM,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
+
+    # Spegni la VM se è in esecuzione
+    WAS_RUNNING=0
+    if sudo virsh domstate "$VM" 2>/dev/null | grep -q running; then
+        WAS_RUNNING=1
+        sudo virsh destroy "$VM" >/dev/null 2>&1 || true
+        sleep 2
+    fi
+
+    # Applica la modifica XML con virt-xml
+    sudo virt-xml "$VM" --edit --graphics \
+        spice,listen=0.0.0.0,port=5900 2>/dev/null || \
+    # Fallback: modifica diretta XML se virt-xml non disponibile
+    sudo virsh dumpxml "$VM" \
+        | sed "s|listen='127.0.0.1'|listen='0.0.0.0'|g" \
+        | sed "s|address='127.0.0.1'|address='0.0.0.0'|g" \
+        | sudo virsh define /dev/stdin
+
+    # Riavvia se era in esecuzione
+    if [[ "$WAS_RUNNING" -eq 1 ]]; then
+        sudo virsh start "$VM" >/dev/null 2>&1 || true
+        echo "✓ VM riavviata"
+    fi
+
+    echo ""
+    echo "✓ SPICE configurato su '$VM'."
+    echo "  Accedi con: ujust vm-console $VM"
