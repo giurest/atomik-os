@@ -143,5 +143,8 @@ COPY files/system/etc/skel/.config/autostart/atomik-first-run.desktop \
      /etc/skel/.config/autostart/atomik-first-run.desktop
 RUN chmod +x /usr/bin/atomik-first-run
 
+# ── Homebrew (tool CLI utente, path standard Linux) ──────────────────────────
+COPY --from=ghcr.io/ublue-os/brew:latest /system_files /
+
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
