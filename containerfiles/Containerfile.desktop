@@ -145,6 +145,12 @@ RUN chmod +x /usr/bin/atomik-first-run
 
 # ── Homebrew (tool CLI utente, path standard Linux) ──────────────────────────
 COPY --from=ghcr.io/ublue-os/brew:latest /system_files /
+RUN --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=tmpfs,dst=/tmp \
+    systemctl preset brew-setup.service && \
+    systemctl preset brew-update.timer && \
+    systemctl preset brew-upgrade.timer
 
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
