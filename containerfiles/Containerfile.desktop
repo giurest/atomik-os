@@ -44,9 +44,7 @@ COPY files/system/usr/lib/systemd/system/atomik-flatpak-base.service \
 COPY files/system/usr/bin/atomik-flatpak-base \
      /usr/bin/atomik-flatpak-base
 RUN chmod +x /usr/bin/atomik-flatpak-base && \
-    mkdir -p /usr/lib/systemd/system/multi-user.target.wants && \
-    ln -sf /usr/lib/systemd/system/atomik-flatpak-base.service \
-           /usr/lib/systemd/system/multi-user.target.wants/atomik-flatpak-base.service
+    systemctl preset atomik-flatpak-base.service
 
 # ── Plymouth theme Atomik (DE-agnostico) ──────────────────────────────────────
 # NOTA: su ostree/bootc NON si rigenera l'initramfs con dracut --force.
@@ -102,8 +100,7 @@ COPY files/system/usr/lib/systemd/system/atomik-fish-setup.service \
 COPY files/system/usr/bin/atomik-fish-setup \
      /usr/bin/atomik-fish-setup
 RUN chmod +x /usr/bin/atomik-fish-setup && \
-    ln -sf /usr/lib/systemd/system/atomik-fish-setup.service \
-           /usr/lib/systemd/system/multi-user.target.wants/atomik-fish-setup.service
+    systemctl preset atomik-fish-setup.service
 COPY files/system/usr/share/fish/vendor_completions.d/ujust.fish \
      /usr/share/fish/vendor_completions.d/ujust.fish
 
