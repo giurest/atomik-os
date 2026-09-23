@@ -53,13 +53,20 @@ for f in kwinrc kdeglobals; do
     [ -f "$SKEL/$f" ] && cp "$SKEL/$f" "$HOME/.config/$f"
 done
 
+# kscreenlockerrc — schermata di blocco
+[ -f "$SKEL/kscreenlockerrc" ] && \
+    cp "$SKEL/kscreenlockerrc" "$HOME/.config/kscreenlockerrc"
+
 # kdedefaults
 [ -d "$SKEL/kdedefaults" ] && cp -r "$SKEL/kdedefaults/." "$HOME/.config/kdedefaults/"
 
-# appletsrc (pannello + wallpaper)
-[ -f "$SKEL/plasma-org.kde.plasma.desktop-appletsrc" ] && \
-    cp "$SKEL/plasma-org.kde.plasma.desktop-appletsrc" \
-       "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+# appletsrc solo se non esiste già (utenti nuovi)
+# per utenti esistenti usa plasma-apply-wallpaperimage
+if [ ! -f "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc" ]; then
+    [ -f "$SKEL/plasma-org.kde.plasma.desktop-appletsrc" ] && \
+        cp "$SKEL/plasma-org.kde.plasma.desktop-appletsrc" \
+           "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+fi
 
 ok "Configurazione Plasma applicata (Fast, Breeze Dark, wallpaper)"
 

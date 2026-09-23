@@ -76,6 +76,13 @@ COPY files/plasma/skel/.config/plasma-org.kde.plasma.desktop-appletsrc \
 RUN mkdir -p /etc/xdg && \
     cp /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc \
        /etc/xdg/plasma-org.kde.plasma.desktop-appletsrc
+COPY files/plasma/skel/.config/kscreenlockerrc \
+     /etc/skel/.config/kscreenlockerrc
+# Konsole profilo Atomik
+mkdir -p "$HOME/.local/share/konsole"
+[ -f "/etc/skel/.local/share/konsole/Atomik.profile" ] && \
+    cp /etc/skel/.local/share/konsole/Atomik.profile \
+       "$HOME/.local/share/konsole/Atomik.profile"
 ARG CACHEBUST=1
 
 # ── Skel permissions ───────────────────────────────────────────
@@ -160,6 +167,10 @@ RUN --mount=type=cache,dst=/var/cache \
 
 # ── Plasmalogin greeter wallpaper ─────────────────────────────────────────────
 COPY files/system/etc/plasmalogin.conf /etc/plasmalogin.conf
+
+# ── Konsole profilo Atomik (shell fish, no semantic integration) ──────────────
+COPY files/plasma/skel/.local/share/konsole/Atomik.profile \
+     /etc/skel/.local/share/konsole/Atomik.profile
 
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint

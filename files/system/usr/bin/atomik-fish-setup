@@ -19,7 +19,6 @@ read -r -d '' ATOMIK_BLOCK << 'BLOCK' || true
 # Blocco gestito automaticamente da atomik-fish-setup — non modificare a mano.
 if status is-interactive
     starship init fish | source
-    set -gx MANGOHUD 1
     cd $HOME
     bind f12 'commandline -i \~'
 end
