@@ -89,12 +89,9 @@ fi
 # ── Rimozione autostart dopo il primo avvio ───────────────────────────────
 rm -f "$HOME/.config/autostart/atomik-first-run.desktop" 2>/dev/null || true
 
-# ── Wallpaper via D-Bus ──────────────────────────────────────────────────────
-if command -v qdbus6 &>/dev/null; then
-    qdbus6 org.kde.plasmashell /PlasmaShell \
-        org.kde.PlasmaShell.evaluateScript \
-        'var allDesktops = desktops(); for (var i=0; i<allDesktops.length; i++) { var d = allDesktops[i]; d.wallpaperPlugin = "org.kde.image"; d.currentConfigGroup = ["Wallpaper","org.kde.image","General"]; d.writeConfig("Image","file:///usr/share/wallpapers/AtomikOS/"); }' \
-        2>/dev/null || true
+# ── Wallpaper ────────────────────────────────────────────────────────────────
+if command -v plasma-apply-wallpaperimage &>/dev/null; then
+    plasma-apply-wallpaperimage /usr/share/wallpapers/AtomikOS/ 2>/dev/null || true
     ok "Wallpaper Atomik OS applicato"
 fi
 
