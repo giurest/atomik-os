@@ -73,6 +73,9 @@ COPY files/plasma/skel/.config/kdedefaults/kdeglobals \
      /etc/skel/.config/kdedefaults/kdeglobals
 COPY files/plasma/skel/.config/plasma-org.kde.plasma.desktop-appletsrc \
      /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc
+RUN mkdir -p /etc/xdg && \
+    cp /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc \
+       /etc/xdg/plasma-org.kde.plasma.desktop-appletsrc
 ARG CACHEBUST=1
 
 # ── Skel permissions ───────────────────────────────────────────
@@ -154,6 +157,9 @@ RUN --mount=type=cache,dst=/var/cache \
     systemctl preset brew-setup.service && \
     systemctl preset brew-update.timer && \
     systemctl preset brew-upgrade.timer
+
+# ── Plasmalogin greeter wallpaper ─────────────────────────────────────────────
+COPY files/system/etc/plasmalogin.conf /etc/plasmalogin.conf
 
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint
