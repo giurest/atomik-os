@@ -69,6 +69,8 @@ COPY files/plasma/skel/.config/kdedefaults/package \
      /etc/skel/.config/kdedefaults/package
 COPY files/plasma/skel/.config/kdedefaults/ksplashrc \
      /etc/skel/.config/kdedefaults/ksplashrc
+COPY files/plasma/skel/.config/kdedefaults/kdeglobals \
+     /etc/skel/.config/kdedefaults/kdeglobals
 COPY files/plasma/skel/.config/plasma-org.kde.plasma.desktop-appletsrc \
      /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc
 ARG CACHEBUST=1
