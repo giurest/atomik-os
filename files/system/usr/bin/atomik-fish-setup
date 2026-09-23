@@ -74,6 +74,18 @@ for HOME_DIR in /var/home/*; do
 
     chown -R "$USERNAME:$USERNAME" "$HOME_DIR/.config/fish"
 
+    # Autostart first-run: copia solo se non già eseguito e non già presente
+    AUTOSTART_DIR="$HOME_DIR/.config/autostart"
+    AUTOSTART_FILE="$AUTOSTART_DIR/atomik-first-run.desktop"
+    FIRSTRUN_MARKER="$HOME_DIR/.config/atomik-first-run-done"
+    SKEL_AUTOSTART="/etc/skel/.config/autostart/atomik-first-run.desktop"
+    if [ ! -f "$FIRSTRUN_MARKER" ] && [ ! -f "$AUTOSTART_FILE" ] && [ -f "$SKEL_AUTOSTART" ]; then
+        mkdir -p "$AUTOSTART_DIR"
+        cp "$SKEL_AUTOSTART" "$AUTOSTART_FILE"
+        chown -R "$USERNAME:$USERNAME" "$AUTOSTART_DIR"
+        echo "✓ Autostart first-run configurato per $USERNAME"
+    fi
+
     # starship.toml: copia il default solo se l'utente non ne ha già uno
     # (rispetta le personalizzazioni). Variante nvidia → hostname green,
     # base → hostname cyan. Rilevato da PRETTY_NAME in os-release.
