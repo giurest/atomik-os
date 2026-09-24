@@ -3,206 +3,298 @@
 </p>
 
 <p align="center">
-  <strong>Distribuzione Linux immutabile · Fedora Silverblue · Niri · DankMaterialShell</strong>
+  <strong>Distribuzione Linux immutabile · Fedora Kinoite · KDE Plasma</strong>
+</p>
+
+<p align="center">
+  <a href="#installazione">🇮🇹 Italiano</a> · <a href="#installation">🇬🇧 English</a>
 </p>
 
 ---
 
 # Atomik OS
 
-Distribuzione Linux immutabile basata su **Fedora Silverblue**, con compositor **Niri** e shell **DankMaterialShell (DMS)** forzati su tutte le varianti.
+Distribuzione Linux immutabile basata su **Fedora Kinoite**, con **KDE Plasma** come ambiente desktop. Progettata per workstation personali, gaming e virtualizzazione.
 
 ## Varianti
 
 | Variante | Base | Uso | Stato |
 |---|---|---|---|
-| `desktop` | F44 | Workstation minimalista + sviluppo | ✅ Disponibile |
-| `puregaming` | `atomik-desktop` | Gaming puro su base desktop | ✅ Disponibile |
-| `desktop-nvidia` | F44 + driver NVIDIA | Workstation con GPU NVIDIA | ✅ Disponibile |
-| `puregaming-nvidia` | `desktop-nvidia` + driver NVIDIA | Gaming con GPU NVIDIA | ✅ Disponibile |
-| `hypervisor` | `atomik-desktop` | Server di virtualizzazione | ✅ Disponibile |
+| `atomik-desktop` | Fedora Kinoite 44 | Workstation generale (AMD/Intel) | ✅ Disponibile |
+| `atomik-desktop-nvidia` | `atomik-desktop` | Workstation con GPU NVIDIA | ✅ Disponibile |
+| `atomik-puregaming` | `atomik-desktop` | Gaming ottimizzato (AMD/Intel) | ✅ Disponibile |
+| `atomik-puregaming-nvidia` | `atomik-desktop` | Gaming ottimizzato con GPU NVIDIA | ✅ Disponibile |
+| `atomik-hypervisor` | `atomik-desktop` | Server di virtualizzazione (headless) | ✅ Disponibile |
 
-Per la variante hypervisor, vedi [docs/hypervisor.md](docs/hypervisor.md)
+Le varianti `puregaming`, `desktop-nvidia`, `puregaming-nvidia` e `hypervisor` ereditano tutto da `atomik-desktop`. Le modifiche al desktop si propagano automaticamente a tutte le derivate.
 
-`puregaming` eredita interamente da `desktop`: tutto ciò che è nella base (Niri, DMS, greetd, ujust, Brave, Bazaar) è presente anche in gaming.
+Per dettagli su ogni variante:
+- [🖥 Desktop](docs/desktop.md)
+- [🎮 PureGaming](docs/puregaming.md)
+- [🖥 Hypervisor](docs/hypervisor.md)
+- [🖧 Server](docs/server.md)
 
-## Benchmark
-
-Confronto su stesso hardware (AMD Ryzen 5 7530U, 14 GB RAM) tra **Atomik OS Desktop** e **Fedora Silverblue 44** stock.
-
-| Metrica | Fedora Silverblue 44 | Atomik OS Desktop | Vincitore |
-|---|---|---|---|
-| RAM idle | 1752 MB | **1607 MB** | ✅ Atomik (−145 MB) |
-| Boot totale | N/A | 51.857s | — |
-| Boot kernel | 9.749s | **0.850s** | ✅ Atomik (11× più veloce) |
-| Boot initrd | 45.939s | **5.439s** | ✅ Atomik (8× più veloce) |
-| Boot userspace | 52.130s | **14.178s** | ✅ Atomik (3× più veloce) |
-| CPU single | 2398 e/s | **3514 e/s** | ✅ Atomik (+46%) |
-| CPU multi | 27098 e/s | **25854 e/s** | ≈ pari |
-| Mem read | 2249 MiB/s | 2238 MiB/s | ≈ pari |
-| Mem write | 2210 MiB/s | 2213 MiB/s | ≈ pari |
-| Disco seq read | **1006 MB/s** | 1013 MB/s | ≈ pari |
-| Disco seq write | 399 MB/s | **407 MB/s** | ✅ Atomik |
-| Disco rand read | **35262 IOPS** | 34531 IOPS | ≈ pari |
-| Disco rand write | 122683 IOPS | **118100 IOPS** | ≈ pari |
-| GPU glmark2 | **2532** | 1937 | Silverblue (F44 vs F43) |
-| Pacchetti installati | 1537 | 1669 | — |
-
-> I benchmark sono stati eseguiti con [atomik-bench](tools/atomik-bench), lo strumento di benchmark universale incluso nel repo.
-> Il vantaggio GPU di Silverblue è atteso: usato F44 con driver più recenti.
+---
 
 ## Installazione
 
-### Da ISO (consigliato)
+### Requisiti
 
-Le ISO vengono generate dal workflow **Build Atomik OS ISO** (Actions → Run workflow → scegli la variante) e pubblicate su storage S3.
+- Sistema Fedora Kinoite installato (vanilla)
+- Connessione internet
+- CPU x86-64-v3 o superiore
 
-Il flusso di installazione:
+> Verifica la compatibilità CPU: `/lib64/ld-linux-x86-64.so.2 --help | grep supported`
 
-1. Avvii l'installer (Anaconda) e completi l'installazione interattiva: lingua, **tastiera**, disco, utente.
-2. Al **primo boot** il sistema passa automaticamente all'immagine Atomik della variante scelta e riavvia.
-3. Al **secondo boot** sei su Atomik OS. Le app Flatpak vengono scaricate in background (vedi *Primo avvio*).
+### Procedura
 
-### Da rebase
+**1. Installa Fedora Kinoite** dalla [pagina ufficiale](https://fedoraproject.org/kinoite/) e completa la configurazione base.
 
-Per passare ad Atomik OS da un sistema Fedora Atomic / bootc esistente:
+**2. Esegui il comando di installazione:**
 
 ```bash
-# Variante desktop
-sudo bootc switch ghcr.io/giurest/atomik-desktop:latest
-
-# Variante gaming
-sudo bootc switch ghcr.io/giurest/atomik-puregaming:latest
+curl -fsSL https://giurestlabs.it/get-atomik | bash
 ```
 
-Poi `sudo reboot`.
+Il wizard ti guida nella scelta della variante e completa l'installazione automaticamente.
 
-## Primo avvio
+**3. Riavvia** — al primo login il sistema configura automaticamente:
+- Tema KDE Plasma (Breeze Dark + profilo Fast)
+- Wallpaper Atomik OS (desktop, greeter e schermata di blocco)
+- Shell Fish con configurazione Atomik
+- App Flatpak di base (Telegram, Flatseal, RustDesk, Faugus, Bazaar, Gear Lever)
+- Homebrew per tool CLI aggiuntivi
 
-Al primo boot un servizio installa automaticamente le app Flatpak da Flathub (richiede connessione di rete e qualche minuto). Non serve lanciare comandi manualmente.
+### Sicurezza installer
 
-> **Importante**: le app Flatpak vengono installate *mentre la sessione è già attiva*, quindi il launcher di DMS potrebbe non mostrarle subito. Una volta completato il download, esegui un **restart di DMS** per farle comparire:
->
-> ```bash
-> dms restart
-> ```
->
-> (oppure usa la voce "Riavvia DMS" dal menu di DMS). È necessario una sola volta, al primissimo avvio di un sistema nuovo.
+Il wrapper `get-atomik.sh` verifica l'integrità di `atomik-install.sh` tramite:
+- **SHA256** automatico (aggiornato dal CI ad ogni modifica)
+- **Firma GPG** con chiave pubblica pubblicata indipendentemente su `giurestlabs.it/atomik-os/pubkey.gpg`
+
+La chiave privata non è mai nel repo — un attaccante che compromette solo GitHub non può firmare versioni malevole.
+
+---
 
 ## Comandi di sistema (ujust)
 
-Atomik include `ujust`, un set di comandi per le operazioni comuni. Esegui `ujust` senza argomenti per la lista completa. Tra le ricette disponibili:
+Atomik include `ujust`, una raccolta di comandi per le operazioni comuni. Lancia `ujust` senza argomenti per la lista completa.
 
 ```bash
-ujust create-user      # crea un nuovo utente
 ujust update           # aggiorna il sistema (bootc upgrade)
-ujust status           # stato dell'immagine bootc
+ujust status           # stato dell'immagine bootc corrente
 ujust rollback         # torna all'immagine precedente
-ujust set-wallpaper    # imposta lo sfondo Atomik
+ujust changelog        # novità dell'ultimo aggiornamento
+ujust sshauth-config   # configura autenticazione SSH verso l'hypervisor
+ujust vm-console VM    # apre la console SPICE di una VM
+ujust brew-setup       # installa Homebrew (tool CLI utente)
 ```
-Il sistema è configurato nel seguente modo:
-- File Entrypoint per ogni variante (entrypoint-desktop.just, entrypoint-hypervisor.just, entrypoint-puregaming)
-- Common.just (Set di ricette comuni a tutte le varianti)
-- Desktop-tools.just (Set di ricette specifiche per la variante desktop e desktop-nvidia)
-- gaming.just (Set di ricette specifiche per la variante puregaming e puregaming-nvidia)
-- hypervisor.just (Set di ricette specifiche per la variante hypervisor)
-- server.just (Set di ricette specifiche per la variante server)
-- environment.just (Set di ricette specifiche per le varianti con server grafico)
+
+---
 
 ## Software incluso
 
-### Base (Desktop — presente su tutte le varianti)
+### Base (presente su tutte le varianti)
 
-- **Compositor**: Niri (sessione di default)
-- **Shell desktop**: DankMaterialShell (DMS) + dms-greeter
-- **Login**: greetd con dms-greeter
-- **Terminale**: Alacritty + Fish + Starship
-- **File manager**: Nautilus
-- **Tema**: Papirus icons
+- **Desktop**: KDE Plasma 6 (Kinoite)
+- **Profilo**: Fast (effetti disabilitati, massima reattività)
+- **Tema**: Breeze Dark
+- **Terminale**: Konsole + Fish + Starship
+- **Browser**: Brave (nativo, debloated)
+- **Store app**: Bazaar (Flatpak)
 - **Boot**: Plymouth con tema Atomik
-- **Browser**: Brave NATIVO Debloated
-- **Store app**: Bazaar (Flatpak) — per installare facilmente altre applicazioni
-- **Utility Flatpak**: Flatseal, Telegram
-- **CLI**: eza, bat, ripgrep, fd, htop, fastfetch
-- **Container**: podman, podman-compose, distrobox
+- **CLI tools**: Homebrew, fastfetch
+- **Container**: podman, distrobox
+- **App Flatpak base**: Telegram, Flatseal, RustDesk, Faugus, Gear Lever
 
 ### PureGaming (in aggiunta alla base)
 
-- **Tool di sistema**: MangoHud, GameMode (via RPMFusion)
-- **Client di gioco** (RPM): Steam, Lutris, (Flatpak) Heroic
-- **Comunicazione** (Flatpak): Discord, TeamSpeak3
-- **Ottimizzazioni**: sysctl gaming (swappiness, max_map_count)
+- **Overlay GPU**: MangoHud (per-gioco via Steam launch options)
+- **Performance**: GameMode, sysctl gaming (swappiness, max_map_count)
+- **Client di gioco**: Steam, Lutris (RPM); Heroic (Flatpak)
+- **Comunicazione**: Discord, TeamSpeak3 (Flatpak)
 
-## Installare altre app
+### Hypervisor (in aggiunta alla base)
 
-Usa **Bazaar** (lo store grafico) per installare qualsiasi altra applicazione Flatpak da Flathub, senza modificare l'immagine. In alternativa, da terminale:
+- **Virtualizzazione**: libvirt, QEMU/KVM, virt-manager
+- **Gestione VM**: Cockpit + cockpit-machines (https://[IP]:9090)
+- **Rete VM**: NAT default via virbr0, port forward via socat
+- **Backup VM**: su NAS Synology via SMB
 
-```shell
-flatpak install flathub <app-id>
-```
-
-## Benchmark tool
-
-Il repo include [atomik-bench](tools/atomik-bench), una suite di benchmark leggera e universale per confrontare Atomik OS con altre distribuzioni sullo stesso hardware.
-
-```bash
-# Esegui benchmark (funziona su qualsiasi distro Linux)
-curl -fsSL https://raw.githubusercontent.com/giurest/atomik-os/main/tools/atomik-bench | bash
-
-# Confronta due risultati
-./tools/atomik-bench-compare risultato1.json risultato2.json
-```
+---
 
 ## Struttura repo
 
 ```
 atomik-os/
 ├── .github/workflows/
-│   ├── build.yml                         # Build immagini OCI → ghcr.io (desktop + derivate)
-│   ├── build-hypervisor.yml              # Build immagini OCI → ghcr.io (Hypervisor)
-│   ├── build-server-qcow2.yml            # Build immagini OCI → ghcr.io (Generazione manuale immagine server)
-│   ├── build-server.yml                  # Build immagini OCI → ghcr.io (Server)
-│   └── iso-manual.yml                    # Genera ISO per variante (workflow_dispatch)
+│   ├── build.yml                     # Build immagini OCI → ghcr.io
+│   └── update-installer-sha.yml      # Aggiorna SHA256 dell'installer
 ├── containerfiles/
-│   ├── Containerfile.desktop             # base (FROM F44 Silverblue)
-│   ├── Containerfile.puregaming          # FROM atomik-desktop
-│   ├── Containerfile.desktop-nvidia      # base (FROM F44 Silverblue + driver NVIDIA)
-│   └── Containerfile.puregaming-nvidia   # FROM atomik-desktop-nvidia
-│   └── Containerfile.hypervisor          # FROM atomik-desktop-nvidia
-├── installer/
-│   ├── atomik-desktop.toml
-│   ├── atomik-puregaming.toml
-│   ├── atomik-desktop-nvidia.toml
-│   └── atomik-puregaming-nvidia.toml
+│   ├── Containerfile.desktop         # Base (FROM Fedora Kinoite 44)
+│   ├── Containerfile.puregaming      # FROM atomik-desktop
+│   ├── Containerfile.desktop-nvidia  # FROM atomik-desktop + driver NVIDIA
+│   ├── Containerfile.puregaming-nvidia # FROM atomik-desktop-nvidia
+│   └── Containerfile.hypervisor      # FROM atomik-desktop
+├── install/
+│   ├── get-atomik.sh                 # Bootstrap con verifica GPG+SHA256
+│   ├── atomik-install.sh             # Wizard installazione (whiptail)
+│   └── atomik-install.sh.sha256      # Checksum (aggiornato dal CI)
 ├── files/
-│   ├── branding/                         # Logo SVG e PNG (dark/light, icone, wallpaper)
-│   ├── niri/                             # config Niri di sistema
-│   ├── plymouth/atomik/                  # tema Plymouth
-│   ├── fastfetch/                        # config fastfetch per variante
-│   ├── ujust/                            # justfile con i comandi di sistema
-│   ├── skel/                             # skel utenti (autostart wallpaper)
-│   ├── backgrounds/                      # wallpaper di sistema
-│   ├── dms/                              # file DMS personalizzati (SystemLogo.qml)
-│   └── system/                           # file copiati nel sistema
+│   ├── branding/                     # Logo SVG/PNG, icone
+│   ├── plasma/                       # Config KDE Plasma (skel, wallpaper)
+│   ├── plymouth/atomik/              # Tema Plymouth
+│   ├── fastfetch/                    # Config fastfetch per variante
+│   ├── ujust/                        # Ricette ujust per variante
+│   └── system/                       # File di sistema (servizi, script)
+├── build_files_desktop_kn/           # Script di build variante desktop
+├── build_files_nvidia/               # Script di build variante NVIDIA
+├── build_files_puregaming/           # Script di build variante gaming
 └── tools/
-    ├── atomik-bench                      # suite benchmark universale
-    └── atomik-bench-compare              # confronto risultati benchmark
+    └── atomik-bench                  # Suite benchmark universale
 ```
-
-## Build locale (opzionale)
-
-```shell
-# Richiede podman o buildah — non è possibile sviluppare al di fuori di una distro bootc
-buildah build -f containerfiles/Containerfile.desktop -t atomik-desktop:local .
-```
-
-> Nota: `Containerfile.puregaming` parte da `ghcr.io/giurest/atomik-desktop:latest`, quindi per buildarlo localmente serve prima l'immagine desktop.
-
-## Note tecniche
-
-- Il sistema è **bootc/OSTree**: aggiornamenti atomici con `bootc upgrade`, rollback con `bootc rollback`.
-- `ID` in `/etc/os-release` resta `fedora` (richiesto da bootc-image-builder per la ISO); il branding Atomik è in `NAME`/`PRETTY_NAME`.
 
 ---
 
-> **Requisiti**: CPU x86-64-v3 o superiore (verifica con `/lib64/ld-linux-x86-64.so.2 --help | grep supported`).
+## Note tecniche
+
+- Il sistema è **bootc/OSTree**: aggiornamenti atomici con `ujust update`, rollback con `ujust rollback`
+- `/etc` e `/var` persistono tra gli aggiornamenti; `/usr` è immutabile
+- `ID` in `/etc/os-release` resta `fedora` per compatibilità bootc
+- Le app si installano come **Flatpak** (Bazaar/Flathub) o tramite **Homebrew** (tool CLI)
+- Per aggiungere pacchetti RPM temporaneamente: `rpm-ostree install` (sconsigliato, rompe l'immutabilità)
+
+---
+
+## Build locale
+
+```bash
+# Richiede podman o buildah
+buildah build -f containerfiles/Containerfile.desktop -t atomik-desktop:local .
+```
+
+> Le varianti ereditano da `ghcr.io/giurest/atomik-desktop:latest` — per buildarle localmente serve prima l'immagine desktop.
+
+---
+
+---
+
+# Atomik OS — English
+
+An immutable Linux distribution based on **Fedora Kinoite** with **KDE Plasma**. Designed for personal workstations, gaming, and virtualization.
+
+## Variants
+
+| Variant | Base | Use | Status |
+|---|---|---|---|
+| `atomik-desktop` | Fedora Kinoite 44 | General workstation (AMD/Intel) | ✅ Available |
+| `atomik-desktop-nvidia` | `atomik-desktop` | Workstation with NVIDIA GPU | ✅ Available |
+| `atomik-puregaming` | `atomik-desktop` | Optimized gaming (AMD/Intel) | ✅ Available |
+| `atomik-puregaming-nvidia` | `atomik-desktop` | Optimized gaming with NVIDIA GPU | ✅ Available |
+| `atomik-hypervisor` | `atomik-desktop` | Virtualization server (headless) | ✅ Available |
+
+---
+
+## Installation
+
+### Requirements
+
+- Fedora Kinoite installed (vanilla)
+- Internet connection
+- x86-64-v3 CPU or higher
+
+> Check CPU compatibility: `/lib64/ld-linux-x86-64.so.2 --help | grep supported`
+
+### Steps
+
+**1. Install Fedora Kinoite** from the [official page](https://fedoraproject.org/kinoite/) and complete the basic setup.
+
+**2. Run the install command:**
+
+```bash
+curl -fsSL https://giurestlabs.it/get-atomik | bash
+```
+
+The wizard guides you through variant selection and completes the installation automatically.
+
+**3. Reboot** — at first login the system automatically configures:
+- KDE Plasma theme (Breeze Dark + Fast profile)
+- Atomik OS wallpaper (desktop, greeter and lock screen)
+- Fish shell with Atomik configuration
+- Base Flatpak apps (Telegram, Flatseal, RustDesk, Faugus, Bazaar, Gear Lever)
+- Homebrew for additional CLI tools
+
+### Installer security
+
+The `get-atomik.sh` wrapper verifies `atomik-install.sh` integrity via:
+- **SHA256** automatically updated by CI on every change
+- **GPG signature** with public key published independently at `giurestlabs.it/atomik-os/pubkey.gpg`
+
+The private key is never in the repo — an attacker who only compromises GitHub cannot sign malicious versions.
+
+---
+
+## System commands (ujust)
+
+Atomik includes `ujust`, a collection of commands for common operations. Run `ujust` without arguments for the full list.
+
+```bash
+ujust update           # update the system (bootc upgrade)
+ujust status           # current bootc image status
+ujust rollback         # revert to previous image
+ujust changelog        # what changed in the last update
+ujust sshauth-config   # configure SSH authentication to the hypervisor
+ujust vm-console VM    # open a VM's SPICE console
+ujust brew-setup       # install Homebrew (user-level CLI tools)
+```
+
+---
+
+## Included software
+
+### Base (on all variants)
+
+- **Desktop**: KDE Plasma 6 (Kinoite)
+- **Profile**: Fast (effects disabled, maximum responsiveness)
+- **Theme**: Breeze Dark
+- **Terminal**: Konsole + Fish + Starship
+- **Browser**: Brave (native, debloated)
+- **App store**: Bazaar (Flatpak)
+- **Boot**: Plymouth with Atomik theme
+- **CLI tools**: Homebrew, fastfetch
+- **Containers**: podman, distrobox
+- **Base Flatpak apps**: Telegram, Flatseal, RustDesk, Faugus, Gear Lever
+
+### PureGaming (in addition to base)
+
+- **GPU overlay**: MangoHud (per-game via Steam launch options)
+- **Performance**: GameMode, gaming sysctl (swappiness, max_map_count)
+- **Game clients**: Steam, Lutris (RPM); Heroic (Flatpak)
+- **Communication**: Discord, TeamSpeak3 (Flatpak)
+
+### Hypervisor (in addition to base)
+
+- **Virtualization**: libvirt, QEMU/KVM, virt-manager
+- **VM management**: Cockpit + cockpit-machines (https://[IP]:9090)
+- **VM networking**: NAT default via virbr0, port forwarding via socat
+- **VM backup**: to Synology NAS via SMB
+
+---
+
+## Technical notes
+
+- The system is **bootc/OSTree**: atomic updates with `ujust update`, rollback with `ujust rollback`
+- `/etc` and `/var` persist across updates; `/usr` is immutable
+- `ID` in `/etc/os-release` remains `fedora` for bootc compatibility
+- Apps are installed as **Flatpak** (Bazaar/Flathub) or via **Homebrew** (CLI tools)
+- To temporarily add RPM packages: `rpm-ostree install` (not recommended, breaks immutability)
+
+---
+
+## Local build
+
+```bash
+# Requires podman or buildah
+buildah build -f containerfiles/Containerfile.desktop -t atomik-desktop:local .
+```
+
+> Variants inherit from `ghcr.io/giurest/atomik-desktop:latest` — to build them locally you need the desktop image first.
