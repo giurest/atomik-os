@@ -79,10 +79,8 @@ RUN mkdir -p /etc/xdg && \
 COPY files/plasma/skel/.config/kscreenlockerrc \
      /etc/skel/.config/kscreenlockerrc
 # Konsole profilo Atomik
-mkdir -p "$HOME/.local/share/konsole"
-[ -f "/etc/skel/.local/share/konsole/Atomik.profile" ] && \
-    cp /etc/skel/.local/share/konsole/Atomik.profile \
-       "$HOME/.local/share/konsole/Atomik.profile"
+COPY files/plasma/skel/.local/share/konsole/Atomik.profile \
+     /etc/skel/.local/share/konsole/Atomik.profile
 ARG CACHEBUST=1
 
 # ── Skel permissions ───────────────────────────────────────────
