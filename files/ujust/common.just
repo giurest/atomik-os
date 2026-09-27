@@ -940,3 +940,192 @@ brew-setup:
     echo "    brew install bat       # cat migliorato"
     echo "    brew list              # tool installati"
     echo "    brew update && brew upgrade  # aggiorna tutto"
+
+# [Sistema] Cambia variante Atomik con snapshot pre-switch e ripristino opzionale
+safe-switch:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    REGISTRY="ghcr.io/giurest"
+    SNAPSHOT_DIR="$HOME/atomik-snapshots"
+    TMP_ETC="/tmp/atomik-restore-etc"
+    TMP_HOME="/tmp/atomik-restore-home"
+
+    # ── Varianti disponibili ─────────────────────────────────────────────────
+    declare -A VARIANTI=(
+        [1]="desktop"
+        [2]="desktop-nvidia"
+        [3]="puregaming"
+        [4]="puregaming-nvidia"
+        [5]="hypervisor"
+    )
+    declare -A IMMAGINI=(
+        [desktop]="atomik-desktop"
+        [desktop-nvidia]="atomik-desktop-nvidia"
+        [puregaming]="atomik-puregaming"
+        [puregaming-nvidia]="atomik-puregaming-nvidia"
+        [hypervisor]="atomik-hypervisor"
+    )
+
+    # ── Rileva variante corrente ─────────────────────────────────────────────
+    CURRENT_IMAGE=$(sudo bootc status 2>/dev/null \
+        | grep "Booted image:" | grep -oP 'ghcr\.io/giurest/\K[^:]+' || true)
+    CURRENT_VARIANT=""
+    for v in "${!IMMAGINI[@]}"; do
+        if [[ "${IMMAGINI[$v]}" == "$CURRENT_IMAGE" ]]; then
+            CURRENT_VARIANT="$v"
+            break
+        fi
+    done
+
+    echo ""
+    echo "╔══════════════════════════════════════════════════════╗"
+    echo "  Atomik OS — Safe Switch variante                     "
+    echo "╚══════════════════════════════════════════════════════╝"
+    echo ""
+    [[ -n "$CURRENT_VARIANT" ]] && echo "  Variante corrente: ${CURRENT_VARIANT}" \
+        || echo "  Variante corrente: non rilevata (${CURRENT_IMAGE:-sconosciuta})"
+    echo ""
+
+    # ── Scelta variante di destinazione ──────────────────────────────────────
+    echo "  Varianti disponibili:"
+    for i in 1 2 3 4 5; do
+        v="${VARIANTI[$i]}"
+        [[ "$v" == "$CURRENT_VARIANT" ]] && MARK=" (corrente)" || MARK=""
+        echo "    $i) $v${MARK}"
+    done
+    echo ""
+    read -rp "  Scegli variante di destinazione [1-5]: " SCELTA
+    [[ ! "$SCELTA" =~ ^[1-5]$ ]] && { echo "✗ Scelta non valida."; exit 1; }
+
+    TARGET_VARIANT="${VARIANTI[$SCELTA]}"
+    TARGET_IMAGE="${REGISTRY}/${IMMAGINI[$TARGET_VARIANT]}:latest"
+
+    if [[ "$TARGET_VARIANT" == "$CURRENT_VARIANT" ]]; then
+        echo "✗ Sei già su '$CURRENT_VARIANT'."
+        exit 1
+    fi
+
+    echo ""
+    echo "  → Da: ${CURRENT_VARIANT:-sconosciuta}"
+    echo "  → A:  ${TARGET_VARIANT}"
+    echo "  → Immagine: ${TARGET_IMAGE}"
+    echo ""
+    echo "  Operazioni che verranno eseguite:"
+    echo "   1. Snapshot variante corrente salvato in ${SNAPSHOT_DIR}/${CURRENT_VARIANT:-unknown}/"
+    SNAP_EXISTS=false
+    if [[ -f "${SNAPSHOT_DIR}/${TARGET_VARIANT}/etc-manifest.txt" ]]; then
+        echo "   2. Trovato snapshot di '${TARGET_VARIANT}' → ripristino /etc e home disponibile"
+        SNAP_EXISTS=true
+    else
+        echo "   2. Nessuno snapshot di '${TARGET_VARIANT}' trovato → solo switch"
+    fi
+    echo "   3. bootc switch verso ${TARGET_IMAGE}"
+    echo ""
+    read -rp "  Confermi? [s/N]: " CONFIRM
+    [[ "${CONFIRM,,}" != "s" ]] && { echo "Operazione annullata."; exit 0; }
+
+    # ── 1. Snapshot variante corrente ────────────────────────────────────────
+    if [[ -n "$CURRENT_VARIANT" ]]; then
+        SNAP_OUT="${SNAPSHOT_DIR}/${CURRENT_VARIANT}"
+        mkdir -p "$SNAP_OUT"
+        echo ""
+        echo "→ Salvo snapshot di '${CURRENT_VARIANT}'..."
+
+        # Manifest /etc: path + timestamp
+        sudo find /etc -type f -printf "%T@ %p\n" 2>/dev/null | sort \
+            > "${SNAP_OUT}/etc-manifest.txt"
+        echo "  ✓ etc-manifest.txt ($(wc -l < "${SNAP_OUT}/etc-manifest.txt") file)"
+
+        # Dot-folder home: path + timestamp
+        find "$HOME" -maxdepth 1 -name ".*" -type d -printf "%T@ %p\n" 2>/dev/null | sort \
+            > "${SNAP_OUT}/home-dotfolders.txt"
+        echo "  ✓ home-dotfolders.txt ($(wc -l < "${SNAP_OUT}/home-dotfolders.txt") cartelle)"
+
+        # Metadata
+        printf 'variante=%s\nimmagine=%s\ndata=%s\nbootc=%s\n' \
+            "$CURRENT_VARIANT" \
+            "$CURRENT_IMAGE" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            "$(sudo bootc status 2>/dev/null | grep 'Version:' | head -1 | awk '{print $2}')" \
+            > "${SNAP_OUT}/metadata.txt"
+        echo "  ✓ metadata.txt"
+        echo "✓ Snapshot salvato in ${SNAP_OUT}"
+    fi
+
+    # ── 2. Ripristino snapshot variante destinazione (se esiste) ─────────────
+    if $SNAP_EXISTS; then
+        echo ""
+        echo "→ Snapshot di '${TARGET_VARIANT}' trovato."
+        cat "${SNAPSHOT_DIR}/${TARGET_VARIANT}/metadata.txt" 2>/dev/null \
+            | sed 's/^/  /' || true
+        echo ""
+        read -rp "  Ripristinare /etc e home allo stato snapshot? [s/N]: " DO_RESTORE
+        if [[ "${DO_RESTORE,,}" == "s" ]]; then
+            SNAP_IN="${SNAPSHOT_DIR}/${TARGET_VARIANT}"
+
+            # ── /etc: rimuovi file più recenti dello snapshot ─────────────
+            echo ""
+            echo "→ Analisi /etc..."
+            SNAP_DATE=$(stat -c %Y "${SNAP_IN}/etc-manifest.txt")
+
+            # Copia prima in /tmp i file da rimuovere
+            sudo mkdir -p "$TMP_ETC"
+            sudo find /etc -type f -newer "${SNAP_IN}/etc-manifest.txt" \
+                2>/dev/null | while read -r f; do
+                DEST="${TMP_ETC}${f}"
+                sudo mkdir -p "$(dirname "$DEST")"
+                sudo cp "$f" "$DEST" 2>/dev/null || true
+            done
+            N_ETC=$(sudo find "$TMP_ETC" -type f 2>/dev/null | wc -l)
+            echo "  ✓ ${N_ETC} file /etc copiati in ${TMP_ETC}"
+
+            # Ora rimuovi
+            sudo find /etc -type f -newer "${SNAP_IN}/etc-manifest.txt" \
+                2>/dev/null | while read -r f; do
+                sudo rm -f "$f" 2>/dev/null || true
+            done
+            echo "  ✓ File /etc post-snapshot rimossi"
+
+            # ── Home dot-folder: rimuovi quelle non nello snapshot ────────
+            echo "→ Analisi dot-folder home..."
+            # Leggi le cartelle presenti nello snapshot
+            SNAP_FOLDERS=$(awk '{print $2}' "${SNAP_IN}/home-dotfolders.txt" 2>/dev/null || true)
+
+            sudo mkdir -p "$TMP_HOME"
+            find "$HOME" -maxdepth 1 -name ".*" -type d 2>/dev/null | while read -r d; do
+                if ! echo "$SNAP_FOLDERS" | grep -qF "$d"; then
+                    cp -a "$d" "$TMP_HOME/" 2>/dev/null || true
+                    rm -rf "$d" 2>/dev/null || true
+                    echo "  rimossa: $(basename "$d")"
+                fi
+            done
+            echo "  ✓ Dot-folder post-snapshot rimosse"
+
+            echo ""
+            echo "  ⚠ Copie temporanee disponibili fino al prossimo riavvio:"
+            echo "    /etc modificato → ${TMP_ETC}"
+            echo "    dot-folder home → ${TMP_HOME}"
+        fi
+    fi
+
+    # ── 3. bootc switch ──────────────────────────────────────────────────────
+    echo ""
+    echo "→ Avvio switch verso ${TARGET_VARIANT}..."
+    sudo bootc switch "$TARGET_IMAGE"
+
+    echo ""
+    echo "╔══════════════════════════════════════════════════════╗"
+    echo "  ✓ Switch completato!                                 "
+    echo "╚══════════════════════════════════════════════════════╝"
+    echo ""
+    echo "  Variante selezionata: ${TARGET_VARIANT}"
+    echo "  Riavvia per applicare il cambio: ujust reboot"
+    echo ""
+    if $SNAP_EXISTS && [[ "${DO_RESTORE,,}" == "s" ]]; then
+        echo "  ⚠ Copie temporanee (disponibili fino al riavvio):"
+        echo "    ${TMP_ETC}"
+        echo "    ${TMP_HOME}"
+        echo ""
+    fi
+    echo "  Al prossimo avvio atomik-first-run configurerà la nuova variante."
