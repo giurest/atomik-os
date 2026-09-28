@@ -968,15 +968,10 @@ safe-switch:
     )
 
     # ── Rileva variante corrente ─────────────────────────────────────────────
-    CURRENT_IMAGE=$(sudo bootc status 2>/dev/null \
-        | grep "Booted image:" | grep -oP 'ghcr\.io/giurest/\K[^:]+' || true)
-    CURRENT_VARIANT=""
-    for v in "${!IMMAGINI[@]}"; do
-        if [[ "${IMMAGINI[$v]}" == "$CURRENT_IMAGE" ]]; then
-            CURRENT_VARIANT="$v"
-            break
-        fi
-    done
+    CURRENT_VARIANT=$(hostnamectl 2>/dev/null \
+        | grep "Static hostname:" \
+        | sed 's/.*atomik-//' | tr -d ' ' || true)
+    CURRENT_IMAGE="${IMMAGINI[$CURRENT_VARIANT]:-sconosciuta}"
 
     echo ""
     echo "╔══════════════════════════════════════════════════════╗"
