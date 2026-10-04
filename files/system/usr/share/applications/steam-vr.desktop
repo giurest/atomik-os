@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Steam (modalità VR)
+Name[en]=Steam (VR mode)
+Comment=Avvia Steam con la cattura PipeWire per la vista Desktop di SteamVR
+Comment[en]=Starts Steam with PipeWire capture so the SteamVR Desktop view works on Wayland
+Exec=/usr/bin/atomik-steam-vr
+Icon=steam
+Terminal=false
+Categories=Game;

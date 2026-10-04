@@ -54,5 +54,11 @@ COPY files/atomik-defaults/MangoHud/MangoHud.conf \
 RUN cp /usr/share/atomik/defaults/MangoHud/MangoHud.conf \
        /etc/skel/.config/MangoHud/MangoHud.conf
 
+# ── Steam modalità VR (cattura PipeWire per la vista Desktop di SteamVR) ──────
+COPY files/system/usr/bin/atomik-steam-vr /usr/bin/atomik-steam-vr
+COPY files/system/usr/share/applications/steam-vr.desktop \
+     /usr/share/applications/steam-vr.desktop
+RUN chmod +x /usr/bin/atomik-steam-vr
+
 # ── Lint finale ───────────────────────────────────────────────────────────────
 RUN bootc container lint

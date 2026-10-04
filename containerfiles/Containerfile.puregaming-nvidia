@@ -23,4 +23,10 @@ RUN printf 'atomik-puregaming-nvidia\n' > /usr/lib/hostname
 RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (PureGaming NVIDIA)"/' /etc/os-release && \
     sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Atomik OS (PureGaming NVIDIA)"/' /usr/lib/os-release
 
+# ── Steam modalità VR (cattura PipeWire per la vista Desktop di SteamVR) ──────
+COPY files/system/usr/bin/atomik-steam-vr /usr/bin/atomik-steam-vr
+COPY files/system/usr/share/applications/steam-vr.desktop \
+     /usr/share/applications/steam-vr.desktop
+RUN chmod +x /usr/bin/atomik-steam-vr
+
 RUN bootc container lint
