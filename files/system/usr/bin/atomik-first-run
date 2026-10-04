@@ -102,6 +102,14 @@ if command -v plasma-apply-wallpaperimage &>/dev/null; then
     ok "Wallpaper Atomik OS applicato"
 fi
 
+# ── Cache menu KDE ───────────────────────────────────────────────────────────
+# Su ostree i file in /usr hanno data 1970: dopo il bootc switch KDE può non
+# accorgersi delle nuove voci di menu (es. Atomik Panel). Rigenero la cache.
+if command -v kbuildsycoca6 &>/dev/null; then
+    kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+    ok "Menu applicazioni Atomik aggiornato"
+fi
+
 # ── 4. Marker completamento ───────────────────────────────
 touch "$MARKER"
 
