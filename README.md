@@ -67,11 +67,18 @@ Il wizard ti guida nella scelta della variante e completa l'installazione automa
 
 ### Sicurezza installer
 
-Il wrapper `get-atomik.sh` verifica l'integrità di `atomik-install.sh` tramite:
-- **SHA256** automatico (aggiornato dal CI ad ogni modifica)
-- **Firma GPG** con chiave pubblica pubblicata indipendentemente su `giurestlabs.it/atomik-os/pubkey.gpg`
+`get-atomik.sh` è servito direttamente da `giurestlabs.it` (non da GitHub) e accetta solo un `atomik-install.sh` firmato con la chiave GPG la cui fingerprint è **scritta nello script**:
 
-La chiave privata non è mai nel repo — un attaccante che compromette solo GitHub non può firmare versioni malevole.
+```
+08B4 032A E979 4BFB 8F5A  CD90 BE35 CB1E BF3C AD73
+```
+
+- La chiave privata non è mai nel repo né nella CI.
+- Compromettere solo GitHub non basta per far eseguire codice modificato: la firma non è falsificabile e il bootstrap non viene dal repo.
+- Il checksum SHA256 serve solo a rilevare download corrotti, non protegge da un attaccante.
+- Limiti: se il sito `giurestlabs.it` venisse compromesso, il bootstrap potrebbe essere sostituito. Le immagini sono firmate con cosign in CI, ma l'installer non ne impone ancora la verifica.
+
+Non vuoi eseguire script in pipe? La procedura manuale è in [SECURITY.md](SECURITY.md).
 
 ---
 
@@ -232,11 +239,18 @@ The wizard guides you through variant selection and completes the installation a
 
 ### Installer security
 
-The `get-atomik.sh` wrapper verifies `atomik-install.sh` integrity via:
-- **SHA256** automatically updated by CI on every change
-- **GPG signature** with public key published independently at `giurestlabs.it/atomik-os/pubkey.gpg`
+`get-atomik.sh` is served directly from `giurestlabs.it` (not from GitHub) and only accepts an `atomik-install.sh` signed with the GPG key whose fingerprint is **hardcoded in the script**:
 
-The private key is never in the repo — an attacker who only compromises GitHub cannot sign malicious versions.
+```
+08B4 032A E979 4BFB 8F5A  CD90 BE35 CB1E BF3C AD73
+```
+
+- The private key is never in the repo or in CI.
+- Compromising GitHub alone is not enough to make modified code run: the signature cannot be forged and the bootstrap does not come from the repo.
+- The SHA256 checksum only detects corrupted downloads; it does not protect against an attacker.
+- Limits: if the `giurestlabs.it` site were compromised, the bootstrap could be replaced. Images are signed with cosign in CI, but the installer does not yet enforce signature verification.
+
+Prefer not to pipe scripts into a shell? The manual procedure is in [SECURITY.md](SECURITY.md).
 
 ---
 
