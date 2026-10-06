@@ -428,7 +428,7 @@ pods-check:
     echo ""
     echo "  Per applicare: ujust pods-update"
 
-# [Servizi] Ripristina i container all'immagine precedente (rollback rapido, i dati restano intatti)
+# [Servizi] Applica gli aggiornamenti disponibili ai container (esplicito, manuale)
 pods-update:
     #!/usr/bin/env bash
     set -euo pipefail

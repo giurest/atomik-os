@@ -5,7 +5,7 @@ FROM ghcr.io/giurest/atomik-desktop:latest
 
 # ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Hypervisor"
-LABEL org.opencontainers.image.description="Atomik OS — variante Hypervisor su base Desktop (Niri + DMS) con libvirt/QEMU-KVM e virt-manager"
+LABEL org.opencontainers.image.description="Atomik OS — variante Hypervisor su base Desktop (KDE Plasma) con libvirt/QEMU-KVM e virt-manager"
 
 # ── Build: stack virtualizzazione (via build.sh) ──────────────────────────────
 # Usiamo 'bash /ctx/build.sh' per non dipendere dal bit eseguibile in git.
