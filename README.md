@@ -23,7 +23,7 @@ Distribuzione Linux immutabile basata su **Fedora Kinoite**, con **KDE Plasma** 
 | `atomik-desktop` | Fedora Kinoite 44 | Workstation generale (AMD/Intel) | ✅ Disponibile |
 | `atomik-desktop-nvidia` | `atomik-desktop` | Workstation con GPU NVIDIA | ✅ Disponibile |
 | `atomik-puregaming` | `atomik-desktop` | Gaming ottimizzato (AMD/Intel) | ✅ Disponibile |
-| `atomik-puregaming-nvidia` | `atomik-desktop` | Gaming ottimizzato con GPU NVIDIA | ✅ Disponibile |
+| `atomik-puregaming-nvidia` | `atomik-desktop-nvidia` | Gaming ottimizzato con GPU NVIDIA | ✅ Disponibile |
 | `atomik-hypervisor` | `atomik-desktop` | Server di virtualizzazione (headless) | ✅ Disponibile |
 
 Le varianti `puregaming`, `desktop-nvidia`, `puregaming-nvidia` e `hypervisor` ereditano tutto da `atomik-desktop`. Le modifiche al desktop si propagano automaticamente a tutte le derivate.
@@ -127,30 +127,37 @@ ujust brew-setup       # installa Homebrew (tool CLI utente)
 ```
 atomik-os/
 ├── .github/workflows/
-│   ├── build.yml                     # Build immagini OCI → ghcr.io
-│   └── update-installer-sha.yml      # Aggiorna SHA256 dell'installer
+│   ├── build.yml                        # Build immagini OCI desktop e derivate → ghcr.io
+│   ├── build-hypervisor.yml             # Build immagine hypervisor
+│   ├── build-server.yml                 # Build immagine server (VM di servizio)
+│   ├── build-server-qcow2.yml           # qcow2 base delle VM (manuale o tag server-v*)
+│   ├── build-php.yml                    # Build container PHP (atomik-php)
+│   └── update-installer-sha.yml         # Aggiorna lo SHA256 dell'installer
 ├── containerfiles/
-│   ├── Containerfile.desktop         # Base (FROM Fedora Kinoite 44)
-│   ├── Containerfile.puregaming      # FROM atomik-desktop
-│   ├── Containerfile.desktop-nvidia  # FROM atomik-desktop + driver NVIDIA
-│   ├── Containerfile.puregaming-nvidia # FROM atomik-desktop-nvidia
-│   └── Containerfile.hypervisor      # FROM atomik-desktop
+│   ├── Containerfile.desktop            # Base (FROM Fedora Kinoite 44)
+│   ├── Containerfile.desktop-nvidia     # FROM atomik-desktop + driver NVIDIA
+│   ├── Containerfile.puregaming         # FROM atomik-desktop
+│   ├── Containerfile.puregaming-nvidia  # FROM atomik-desktop-nvidia
+│   ├── Containerfile.hypervisor         # FROM atomik-desktop
+│   └── Containerfile.server             # Immagine minimale per le VM di servizio
+├── containerapps/php/                   # Container PHP (Apache) per il web server delle VM
 ├── install/
-│   ├── get-atomik.sh                 # Bootstrap con verifica GPG+SHA256
-│   ├── atomik-install.sh             # Wizard installazione (whiptail)
-│   └── atomik-install.sh.sha256      # Checksum (aggiornato dal CI)
+│   ├── get-atomik.sh                    # Bootstrap con verifica GPG + SHA256
+│   ├── atomik-install.sh                # Wizard di installazione (whiptail)
+│   ├── atomik-install.sh.sha256         # Checksum (aggiornato dal CI)
+│   └── atomik-install.sh.asc            # Firma GPG
 ├── files/
-│   ├── branding/                     # Logo SVG/PNG, icone
-│   ├── plasma/                       # Config KDE Plasma (skel, wallpaper)
-│   ├── plymouth/atomik/              # Tema Plymouth
-│   ├── fastfetch/                    # Config fastfetch per variante
-│   ├── ujust/                        # Ricette ujust per variante
-│   └── system/                       # File di sistema (servizi, script)
-├── build_files_desktop_kn/           # Script di build variante desktop
-├── build_files_nvidia/               # Script di build variante NVIDIA
-├── build_files_puregaming/           # Script di build variante gaming
-└── tools/
-    └── atomik-bench                  # Suite benchmark universale
+│   ├── atomik-defaults/                 # Default di sistema (MangoHud, starship)
+│   ├── branding/                        # Logo SVG/PNG, icone
+│   ├── fastfetch/                       # Config fastfetch per variante
+│   ├── plasma/                          # Config KDE Plasma (skel, wallpaper)
+│   ├── plymouth/atomik/                 # Tema Plymouth
+│   ├── scripts/                         # Script di supporto (mangohud-vdf.py)
+│   ├── system/                          # File di sistema (servizi, script, .desktop)
+│   └── ujust/                           # Ricette ujust per variante
+├── build_files_*/                       # Script di build per variante
+├── docs/                                # Documentazione per variante
+└── tools/                               # atomik-bench, atomik-bench-compare, setup server Proxmox
 ```
 
 ---
@@ -189,7 +196,7 @@ An immutable Linux distribution based on **Fedora Kinoite** with **KDE Plasma**.
 | `atomik-desktop` | Fedora Kinoite 44 | General workstation (AMD/Intel) | ✅ Available |
 | `atomik-desktop-nvidia` | `atomik-desktop` | Workstation with NVIDIA GPU | ✅ Available |
 | `atomik-puregaming` | `atomik-desktop` | Optimized gaming (AMD/Intel) | ✅ Available |
-| `atomik-puregaming-nvidia` | `atomik-desktop` | Optimized gaming with NVIDIA GPU | ✅ Available |
+| `atomik-puregaming-nvidia` | `atomik-desktop-nvidia` | Optimized gaming with NVIDIA GPU | ✅ Available |
 | `atomik-hypervisor` | `atomik-desktop` | Virtualization server (headless) | ✅ Available |
 
 ---
