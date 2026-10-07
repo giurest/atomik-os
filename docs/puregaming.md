@@ -47,6 +47,12 @@ Su Wayland la vista **Desktop** di SteamVR, quella che mostra lo schermo del PC 
 - **Cambio di monitor o di scheda video**: il permesso ricordato può non essere più valido e la richiesta di condivisione può ricomparire.
 - **Remote Play**: l'opzione `-pipewire` può dare problemi su alcuni sistemi, per questo non è attiva di default.
 
+## Varianti NVIDIA e Secure Boot
+
+Il driver NVIDIA proprietario non è firmato per Secure Boot. Per usarlo,
+disattiva Secure Boot nel firmware: con Secure Boot attivo il sistema si avvia
+comunque, ma con il driver grafico di base.
+
 ---
 
 *Per la guida completa all'installazione, vedi il [README principale](../README.md).*
