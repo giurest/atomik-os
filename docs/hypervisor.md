@@ -94,6 +94,13 @@ conferma.
 
 Controlla (tramite ETag) se su GitHub esiste una versione più recente della qcow2 base e la scarica solo se cambiata. Viene invocata automaticamente da `atomik-server`, quindi ogni VM nuova nasce già aggiornata. Usa `force` per forzare il riscaricamento. questa ricetta è inclusa in `ujust atomik-server`
 
+La qcow2 base serve a creare **nuove** VM: `atomik-server` ne copia il disco. Le
+VM già esistenti non vengono toccate da questo aggiornamento, si aggiornano con
+`ujust update` dentro la VM. La qcow2 si genera a mano dal workflow
+`build-server-qcow2` (o con un tag `server-v*`) a partire dall'immagine
+`atomik-server:latest`, e conviene rigenerarla dopo ogni aggiornamento
+significativo dell'immagine server.
+
 ## Servizi specialistici
 
 Un servizio si installa **dentro la VM**, dopo averla creata. Ogni ricetta `*-setup` trasforma una VM base generica nel servizio specifico: monta lo storage necessario, scrive il quadlet Podman e avvia il container. 
@@ -290,28 +297,36 @@ L'hypervisor include **Cockpit** con il modulo `cockpit-machines`, che offre
 una gestione via browser delle VM libvirt (stato, console grafica, avvio/stop,
 monitoraggio risorse) e un terminale dell'host.
 
-### Sicurezza: isolato dalla LAN
+### Accesso
 
-Cockpit ascolta sulla porta 9090, ma **non è esposto alla LAN**: il firewall
-non apre né la porta né il servizio `cockpit`. L'immagine rimuove esplicitamente
-il servizio dalla zona firewall (il pacchetto lo aggiungerebbe di default),
-così lo stato "installato ma isolato" è riproducibile e sopravvive ai reboot.
+Cockpit è raggiungibile dalla LAN su `https://<ip-hypervisor>:9090`. L'immagine
+apre la porta 9090/tcp nel firewall e imposta `Origins = *` in
+`/etc/cockpit/cockpit.conf`, così l'accesso funziona da qualsiasi indirizzo
+(IP, nome host, telefono). Il login usa le credenziali di sistema
+dell'hypervisor. Il certificato è autofirmato: la prima volta il browser
+mostra un avviso.
 
-Questo è intenzionale: Cockpit dà accesso amministrativo completo all'host
-(terminale root incluso), quindi non va esposto direttamente sulla rete.
+### Sicurezza
 
-### Accesso via tunnel SSH
+Cockpit dà accesso amministrativo completo all'host (terminale root incluso).
+Con la porta aperta, chiunque sulla LAN raggiunge la pagina di login e la
+protezione è la sola password di sistema: l'impostazione presuppone una **LAN
+fidata**.
 
-Si raggiunge dalla macchina di sviluppo tramite un tunnel SSH, che riusa il
-canale già autenticato senza aprire nuove porte:
+Per chiudere l'accesso diretto, lasciando Cockpit installato:
 
+```bash
+sudo firewall-cmd --permanent --remove-port=9090/tcp
+sudo firewall-cmd --reload
+```
+
+e raggiungerlo con un tunnel SSH:
+
+```bash
 ssh -L 9090:localhost:9090 <username>@<ip-hypervisor>
+```
 
-poi si apre `https://localhost:9090` nel browser. Il login usa le credenziali
-di sistema dell'hypervisor.
-
-Per comodità, configurare in `~/.ssh/config` un host con `LocalForward 9090
-localhost:9090`, così `ssh hypervisor` apre già il tunnel.
+poi si apre `https://localhost:9090` nel browser.
 
 ### Rapporto con le ricette ujust
 
@@ -380,12 +395,25 @@ logout/login.
 
 ## Sicurezza
 
-- **Default deny sul firewall** — l'hypervisor espone alla LAN solo le
-  porte che l'utente apre esplicitamente via `vm-forward`.
+- **Firewall restrittivo, con due eccezioni dell'immagine** — oltre alle porte
+  che l'utente apre via `vm-forward`, l'immagine apre `9090/tcp` (Cockpit) e
+  `5900-5902/tcp` (console grafica SPICE delle VM). Entrambe presuppongono una
+  LAN fidata: vedi *Porte aperte dall'immagine*.
 - **Credenziali in file dedicati** — password SMB e database in file a `0600`,
   mai nei quadlet o nelle unit systemd.
 - **Isolamento per VM** — ogni servizio nella propria VM; un database non è mai
   esposto sulla LAN (solo le VM interne lo raggiungono via NAT).
+
+### Porte aperte dall'immagine
+
+| Porta | Servizio | Note |
+|---|---|---|
+| `9090/tcp` | Cockpit | Login con le credenziali di sistema (vedi sezione Cockpit) |
+| `5900-5902/tcp` | Console SPICE delle VM con console grafica (`ujust vm-console`) | **Nessuna password**: chi raggiunge la porta vede e controlla la VM. Previste fino a 3 VM con console attiva |
+
+Entrambe presuppongono una LAN fidata. Per VM con dati sensibili valuta di non
+esporre la console grafica o di limitare le porte agli indirizzi che usi.
+
 ### Esposizioni firewall nascoste nei "services"
 
 Il firewall può esporre servizi in due modi: come **porta** (`ports:`) o come

@@ -43,6 +43,7 @@ Per dettagli su ogni variante:
 - Sistema Fedora Kinoite installato (vanilla)
 - Connessione internet
 - CPU x86-64-v3 o superiore
+- Varianti NVIDIA: Secure Boot disattivato nel firmware. Il driver proprietario non è firmato per Secure Boot: con Secure Boot attivo il sistema si avvia con il driver grafico di base
 
 > Verifica la compatibilità CPU: `/lib64/ld-linux-x86-64.so.2 --help | grep supported`
 
@@ -215,6 +216,7 @@ An immutable Linux distribution based on **Fedora Kinoite** with **KDE Plasma**.
 - Fedora Kinoite installed (vanilla)
 - Internet connection
 - x86-64-v3 CPU or higher
+- NVIDIA variants: Secure Boot disabled in firmware. The proprietary driver is not signed for Secure Boot: with it enabled the system boots with the basic graphics driver
 
 > Check CPU compatibility: `/lib64/ld-linux-x86-64.so.2 --help | grep supported`
 

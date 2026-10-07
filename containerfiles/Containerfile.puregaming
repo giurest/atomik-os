@@ -9,7 +9,7 @@ COPY files/ujust/gaming.just /usr/share/atomik/gaming.just
 
 # ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS PureGaming"
-LABEL org.opencontainers.image.description="Atomik OS — variante gaming su base Desktop, MangoHud + GameMode, Steam/Lutris/Heroic via Flatpak"
+LABEL org.opencontainers.image.description="Atomik OS — variante gaming su base Desktop, MangoHud + GameMode, Steam e Lutris (RPM), Heroic (Flatpak)"
 
 # ── Tool gaming (via build.sh con mount RakuOS) ──────────────────────────────
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \

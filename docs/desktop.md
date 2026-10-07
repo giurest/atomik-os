@@ -31,6 +31,12 @@ ujust sshauth-config   # configura SSH verso l'hypervisor
 ujust vm-console VM    # apre la console SPICE di una VM
 ```
 
+## Varianti NVIDIA e Secure Boot
+
+Il driver NVIDIA proprietario non è firmato per Secure Boot. Per usarlo,
+disattiva Secure Boot nel firmware: con Secure Boot attivo il sistema si avvia
+comunque, ma con il driver grafico di base.
+
 ---
 
 *Per la guida completa all'installazione, vedi il [README principale](../README.md).*
