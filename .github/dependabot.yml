@@ -1,0 +1,11 @@
+# Aggiorna le azioni GitHub fissate a un hash: una sola PR settimanale.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

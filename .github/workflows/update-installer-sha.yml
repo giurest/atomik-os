@@ -13,7 +13,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Calcola SHA256 di atomik-install.sh
         run: |
@@ -21,7 +21,7 @@ jobs:
           echo "SHA256: $(cat install/atomik-install.sh.sha256)"
 
       - name: Commit SHA256 aggiornato
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5.2.0
         with:
           commit_message: "ci: update atomik-install.sh SHA256"
           file_pattern: install/atomik-install.sh.sha256

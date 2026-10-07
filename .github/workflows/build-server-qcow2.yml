@@ -23,7 +23,7 @@ jobs:
       packages: read    # per pullare l'immagine da ghcr
     steps:
       - name: Free disk space
-        uses: jlumbroso/free-disk-space@main
+        uses: jlumbroso/free-disk-space@36e9a5af4eddb91fc11aec4c6f6f79b3cc0cb523 # main
         with:
           tool-cache: false
           android: true
@@ -34,7 +34,7 @@ jobs:
           swap-storage: true
 
       - name: Login to ghcr.io
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
