@@ -72,7 +72,7 @@ jobs:
   # ── Fase 1: immagine base desktop ──────────────────────────────────────────
   build-base:
     name: Build ${{ matrix.variant }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -148,7 +148,7 @@ jobs:
   # ── Fase 2: varianti derivate da desktop ───────────────────────────────────
   build-derived:
     name: Build ${{ matrix.variant }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-base
     permissions:
       contents: read
@@ -226,7 +226,7 @@ jobs:
   # ── Fase 3: varianti derivate da desktop-nvidia ────────────────────────────
   build-nvidia-derived:
     name: Build ${{ matrix.variant }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-derived
     permissions:
       contents: read
