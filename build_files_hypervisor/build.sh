@@ -63,12 +63,21 @@ systemctl enable virtqemud.socket    2>/dev/null || true
 systemctl enable virtnetworkd.socket 2>/dev/null || true
 systemctl enable virtstoraged.socket 2>/dev/null || true
 
-## ── Cockpit: socket attivo, MA non esposto in LAN ────────────────────────────
+## ── Cockpit e console SPICE: porte aperte sulla LAN (si assume una LAN fidata) ─
 ## Il pacchetto cockpit aggiunge il servizio alla zona firewall di default:
+## lo sostituiamo con le sole porte necessarie, 9090 (Cockpit) e 5900-5902
+## (console grafica SPICE delle VM). Dettagli in docs/hypervisor.md.
 systemctl enable cockpit.socket
 firewall-offline-cmd --remove-service=cockpit 2>/dev/null || true
 firewall-offline-cmd --add-port=9090/tcp
 firewall-offline-cmd --add-port=5900-5902/tcp
+
+## ── Mai in sospensione ────────────────────────────────────────────────────────
+## L'hypervisor ospita VM e servizi: non deve sospendersi né andare in
+## ibernazione, nemmeno su richiesta del desktop (PowerDevil/logind).
+## Mascherare i target crea i collegamenti a /dev/null in /etc/systemd/system,
+## lo stesso risultato di un mask fatto a mano su una macchina già installata.
+systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 
 ## ── Rete NAT default (virbr0) in autostart ────────────────────────────────────
 ## libvirt-daemon-config-network fornisce la rete 'default'. La rendiamo
