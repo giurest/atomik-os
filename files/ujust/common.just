@@ -195,7 +195,7 @@ git-config:
     echo "── Clona repository ──"
     read -rp "URL repository da clonare (vuoto per saltare): " REPO_URL
     if [ -n "$REPO_URL" ]; then
-        read -rp "Cartella destinazione (default: ~/code): " CODE_DIR
+        read -rp "Cartella destinazione (default: code - indicare il percordo relativo essendo la base configurata su HOME): " CODE_DIR
         CODE_DIR="${CODE_DIR:-$HOME/code}"
         mkdir -p "$CODE_DIR"
         cd "$CODE_DIR"
@@ -460,7 +460,7 @@ smb-connect:
     mkdir -p "$MOUNT_PATH"
 
     read -rp "Descrizione (es. NAS Ufficio): " DESCRIPTION
-    read -rp "Percorso remoto (es. //192.168.178.100/dati): " REMOTE_PATH
+    read -rp "Percorso remoto (es. //ip smb server/folder): " REMOTE_PATH
     read -rp "Utente SMB: " SMB_USER
     read -srp "Password SMB: " SMB_PASS
     echo ""
