@@ -518,7 +518,7 @@ smb-connect:
         "" \
         "[Automount]" \
         "Where=${MOUNT_PATH}" \
-        "TimeoutIdleSec=60" \
+        "TimeoutIdleSec=0" \
         "" \
         "[Install]" \
         "WantedBy=multi-user.target" \
@@ -531,7 +531,8 @@ smb-connect:
     echo ""
     echo "✓ Connessione '$CONNECTION' creata e attiva."
     echo "  Accedi a: $MOUNT_PATH"
-    echo "  Si monta automaticamente al primo accesso."
+    echo "  Si monta automaticamente al primo accesso e resta montata"
+    echo "  (nessuno smontaggio per inattività: Dolphin non perde la cartella aperta)."
 
 # [Rete] Rimuovi una connessione SMB
 smb-disconnect:
