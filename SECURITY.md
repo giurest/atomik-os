@@ -54,6 +54,19 @@ less atomik-install.sh
 bash atomik-install.sh
 ```
 
+### Verifica delle immagini
+
+Le immagini sono firmate in CI con [cosign](https://github.com/sigstore/cosign) (firma *keyless* tramite GitHub OIDC). Puoi verificarle a mano quando vuoi; il sistema non lo impone e non blocca gli aggiornamenti non firmati.
+
+```bash
+# cosign è disponibile con: brew install cosign
+cosign verify ghcr.io/giurest/atomik-desktop:latest \
+  --certificate-identity-regexp 'https://github.com/giurest/atomik-os/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+L'esito corretto riporta che le verifiche cosign sono riuscite e mostra come identità un workflow di `giurest/atomik-os`. Sostituisci `atomik-desktop` con la variante che usi (`atomik-desktop-nvidia`, `atomik-puregaming`, `atomik-puregaming-nvidia`, `atomik-hypervisor`, `atomik-server`).
+
 ### Segnalare una vulnerabilità
 
 Usa la scheda **Security → Report a vulnerability** di questo repository GitHub (segnalazione privata). Non aprire una issue pubblica per problemi di sicurezza.
@@ -109,6 +122,19 @@ gpg --verify atomik-install.sh.asc atomik-install.sh           # look for "Good 
 less atomik-install.sh
 bash atomik-install.sh
 ```
+
+### Image verification
+
+Images are signed in CI with [cosign](https://github.com/sigstore/cosign) (*keyless* signing via GitHub OIDC). You can verify them by hand whenever you like; the system does not enforce this and does not block unsigned updates.
+
+```bash
+# cosign is available with: brew install cosign
+cosign verify ghcr.io/giurest/atomik-desktop:latest \
+  --certificate-identity-regexp 'https://github.com/giurest/atomik-os/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+A successful result reports that the cosign checks passed and shows a `giurest/atomik-os` workflow as the identity. Replace `atomik-desktop` with the variant you use (`atomik-desktop-nvidia`, `atomik-puregaming`, `atomik-puregaming-nvidia`, `atomik-hypervisor`, `atomik-server`).
 
 ### Reporting a vulnerability
 
