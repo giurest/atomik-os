@@ -1,0 +1,341 @@
+#!/usr/bin/env bash
+# atomik-ollama — Ollama + Open WebUI in Podman rootless (Quadlet utente)
+# Uso: atomik-ollama <setup|start|stop|status|pull|list|gpu|remove> [args]
+# Avvio SEMPRE manuale: nessun servizio parte al boot.
+set -euo pipefail
+
+# ── Versioni fissate (nessun :latest) ────────────────────────────────────────
+OLLAMA_IMAGE="docker.io/ollama/ollama:0.40.6"
+WEBUI_IMAGE="ghcr.io/open-webui/open-webui:v0.12.3"
+
+# ── Percorsi ─────────────────────────────────────────────────────────────────
+UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/containers/systemd"
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/atomik"
+CONF_FILE="$CONF_DIR/ollama.conf"
+APP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+START_DESKTOP="$APP_DIR/atomik-ollama-start.desktop"
+STOP_DESKTOP="$APP_DIR/atomik-ollama-stop.desktop"
+WEBUI_URL="http://127.0.0.1:3000"
+MIN_FREE_GB=15
+
+IGPU=0   # 0 = solo CPU (default Ollama), 1 = usa anche la GPU integrata AMD
+
+say()  { printf '%s\n' "$*"; }
+err()  { printf 'Errore: %s\n' "$*" >&2; }
+notify() {
+    command -v notify-send &>/dev/null && notify-send -a "Ollama" -i applications-science "$1" "${2:-}" || true
+}
+
+load_conf() {
+    if [[ -f "$CONF_FILE" ]]; then
+        # shellcheck disable=SC1090
+        IGPU="$(sed -n 's/^IGPU=\([01]\)$/\1/p' "$CONF_FILE" | head -n1)"
+        IGPU="${IGPU:-0}"
+    fi
+}
+
+save_conf() {
+    mkdir -p "$CONF_DIR"
+    printf 'IGPU=%s\n' "$IGPU" > "$CONF_FILE"
+}
+
+installed() { [[ -f "$UNIT_DIR/ollama.container" ]]; }
+
+need_installed() {
+    installed || { err "Ollama non è installato. Esegui: ujust ollama-setup"; exit 1; }
+}
+
+need_podman() {
+    command -v podman &>/dev/null || { err "podman non trovato."; exit 1; }
+}
+
+ask_yn() {  # ask_yn "domanda" default(y|n)
+    local q="$1" def="${2:-n}" ans prompt="[s/N]"
+    [[ "$def" == "y" ]] && prompt="[S/n]"
+    if [[ ! -t 0 ]]; then [[ "$def" == "y" ]]; return; fi
+    read -r -p "$q $prompt " ans || true
+    ans="${ans:-$def}"
+    [[ "$ans" =~ ^[sSyY]$ ]]
+}
+
+# ── Rilevamento hardware ─────────────────────────────────────────────────────
+gpu_vendors() {  # stampa i vendor id (0x1002 AMD, 0x10de NVIDIA, 0x8086 Intel)
+    local f
+    for f in /sys/class/drm/card*/device/vendor; do
+        [[ -r "$f" ]] && cat "$f"
+    done | sort -u
+}
+has_amd()    { local v; v="$(gpu_vendors)"; grep -qx 0x1002 <<<"$v"; }
+has_nvidia() { local v; v="$(gpu_vendors)"; grep -qx 0x10de <<<"$v"; }
+
+# ── Generazione unità Quadlet ────────────────────────────────────────────────
+write_units() {
+    mkdir -p "$UNIT_DIR"
+
+    cat > "$UNIT_DIR/ollama.network" <<'EOF'
+[Network]
+NetworkName=ollama-net
+EOF
+
+    cat > "$UNIT_DIR/ollama.container" <<EOF
+# Generato da atomik-ollama — non modificare a mano (viene riscritto da "ujust ollama-gpu")
+[Unit]
+Description=Ollama (Atomik OS)
+After=network-online.target
+
+[Container]
+ContainerName=ollama
+Image=$OLLAMA_IMAGE
+Network=ollama.network
+PublishPort=127.0.0.1:11434:11434
+Volume=ollama-data:/root/.ollama
+AddDevice=/dev/dri
+GroupAdd=keep-groups
+Environment=OLLAMA_NO_CLOUD=1
+Environment=OLLAMA_IGPU_ENABLE=$IGPU
+
+[Service]
+TimeoutStartSec=900
+EOF
+
+    cat > "$UNIT_DIR/open-webui.container" <<EOF
+# Generato da atomik-ollama — non modificare a mano
+[Unit]
+Description=Open WebUI per Ollama (Atomik OS)
+Requires=ollama.service
+After=ollama.service
+
+[Container]
+ContainerName=open-webui
+Image=$WEBUI_IMAGE
+Network=ollama.network
+PublishPort=127.0.0.1:3000:8080
+Volume=open-webui-data:/app/backend/data
+Environment=OLLAMA_BASE_URL=http://ollama:11434
+Environment=ANONYMIZED_TELEMETRY=false
+Environment=SCARF_NO_ANALYTICS=true
+Environment=DO_NOT_TRACK=true
+Environment=ENABLE_VERSION_UPDATE_CHECK=false
+Environment=CORS_ALLOW_ORIGIN=http://localhost:3000
+
+[Service]
+TimeoutStartSec=900
+EOF
+
+    systemctl --user daemon-reload
+}
+
+write_menu_entries() {
+    mkdir -p "$APP_DIR"
+    cat > "$START_DESKTOP" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Ollama avvio
+Name[en]=Ollama start
+Comment=Avvia Ollama e apre l'interfaccia web
+Comment[en]=Start Ollama and open the web interface
+Exec=/usr/bin/atomik-ollama start --open
+Icon=applications-science
+Terminal=false
+Categories=Utility;Science;
+EOF
+    cat > "$STOP_DESKTOP" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Ollama stop
+Name[en]=Ollama stop
+Comment=Ferma Ollama e libera RAM e GPU
+Comment[en]=Stop Ollama and free RAM and GPU
+Exec=/usr/bin/atomik-ollama stop
+Icon=process-stop
+Terminal=false
+Categories=Utility;Science;
+EOF
+    command -v update-desktop-database &>/dev/null && update-desktop-database "$APP_DIR" 2>/dev/null || true
+}
+
+# ── Comandi ──────────────────────────────────────────────────────────────────
+cmd_setup() {
+    need_podman
+    say "═══ Ollama + Open WebUI (Podman rootless) ═══"
+    say ""
+    say "Verranno scaricati, senza avvio automatico:"
+    say "  • $OLLAMA_IMAGE   (~5,6 GB)"
+    say "  • $WEBUI_IMAGE   (~4,6 GB)"
+    say "  • un modello a tua scelta (es. llama3.2:3b ~2 GB, dopo)"
+    say "Spazio totale tipico: ~14 GB. RAM a riposo: ~1,6 GB, solo quando è avviato."
+    say "Tutto gira nel tuo utente, esposto solo su 127.0.0.1 (non raggiungibile dalla rete)."
+    say ""
+
+    local free_gb
+    free_gb=$(df --output=avail -BG "$HOME" | tail -n1 | tr -dc '0-9')
+    if (( free_gb < MIN_FREE_GB )); then
+        err "spazio libero insufficiente in \$HOME: ${free_gb} GB (servono almeno ${MIN_FREE_GB} GB)."
+        exit 1
+    fi
+
+    load_conf
+    if has_nvidia; then
+        say "⚠ Rilevata GPU NVIDIA: l'accelerazione NVIDIA in Podman NON è ancora supportata"
+        say "  da questa ricetta (in fase di test). Ollama funzionerà su CPU."
+        say ""
+    fi
+    if has_amd; then
+        say "Rilevata GPU AMD. Ollama per impostazione predefinita ignora le GPU integrate."
+        say "Su una Radeon 780M abbiamo misurato ~+45% di velocità in generazione (llama3.2:3b),"
+        say "ma è una funzione sperimentale di Ollama."
+        if ask_yn "Abilitare la GPU integrata AMD?" n; then IGPU=1; else IGPU=0; fi
+        say ""
+    fi
+
+    ask_yn "Procedere con il download e l'installazione?" y || { say "Annullato."; exit 0; }
+
+    say "→ Download immagini (può richiedere diversi minuti)..."
+    podman pull "$OLLAMA_IMAGE"
+    podman pull "$WEBUI_IMAGE"
+
+    save_conf
+    write_units
+    write_menu_entries
+
+    say ""
+    say "✓ Installato. Nel menu applicazioni trovi «Ollama avvio» e «Ollama stop»."
+    say "  Oppure: ujust ollama-start / ujust ollama-stop"
+    say ""
+    say "Nota trasparenza: al PRIMO avvio Open WebUI scarica da huggingface.co un piccolo"
+    say "modello di embedding (~90 MB) per la ricerca nei documenti. Gli aggiornamenti"
+    say "automatici e la telemetria sono disattivati."
+    say "Per scaricare un modello:  ujust ollama-pull llama3.2:3b"
+}
+
+cmd_start() {
+    need_installed
+    local open=0
+    [[ "${1:-}" == "--open" ]] && open=1
+    notify "Ollama" "Avvio in corso..."
+    say "→ Avvio Ollama e Open WebUI..."
+    if ! systemctl --user start open-webui.service; then
+        err "avvio fallito. Dettagli: journalctl --user -u ollama -u open-webui -n 50"
+        notify "Ollama" "Avvio fallito (vedi journalctl --user -u open-webui)"
+        exit 1
+    fi
+    local i
+    for i in $(seq 1 120); do
+        curl -fsS -o /dev/null "$WEBUI_URL" 2>/dev/null && break
+        sleep 1
+    done
+    if curl -fsS -o /dev/null "$WEBUI_URL" 2>/dev/null; then
+        say "✓ Pronto: $WEBUI_URL"
+        notify "Ollama pronto" "$WEBUI_URL"
+        (( open )) && { xdg-open "$WEBUI_URL" >/dev/null 2>&1 || true; }
+    else
+        say "⚠ Avviato ma l'interfaccia non risponde ancora (primo avvio: scarica il modello di embedding)."
+        say "  Riprova tra un minuto: $WEBUI_URL"
+    fi
+}
+
+cmd_stop() {
+    need_installed
+    systemctl --user stop open-webui.service ollama.service 2>/dev/null || true
+    say "✓ Ollama e Open WebUI fermati (RAM e GPU liberate)."
+    notify "Ollama fermato" "RAM e GPU liberate"
+}
+
+cmd_status() {
+    need_installed
+    load_conf
+    local s
+    for s in ollama open-webui; do
+        printf '%-12s %s\n' "$s" "$(systemctl --user is-active "$s.service" 2>/dev/null || true)"
+    done
+    printf '%-12s %s\n' "GPU integr." "$([[ "$IGPU" == 1 ]] && echo abilitata || echo disabilitata)"
+    if systemctl --user is-active --quiet ollama.service; then
+        say ""
+        say "Modelli caricati in memoria:"
+        podman exec ollama ollama ps || true
+    fi
+}
+
+ensure_ollama_running() {
+    need_installed
+    systemctl --user is-active --quiet ollama.service || systemctl --user start ollama.service
+    local i
+    for i in $(seq 1 30); do
+        podman exec ollama ollama list &>/dev/null && return 0
+        sleep 1
+    done
+    err "Ollama non risponde."; exit 1
+}
+
+cmd_pull() {
+    local model="${1:-}"
+    [[ -n "$model" ]] || { err "uso: ujust ollama-pull <modello>   (es. llama3.2:3b)"; exit 1; }
+    ensure_ollama_running
+    podman exec -it ollama ollama pull "$model"
+}
+
+cmd_list() {
+    ensure_ollama_running
+    podman exec ollama ollama list
+}
+
+cmd_gpu() {
+    need_installed
+    load_conf
+    case "${1:-}" in
+        on)  IGPU=1 ;;
+        off) IGPU=0 ;;
+        "")
+            say "GPU integrata AMD: $([[ "$IGPU" == 1 ]] && echo abilitata || echo disabilitata)"
+            say "Vendor GPU rilevati: $(gpu_vendors | tr '\n' ' ')(0x1002=AMD, 0x10de=NVIDIA, 0x8086=Intel)"
+            if systemctl --user is-active --quiet ollama.service; then
+                say ""; podman exec ollama ollama ps || true
+                say "(colonna PROCESSOR: «100% GPU» = accelerato, «100% CPU» = solo CPU)"
+            fi
+            has_nvidia && say "NVIDIA: accelerazione non ancora supportata da questa ricetta."
+            return 0 ;;
+        *) err "uso: ujust ollama-gpu [on|off]"; exit 1 ;;
+    esac
+    save_conf
+    local was_running=0
+    systemctl --user is-active --quiet ollama.service && was_running=1
+    write_units
+    say "✓ GPU integrata: $([[ "$IGPU" == 1 ]] && echo abilitata || echo disabilitata)"
+    if (( was_running )); then
+        say "→ Riavvio Ollama per applicare..."
+        systemctl --user restart ollama.service
+    else
+        say "Verrà applicata al prossimo avvio."
+    fi
+}
+
+cmd_remove() {
+    need_podman
+    installed || { say "Ollama non risulta installato."; exit 0; }
+    say "Verranno rimossi servizi, icone del menu e immagini."
+    systemctl --user stop open-webui.service ollama.service 2>/dev/null || true
+    rm -f "$UNIT_DIR/ollama.container" "$UNIT_DIR/open-webui.container" "$UNIT_DIR/ollama.network"
+    rm -f "$START_DESKTOP" "$STOP_DESKTOP" "$CONF_FILE"
+    systemctl --user daemon-reload
+    podman rmi "$OLLAMA_IMAGE" "$WEBUI_IMAGE" 2>/dev/null || true
+    command -v update-desktop-database &>/dev/null && update-desktop-database "$APP_DIR" 2>/dev/null || true
+    if ask_yn "Eliminare anche i DATI (modelli scaricati e chat di Open WebUI)?" n; then
+        podman volume rm ollama-data open-webui-data 2>/dev/null || true
+        say "✓ Dati eliminati."
+    else
+        say "Dati conservati (volumi ollama-data e open-webui-data)."
+    fi
+    say "✓ Rimosso."
+}
+
+case "${1:-}" in
+    setup)  shift; cmd_setup  "$@" ;;
+    start)  shift; cmd_start  "$@" ;;
+    stop)   shift; cmd_stop   "$@" ;;
+    status) shift; cmd_status "$@" ;;
+    pull)   shift; cmd_pull   "$@" ;;
+    list)   shift; cmd_list   "$@" ;;
+    gpu)    shift; cmd_gpu    "$@" ;;
+    remove) shift; cmd_remove "$@" ;;
+    *) say "Uso: atomik-ollama <setup|start|stop|status|pull|list|gpu|remove>"; exit 1 ;;
+esac

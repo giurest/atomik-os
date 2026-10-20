@@ -100,9 +100,11 @@ COPY files/ujust/entrypoint-desktop.just /usr/share/atomik/justfile
 COPY files/ujust/common.just        /usr/share/atomik/common.just
 COPY files/ujust/environment.just   /usr/share/atomik/environment.just
 COPY files/ujust/desktop-tools.just /usr/share/atomik/desktop-tools.just
+COPY files/ujust/ollama.just        /usr/share/atomik/ollama.just
 COPY files/system/usr/bin/ujust /usr/bin/ujust
 COPY files/system/usr/bin/atomik-powerwash-prepare /usr/bin/atomik-powerwash-prepare
-RUN chmod +x /usr/bin/ujust /usr/bin/atomik-powerwash-prepare
+COPY files/system/usr/bin/atomik-ollama /usr/bin/atomik-ollama
+RUN chmod +x /usr/bin/ujust /usr/bin/atomik-powerwash-prepare /usr/bin/atomik-ollama
 
 # ── Fish greeting + setup + autocomplete ujust (DE-agnostico) ─────────────────
 COPY files/system/usr/share/fish/vendor_functions.d/fish_greeting.fish \

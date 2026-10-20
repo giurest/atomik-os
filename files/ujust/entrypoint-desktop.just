@@ -7,6 +7,7 @@
 import 'common.just'
 import 'environment.just'
 import 'desktop-tools.just'
+import 'ollama.just'
 
 # Mostra l'elenco delle ricette disponibili
 _default:

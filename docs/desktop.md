@@ -29,6 +29,7 @@ ujust rollback         # torna all'immagine precedente
 ujust brew-setup       # installa Homebrew
 ujust sshauth-config   # configura SSH verso l'hypervisor
 ujust vm-console VM    # apre la console SPICE di una VM
+ujust ollama-setup     # Ollama + Open WebUI in Podman (vedi docs/ollama.md)
 ```
 
 ## Varianti NVIDIA e Secure Boot
