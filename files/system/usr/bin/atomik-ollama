@@ -116,7 +116,7 @@ Environment=ANONYMIZED_TELEMETRY=false
 Environment=SCARF_NO_ANALYTICS=true
 Environment=DO_NOT_TRACK=true
 Environment=ENABLE_VERSION_UPDATE_CHECK=false
-Environment=CORS_ALLOW_ORIGIN=http://localhost:3000
+Environment=CORS_ALLOW_ORIGIN=http://localhost:3000;http://127.0.0.1:3000
 
 [Service]
 TimeoutStartSec=900
