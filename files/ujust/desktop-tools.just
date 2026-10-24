@@ -43,12 +43,24 @@ install-winboat:
         echo "✗ Impossibile trovare l'AppImage nelle release."
         exit 1
     fi
-    TMPFILE=$(mktemp /tmp/WinBoat-XXXX.AppImage)
-    curl -fSL "$URL" -o "$TMPFILE"
-    chmod +x "$TMPFILE"
+    #TMPFILE=$(mktemp /tmp/WinBoat-XXXX.AppImage)
+    #curl -fSL "$URL" -o "$TMPFILE"
+    #chmod +x "$TMPFILE"
+    # Usiamo la cartella dei download dell'utente, accessibile da Flatpak
+    TARGET_DIR="$HOME/Downloads"
+    mkdir -p "$TARGET_DIR"
+    FILENAME="WinBoat.AppImage"
+    LOCAL_PATH="$TARGET_DIR/$FILENAME"
+
+    echo "→ Download in corso in ~/Downloads..."
+    curl -fSL "$URL" -o "$LOCAL_PATH"
+    chmod +x "$LOCAL_PATH"
+
     echo "→ Integrazione con Gear Lever..."
-    flatpak run it.mijorus.gearlever --integrate "$TMPFILE"
-    rm -f "$TMPFILE"
+    #flatpak run it.mijorus.gearlever --integrate "$TMPFILE"
+    flatpak run it.mijorus.gearlever --integrate "$LOCAL_PATH"
+    #rm -f "$TMPFILE"
+    rm -f "$LOCAL_PATH"
     echo ""
     echo "✓ WinBoat installato e integrato nel launcher."
     echo "  Prerequisiti: Podman (✓), FreeRDP (✓), KVM abilitato"
@@ -84,11 +96,11 @@ unlock-winboat:
     fi
 
 # [Manutenzione] Applica le regole udev o configurazioni rapide che abbiamo visto prima
-fix-solaar:
-    @echo "Applicazione permessi Solaar e uinput..."
-    sudo curl -sSL https://raw.githubusercontent.com/pwr-Solaar/Solaar/master/rules.d-uinput/42-logitech-unify-permissions.rules -o /etc/udev/rules.d/42-logitech-unify-permissions.rules
-    sudo udevadm control --reload-rules && sudo udevadm trigger
-    flatpak override --user --device=all io.github.pwr_solaar.solaar    
+#fix-solaar:
+#    @echo "Applicazione permessi Solaar e uinput..."
+#    sudo curl -sSL https://raw.githubusercontent.com/pwr-Solaar/Solaar/master/rules.d-uinput/42-logitech-unify-permissions.rules -o /etc/udev/rules.d/42-logitech-unify-permissions.rules
+#    sudo udevadm control --reload-rules && sudo udevadm trigger
+#    flatpak override --user --device=all io.github.pwr_solaar.solaar    
 
 # [Manutenzione] Powerwash: backup dati essenziali + reset completo del sistema
 powerwash:
