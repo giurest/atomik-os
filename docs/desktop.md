@@ -23,9 +23,9 @@ curl -fsSL https://giurestlabs.it/get-atomik | bash
 ## Ricette ujust principali
 ### Principio di funzionamento ujust
 Ogni Variante ha un entrypoint-variante.just che viene caricato come loader specifico, all'interno del file vengono importate le ricette provenienti dal catalogo specifico se prendiamo in esame entrypoint-desktop.just troveremo al suo interno:
--desktop-tools.just
--environment.just
--ollama.just
+- **desktop-tools.just**
+- **environment.just**
+- **ollama.just**
 
 ```bash
 ujust update           # aggiorna il sistema
