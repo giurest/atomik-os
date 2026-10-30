@@ -49,7 +49,7 @@ Per dettagli su ogni variante:
 
 ### Procedura
 
-**1. Installa Fedora Kinoite** dalla [pagina ufficiale](https://fedoraproject.org/kinoite/) e completa la configurazione base.
+**1. Installa Fedora Kinoite** dalla [pagina ufficiale](https://fedoraproject.org/atomic-desktops/kinoite/) e completa la configurazione base.
 
 **2. Esegui il comando di installazione:**
 
