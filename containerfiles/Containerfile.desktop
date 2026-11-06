@@ -1,7 +1,7 @@
 FROM scratch AS ctx
 COPY build_files_desktop_kn /
 
-FROM quay.io/fedora/fedora-kinoite:44
+FROM quay.io/fedora/fedora-kinoite:45
 
 # ── Metadata ──────────────────────────────────────────────────────────────────
 LABEL org.opencontainers.image.title="Atomik OS Desktop"
