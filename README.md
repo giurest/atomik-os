@@ -20,7 +20,7 @@ Distribuzione Linux immutabile basata su **Fedora Kinoite**, con **KDE Plasma** 
 
 | Variante | Base | Uso | Stato |
 |---|---|---|---|
-| `atomik-desktop` | Fedora Kinoite 44 | Workstation generale (AMD/Intel) | ✅ Disponibile |
+| `atomik-desktop` | Fedora Kinoite 45 | Workstation generale (AMD/Intel) | ✅ Disponibile |
 | `atomik-desktop-nvidia` | `atomik-desktop` | Workstation con GPU NVIDIA | ✅ Disponibile |
 | `atomik-puregaming` | `atomik-desktop` | Gaming ottimizzato (AMD/Intel) | ✅ Disponibile |
 | `atomik-puregaming-nvidia` | `atomik-desktop-nvidia` | Gaming ottimizzato con GPU NVIDIA | ✅ Disponibile |
