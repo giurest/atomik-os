@@ -28,6 +28,7 @@ NetworkManager
 NetworkManager-wifi
 bluez
 bluez-tools
+partitionmanager
 
 # ── Tool CLI moderni ─────────────────────────────────────────────────────────
 eza
