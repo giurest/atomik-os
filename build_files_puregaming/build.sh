@@ -11,7 +11,8 @@ dnf -y install --skip-unavailable \
     gamemode \
     gamemode-devel \
     lutris \
-    gamescope
+    gamescope \
+	openssl
 	
 # LACT — AMD/NVIDIA GPU tuning
 dnf copr enable -y ilyaz/LACT
