@@ -51,7 +51,7 @@ jobs:
             --security-opt label=type:unconfined_t \
             -v "$(pwd)/output":/output \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
-            quay.io/centos-bootc/bootc-image-builder:latest \
+            quay.io/centos-bootc/bootc-image-builder@sha256:dab86ee6b46dcade411b37f4e70b07d93b6a06da0dbfec6fe89247a220e0d9f8 \
             --type qcow2 --rootfs xfs \
             "${IMAGE}"
           # Tutto l'output è di proprietà di root (bootc-image-builder gira come

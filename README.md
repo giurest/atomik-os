@@ -142,7 +142,7 @@ atomik-os/
 │   ├── build-php.yml                    # Build container PHP (atomik-php)
 │   └── update-installer-sha.yml         # Aggiorna lo SHA256 dell'installer
 ├── containerfiles/
-│   ├── Containerfile.desktop            # Base (FROM Fedora Kinoite 44)
+│   ├── Containerfile.desktop            # Base (FROM Fedora Kinoite 45)
 │   ├── Containerfile.desktop-nvidia     # FROM atomik-desktop + driver NVIDIA
 │   ├── Containerfile.puregaming         # FROM atomik-desktop
 │   ├── Containerfile.puregaming-nvidia  # FROM atomik-desktop-nvidia

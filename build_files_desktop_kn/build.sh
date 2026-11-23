@@ -50,8 +50,16 @@ if [ -n "$PKGS" ]; then
     dnf install -y --skip-unavailable $PKGS
 fi
 
-## Starship prompt (non nei repo Fedora, binario ufficiale)
-curl -fsSL https://starship.rs/install.sh | sh -s -- --yes -b /usr/bin
+## Starship prompt (binario ufficiale, versione fissata + verifica SHA256)
+## Aggiornamento: nuova versione da github.com/starship/starship/releases,
+## checksum dal file starship-x86_64-unknown-linux-musl.tar.gz.sha256 della release.
+STARSHIP_VERSION="1.27.0"
+STARSHIP_SHA256="10c8eb4cb3b761d9bf59ea828444c2dab36c900b7d69a69e08814b286969df89"
+curl -fsSLo /tmp/starship.tar.gz \
+    "https://github.com/starship/starship/releases/download/v${STARSHIP_VERSION}/starship-x86_64-unknown-linux-musl.tar.gz"
+echo "${STARSHIP_SHA256}  /tmp/starship.tar.gz" | sha256sum -c -
+tar -xzf /tmp/starship.tar.gz -C /usr/bin starship
+rm -f /tmp/starship.tar.gz
 
 ## Brave browser RPM
 rm -f /opt && mkdir -p /usr/lib/opt && ln -s /usr/lib/opt /opt

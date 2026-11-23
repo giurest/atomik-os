@@ -62,7 +62,8 @@ RUN printf '%s\n' \
     && a2enconf atomik-public
 
 # ── Composer ──────────────────────────────────────────────────────────────────
-COPY --from=docker.io/composer:latest /usr/bin/composer /usr/bin/composer
+# Fissato per digest (composer 2.11.2, 2026-11-20); per aggiornare: podman pull docker.io/composer:latest
+COPY --from=docker.io/library/composer@sha256:50ea4d33fdcde1adb0f045547295faa1548b33872e5f789dae5b02ce2fb5de93 /usr/bin/composer /usr/bin/composer
 
 # ── php.ini: valori sensati per app reali ─────────────────────────────────────
 RUN { \
