@@ -119,6 +119,9 @@ RUN chmod +x /usr/bin/atomik-fish-setup && \
            /usr/lib/systemd/system/multi-user.target.wants/atomik-fish-setup.service
 COPY files/system/usr/share/fish/vendor_completions.d/ujust.fish \
      /usr/share/fish/vendor_completions.d/ujust.fish
+# Default starship copiati nelle home da atomik-fish-setup (se l'utente non ha già un file)
+COPY files/atomik-defaults/starship.toml        /usr/share/atomik/defaults/starship.toml
+COPY files/atomik-defaults/starship-nvidia.toml /usr/share/atomik/defaults/starship-nvidia.toml
 
 # ── Atomik Panel + Changelog (DE-agnostico) ───────────────────────────────────
 COPY files/system/usr/bin/atomik-panel /usr/bin/atomik-panel

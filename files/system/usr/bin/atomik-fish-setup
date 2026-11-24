@@ -101,6 +101,16 @@ for HOME_DIR in /var/home/*; do
             chown "$USERNAME:$USERNAME" "$STARSHIP_CONFIG"
             echo "✓ starship.toml installato per $USERNAME ($(basename "$STARSHIP_SRC"))"
         fi
+    elif ! grep -qE '^[[:space:]]*scan_timeout[[:space:]]*=' "$STARSHIP_CONFIG"; then
+        # File esistente senza scan_timeout: aggiungo solo quella riga in testa
+        # (le chiavi top-level devono precedere le tabelle TOML). Non tocco altro.
+        if [ -s "$STARSHIP_CONFIG" ]; then
+            sed -i '1i scan_timeout = 500' "$STARSHIP_CONFIG"
+        else
+            printf 'scan_timeout = 500\n' > "$STARSHIP_CONFIG"
+        fi
+        chown "$USERNAME:$USERNAME" "$STARSHIP_CONFIG"
+        echo "✓ scan_timeout aggiunto allo starship.toml di $USERNAME"
     fi
 done
 

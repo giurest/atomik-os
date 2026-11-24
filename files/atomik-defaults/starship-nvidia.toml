@@ -1,3 +1,7 @@
+# Timeout di scansione (ms): il default di starship è 30 ms, troppo corto su PC lenti
+# o a cache fredda (avviso "Scanning current directory timed out").
+scan_timeout = 500
+
 [username]
 show_always = true
 style_user = "blue"
