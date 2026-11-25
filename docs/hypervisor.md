@@ -214,8 +214,11 @@ ujust vm-backup [nome-vm] [versioni]
 
 - Senza argomenti: esegue il backup di **tutte** le VM.
 - Con un nome: solo quella VM (utile prima di aggiornamenti o interventi).
-- `versioni` (default 2): quante versioni mantenere per VM; le più vecchie
-  vengono rimosse automaticamente.
+- `versioni` (default 2): quante versioni **verificate** mantenere per VM; le
+  più vecchie vengono rimosse automaticamente. I backup non verificati non
+  contano nel limite e non fanno scartare l'ultimo backup valido: si conserva
+  solo il più recente non verificato, e solo se è più nuovo dell'ultimo
+  verificato, per poter fare diagnosi.
 
 Per ogni VM: shutdown graceful → copia dei file → riavvio immediato → verifica.
 La VM è offline solo durante shutdown + copia (tipicamente 1–3 minuti secondo la
@@ -231,7 +234,10 @@ Ogni backup viene verificato subito dopo la copia:
 
 - **Livello 1 — checksum**: l'hash SHA256 di ogni file è salvato nel MANIFEST.
 - **Livello 2 — integrità qcow2**: `qemu-img check` conferma che l'immagine
-  disco sia strutturalmente valida.
+  disco sia strutturalmente valida. Esito 0 = ok. Esito 3 = solo «cluster
+  persi» (spazio sprecato, dati integri): il backup resta `verified` e
+  l'avviso è nel log. Esito 1 o 2 (errore o corruzione) = `FAILED`. L'output
+  del controllo viene sempre registrato nei log.
 
 Il MANIFEST riporta `status: verified` solo se entrambi passano; altrimenti
 `status: FAILED`. Un backup FAILED non verrà ripristinato da `vm-restore`.

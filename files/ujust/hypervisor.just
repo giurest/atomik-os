@@ -695,14 +695,28 @@ vm-backup NOME="" VERSIONI="2":
         MANIFEST="${DEST}/MANIFEST"
         STATUS="verified"
 
-        # L2: integrità del qcow2
-        if sudo qemu-img check "${DEST}/${VM}.qcow2" >/dev/null 2>&1; then
-            QCHECK="passed"
-        else
-            QCHECK="FAILED"
-            STATUS="FAILED"
-            err "[${VM}] ERRORE: qemu-img check fallito sul backup"
-        fi
+        # L2: integrità del qcow2. Codici di uscita di `qemu-img check`:
+        #   0 = ok
+        #   3 = solo cluster "persi" (spazio sprecato, nessun danno ai dati) → ok con avviso
+        #   1 = errore interno/apertura, 2 = corruzione trovata → FAILED
+        # L'output viene sempre registrato nel log (prima veniva scartato).
+        QCHECK_OUT="$(sudo qemu-img check "${DEST}/${VM}.qcow2" 2>&1)" && QRC=0 || QRC=$?
+        case "$QRC" in
+            0)
+                QCHECK="passed"
+                ;;
+            3)
+                QCHECK="passed (cluster persi, dati integri)"
+                log "[${VM}] AVVISO: qemu-img check exit 3: cluster persi, nessun danno ai dati"
+                while IFS= read -r qline; do log "[${VM}]   qemu-img: ${qline}"; done <<< "$QCHECK_OUT"
+                ;;
+            *)
+                QCHECK="FAILED (exit ${QRC})"
+                STATUS="FAILED"
+                err "[${VM}] ERRORE: qemu-img check fallito sul backup (exit ${QRC})"
+                while IFS= read -r qline; do err "[${VM}]   qemu-img: ${qline}"; done <<< "$QCHECK_OUT"
+                ;;
+        esac
 
         # L1: checksum di tutti i file (nel MANIFEST)
         {
@@ -733,16 +747,34 @@ vm-backup NOME="" VERSIONI="2":
             FAIL=$((FAIL+1))
         fi
 
-        # ── Rotazione: mantieni solo le ultime ${KEEP} versioni ──────────────
+        # ── Rotazione: mantieni le ultime ${KEEP} versioni VERIFICATE ────────
+        # Le versioni non verificate (FAILED o senza MANIFEST) non contano nel
+        # limite: così un backup fallito non fa scartare l'ultimo backup valido.
+        # Di quelle non verificate si conserva solo la più recente, e solo se è
+        # più nuova dell'ultima verificata (serve per la diagnosi).
         MAPFILE=$(ls -1dr "${BACKUP_ROOT}/${VM}"/*/ 2>/dev/null || true)
         if [[ -n "$MAPFILE" ]]; then
-            COUNT=0
+            COUNT_OK=0
+            SEEN_OK=0
+            KEPT_BAD=0
             while IFS= read -r d; do
                 [[ -z "$d" ]] && continue
-                COUNT=$((COUNT+1))
-                if (( COUNT > KEEP )); then
+                D_STATUS="$(sudo grep '^status:' "${d%/}/MANIFEST" 2>/dev/null | awk '{print $2}' || true)"
+                REMOVE=0
+                if [[ "$D_STATUS" == "verified" ]]; then
+                    SEEN_OK=1
+                    COUNT_OK=$((COUNT_OK+1))
+                    (( COUNT_OK > KEEP )) && REMOVE=1
+                else
+                    if (( SEEN_OK == 0 && KEPT_BAD == 0 )); then
+                        KEPT_BAD=1
+                    else
+                        REMOVE=1
+                    fi
+                fi
+                if (( REMOVE )); then
                     sudo rm -rf "$d"
-                    log "[${VM}] rotazione: rimossa versione $(basename "$d")"
+                    log "[${VM}] rotazione: rimossa versione $(basename "$d") (${D_STATUS:-senza MANIFEST})"
                 fi
             done <<< "$MAPFILE"
         fi
