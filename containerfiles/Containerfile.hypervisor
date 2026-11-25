@@ -19,6 +19,9 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 COPY files/system/etc/polkit-1/rules.d/50-libvirt-wheel.rules \
      /etc/polkit-1/rules.d/50-libvirt-wheel.rules
 
+# ── libvirt-guests: spegnimento ordinato delle VM al riavvio dell'host ───────
+COPY files/system/etc/sysconfig/libvirt-guests /etc/sysconfig/libvirt-guests
+
 # ── Fastfetch config hypervisor ───────────────────────────────────────────────
 RUN mkdir -p /etc/fastfetch
 COPY files/fastfetch/hypervisor.jsonc /etc/fastfetch/config.jsonc

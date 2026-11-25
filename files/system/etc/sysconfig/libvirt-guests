@@ -1,0 +1,20 @@
+# Atomik OS Hypervisor — configurazione di libvirt-guests.service
+#
+# Al riavvio o spegnimento dell'hypervisor le VM accese vengono spente in modo
+# ordinato (ACPI) invece di essere fermate di colpo, come con un taglio di
+# corrente: uno stop brusco può lasciare cluster "persi" nei dischi qcow2.
+
+# Allo spegnimento dell'host: spegni ordinatamente le VM accese.
+ON_SHUTDOWN=shutdown
+
+# Attesa massima (secondi). Scaduta, lo script scrive "Timeout expired" e il
+# riavvio prosegue (nessun destroy: le VM rimaste accese le ferma il sistema).
+# L'unità systemd ha TimeoutStopSec=0, quindi questo è l'unico limite.
+SHUTDOWN_TIMEOUT=120
+
+# Spegni più VM insieme: l'attesa massima vale per tutte, non per ciascuna.
+PARALLEL_SHUTDOWN=4
+
+# All'avvio non far ripartire le VM da qui: l'avvio resta all'autostart di
+# libvirt per singola VM (le VM spente a mano restano spente).
+ON_BOOT=ignore

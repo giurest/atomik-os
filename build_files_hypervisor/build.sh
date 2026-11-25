@@ -63,6 +63,11 @@ systemctl enable virtqemud.socket    2>/dev/null || true
 systemctl enable virtnetworkd.socket 2>/dev/null || true
 systemctl enable virtstoraged.socket 2>/dev/null || true
 
+## ── Spegnimento ordinato delle VM al riavvio dell'host ───────────────────────
+## Senza questo servizio un riavvio ferma le VM accese di colpo (come un taglio
+## di corrente). Configurazione in /etc/sysconfig/libvirt-guests.
+systemctl enable libvirt-guests.service
+
 ## ── Cockpit e console SPICE: porte aperte sulla LAN (si assume una LAN fidata) ─
 ## Il pacchetto cockpit aggiunge il servizio alla zona firewall di default:
 ## lo sostituiamo con le sole porte necessarie, 9090 (Cockpit) e 5900-5902

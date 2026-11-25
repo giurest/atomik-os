@@ -29,6 +29,20 @@ L'hypervisor usa i **socket modulari** di libvirt (`virtqemud`, `virtnetworkd`, 
 
 L'accesso a libvirt è concesso al gruppo `wheel` tramite regola polkit — nessun username cablato nell'immagine.
 
+### Riavvio dell'hypervisor e VM accese
+
+`libvirt-guests.service` è abilitato: al riavvio o spegnimento dell'host le VM
+accese ricevono una richiesta di spegnimento ordinato (ACPI) e il sistema
+attende fino a **120 secondi** che si spengano (in parallelo, fino a 4 insieme).
+Se una VM non risponde entro il tempo massimo, il riavvio prosegue e il sistema
+la ferma. Senza questo servizio, le VM accese venivano fermate di colpo, con il
+rischio di lasciare cluster «persi» nei dischi qcow2 (spazio sprecato, dati
+integri: vedi la verifica automatica del backup).
+
+L'avvio **non** è gestito da questo servizio (`ON_BOOT=ignore`): le VM ripartono
+solo se hanno l'autostart di libvirt (`virsh autostart NOME`); le altre restano
+spente. Per cambiare l'attesa: `/etc/sysconfig/libvirt-guests`.
+
 ## Ciclo di vita di una VM
 
 ### Creare una VM base — `atomik-server`
